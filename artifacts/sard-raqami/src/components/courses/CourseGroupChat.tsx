@@ -23,7 +23,9 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const isActualInstructor = Boolean(
+  // Only verified users, admins, organizations, or the course instructor can moderate or stop/open chat
+  const isVerifiedModerator = Boolean(
+    user?.verified ||
     user?.role === 'admin' ||
     user?.role === 'org' ||
     user?.id === course.instructor?.id ||
@@ -39,10 +41,8 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  // User Role View Switcher: allows testing both Instructor and Student perspectives
-  const [activeRole, setActiveRole] = useState<'instructor' | 'student'>(
-    isActualInstructor ? 'instructor' : 'student'
-  );
+  // Active role is strictly instructor if verified moderator, otherwise strictly student
+  const activeRole: 'instructor' | 'student' = isVerifiedModerator ? 'instructor' : 'student';
   const [isInstructorControlOpen, setIsInstructorControlOpen] = useState(true);
 
   // Pinned announcement edit modal/state
@@ -193,7 +193,7 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
 
     setIsSending(true);
     try {
-      const isInst = activeRole === 'instructor';
+      const isInst = isVerifiedModerator;
       const senderId = user?.id || (isInst ? course.instructor?.id || 'inst-id' : 'usr-student');
       const senderName = isInst
         ? user?.name || course.instructor?.name || 'معلم الدورة'
@@ -226,12 +226,12 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
 
   // Determine if input is disabled for current user
   const isInputDisabled =
-    activeRole === 'student' &&
+    !isVerifiedModerator &&
     (settings.permissionMode === 'instructor_only' || settings.permissionMode === 'muted');
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12" dir="rtl">
-      {/* Top Bar Navigation & Role Switcher */}
+      {/* Top Bar Navigation & Role Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-card-border p-3.5 sm:p-4 rounded-2xl shadow-2xs">
         <button
           type="button"
@@ -242,34 +242,18 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
           <span>العودة إلى تفاصيل الدورة</span>
         </button>
 
-        {/* Perspective / Role Toggle */}
-        <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-xl border border-border/70 self-start sm:self-auto">
-          <span className="text-[11px] font-bold text-muted-foreground pe-1 hidden md:inline">
-            تجربة العرض بصفتك:
-          </span>
-          <button
-            type="button"
-            onClick={() => setActiveRole('instructor')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none flex items-center gap-1.5 ${
-              activeRole === 'instructor'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span>👨‍🏫 المعلم (صلاحيات التحكم)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveRole('student')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none flex items-center gap-1.5 ${
-              activeRole === 'student'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span>🎓 طالب في الدورة</span>
-          </button>
-        </div>
+        {/* Verification / Role Badge */}
+        {isVerifiedModerator ? (
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3.5 py-1.5 rounded-xl self-start sm:self-auto text-xs font-bold text-primary">
+            <Shield className="w-4 h-4 text-primary shrink-0" />
+            <span>حساب موثق / معلم الدورة 🛡️ (صلاحيات التحكم)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-muted/60 border border-border px-3.5 py-1.5 rounded-xl self-start sm:self-auto text-xs font-semibold text-muted-foreground">
+            <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span>طالب مشارك في الدورة 🎓</span>
+          </div>
+        )}
       </div>
 
       {/* Main Chat Header Card */}
@@ -322,16 +306,16 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
           </div>
         </div>
 
-        {/* INSTRUCTOR CONTROL PANEL (Shows when activeRole === 'instructor') */}
-        {activeRole === 'instructor' && (
+        {/* INSTRUCTOR CONTROL PANEL (Only shows for verified users / instructors) */}
+        {isVerifiedModerator && (
           <div className="p-4 sm:p-5 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/80">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 text-primary font-bold text-xs sm:text-sm">
                 <Shield className="w-4 h-4" />
-                <span>لوحة تحكم المعلم في صلاحيات الغرفة</span>
+                <span>لوحة تحكم المعلم المعتمد في صلاحيات الغرفة</span>
               </div>
               <span className="text-[11px] text-muted-foreground">
-                يمكنك كمعلم التحكم في من يحق له إرسال الرسائل وتثبيت التوجيهات
+                بصفتك حساباً موثقاً أو معلم الدورة، يمكنك التحكم في إيقاف أو فتح المحادثة وتثبيت الإعلانات
               </span>
             </div>
 
@@ -577,7 +561,7 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={
-                    activeRole === 'instructor'
+                    isVerifiedModerator
                       ? `اكتب توجيهاً أو رداً لطلابك بصفتك (${user?.name || course.instructor?.name || 'المعلم'})...`
                       : 'اكتب سؤالك أو استفسارك في نقاش الدورة...'
                   }
@@ -598,15 +582,15 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                 <span className="flex items-center gap-1">
                   <span>أنت ترسل الآن بصفتك:</span>
                   <strong className="text-foreground">
-                    {activeRole === 'instructor'
-                      ? `معلم الدورة 👨‍🏫 (${user?.name || course.instructor?.name || 'المعلم'})`
+                    {isVerifiedModerator
+                      ? `معلم معتمد / حساب موثق 👨‍🏫 (${user?.name || course.instructor?.name || 'المعلم'})`
                       : `طالب مشارك 🎓 (${user?.name || 'أنت'})`}
                   </strong>
                 </span>
 
-                {activeRole === 'instructor' && (
+                {isVerifiedModerator && (
                   <span className="text-primary font-semibold">
-                    (يمكنك تغيير صلاحيات الإرسال لجميع الطلاب من اللوحة أعلاه)
+                    (يمكنك إيقاف أو فتح المحادثة للجميع من اللوحة أعلاه)
                   </span>
                 )}
               </div>

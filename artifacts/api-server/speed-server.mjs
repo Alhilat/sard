@@ -2107,12 +2107,12 @@ const updateCourseChatSettingsHandler = (req, res) => {
     const courseId = req.params.id;
     const { permissionMode, pinnedAnnouncement, slowModeSeconds } = req.body;
     
-    // Check permission: admin or org or course creator
+    // Check permission: only verified users, admins, orgs, or course creator
     const course = stmtGetCourseById.get(courseId);
     const isOwner = course && course.org_id === req.user.id;
-    const isPrivileged = req.user.role === 'admin' || req.user.role === 'org' || isOwner;
+    const isPrivileged = Boolean(req.user.verified || req.user.role === 'admin' || req.user.role === 'org' || isOwner);
     if (!isPrivileged) {
-      return res.status(403).json({ success: false, message: 'غير مصرح لك بتعديل إعدادات هذه الغرفة' });
+      return res.status(403).json({ success: false, message: 'فقط الحسابات الموثقة والمعلمون يمكنهم فتح أو إيقاف المحادثة' });
     }
 
     const current = stmtGetCourseChatSettings.get(courseId) || {};
@@ -2169,23 +2169,24 @@ app.post('/api/courses/:id/chat/messages', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, message: 'محتوى الرسالة فارغ' });
     }
 
-    // Verify chat permissions
+    // Verify chat permissions: only verified users or course staff can moderate/bypass restrictions
     const settings = stmtGetCourseChatSettings.get(courseId);
     const mode = settings ? settings.permission_mode : 'all';
     const course = stmtGetCourseById.get(courseId);
-    const isCourseStaff = req.user.role === 'admin' || req.user.role === 'org' || (course && course.org_id === req.user.id);
+    const isCourseStaff = Boolean(req.user.verified || req.user.role === 'admin' || req.user.role === 'org' || (course && course.org_id === req.user.id));
 
-    if (mode === 'muted' && !isCourseStaff && senderRole !== 'instructor') {
+    if (mode === 'muted' && !isCourseStaff) {
       return res.status(403).json({ success: false, message: 'المحادثة متوقفة مؤقتاً بواسطة المعلم' });
     }
 
-    if (mode === 'instructor_only' && !isCourseStaff && senderRole !== 'instructor') {
+    if (mode === 'instructor_only' && !isCourseStaff) {
       return res.status(403).json({ success: false, message: 'إرسال الرسائل مقتصر على المعلم حالياً' });
     }
 
     const msgId = `cmsg_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    const effectiveSenderName = senderName || req.user.name || 'طالب مشارك';
-    const effectiveRole = (isCourseStaff || senderRole === 'instructor') ? 'instructor' : 'student';
+    const effectiveSenderName = req.user.name || senderName || 'طالب مشارك';
+    // Strictly prevent unverified accounts from claiming instructor role
+    const effectiveRole = (isCourseStaff && senderRole === 'instructor') ? 'instructor' : 'student';
     const effectiveAnnouncement = (isAnnouncement && effectiveRole === 'instructor') ? 1 : 0;
     const now = Date.now();
 
