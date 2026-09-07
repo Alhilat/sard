@@ -36,7 +36,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   const [privacy, setPrivacy] = useState<'عام' | 'خاص'>('عام');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isVerified = Boolean(user?.verified || user?.role === 'admin');
+  const isVerified = Boolean(user?.verified || user?.role === 'admin' || user?.role === 'org');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

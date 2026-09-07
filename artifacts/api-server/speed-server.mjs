@@ -295,6 +295,43 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS org_members (
+    id TEXT PRIMARY KEY,
+    org_id TEXT NOT NULL,
+    user_id TEXT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'عضو',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS reports (
+    id TEXT PRIMARY KEY,
+    reporter_id TEXT,
+    target_type TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT PRIMARY KEY,
+    user1_id TEXT NOT NULL,
+    user2_id TEXT NOT NULL,
+    last_message TEXT DEFAULT '',
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS direct_messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    sender_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
   CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
@@ -305,6 +342,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date);
   CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
+  CREATE INDEX IF NOT EXISTS idx_direct_messages_conv ON direct_messages(conversation_id, created_at ASC);
 `);
 
 // Flush initial snapshot immediately so public.sard_cloud_store is populated right away
@@ -941,6 +980,26 @@ app.post('/api/posts', authenticateToken, (req, res) => {
   }
 });
 
+// Delete Post
+app.delete('/api/posts/:id', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const postId = req.params.id;
+    const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(postId);
+    if (!post) return res.status(404).json({ success: false, message: 'المنشور غير موجود' });
+    if (post.author_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'org') {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بحذف هذا المنشور' });
+    }
+    stmtDeletePost.run(postId);
+    db.prepare('DELETE FROM comments WHERE post_id = ?').run(postId);
+    db.prepare('DELETE FROM post_likes WHERE post_id = ?').run(postId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم حذف المنشور بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر حذف المنشور' });
+  }
+});
+
 // Like Post
 app.post('/api/posts/:id/like', authenticateToken, (req, res) => {
   try {
@@ -1230,7 +1289,7 @@ app.post('/api/groups', authenticateToken, (req, res) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'يجب تسجيل الدخول لإنشاء مجموعة' });
     }
-    if (!req.user.verified) {
+    if (!req.user.verified && req.user.role !== 'admin' && req.user.role !== 'org') {
       return res.status(403).json({
         success: false,
         message: 'إنشاء المجموعات متاح حصرياً للحسابات والمنظمات الموثقة. يمكنك كعضو الانضمام لجميع المجموعات والتفاعل معها.',
@@ -1797,7 +1856,7 @@ app.get('/api/activities', authenticateToken, (req, res) => {
 
 app.post('/api/activities', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
-  if (!req.user.verified) {
+  if (!req.user.verified && req.user.role !== 'admin' && req.user.role !== 'org') {
     return res.status(403).json({
       success: false,
       message: 'تنظيم وإضافة الفعاليات متاح حصرياً للحسابات الموثقة والمنظمات. يمكنك كعضو التسجيل والمشاركة في كافة الفعاليات.',
@@ -1908,7 +1967,7 @@ app.get('/api/courses', authenticateToken, (req, res) => {
 
 app.post('/api/courses', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
-  if (!req.user.verified) {
+  if (!req.user.verified && req.user.role !== 'admin' && req.user.role !== 'org') {
     return res.status(403).json({
       success: false,
       message: 'إضافة وإدارة الدورات متاح حصرياً للحسابات الموثقة والمدربين المعتمدين. يمكنك كعضو الانضمام والتعلم في كافة الدورات.',
@@ -2033,6 +2092,191 @@ app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ success: false });
+  }
+});
+
+// ── Org Members Endpoints ───────────────────────────────────────────────────
+app.get('/api/org/members', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const orgId = req.user.role === 'org' ? req.user.id : (req.user.organization_id || req.user.id);
+    let rows = db.prepare('SELECT * FROM org_members WHERE org_id = ? ORDER BY created_at ASC').all(orgId);
+    if (rows.length === 0) {
+      const initialId = `mem_${Date.now()}`;
+      db.prepare(`
+        INSERT INTO org_members (id, org_id, user_id, name, email, role, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(initialId, orgId, req.user.id, req.user.name || 'مسؤول المنظمة', req.user.email, 'مدير', 'active', Date.now());
+      rows = db.prepare('SELECT * FROM org_members WHERE org_id = ? ORDER BY created_at ASC').all(orgId);
+    }
+    res.json({ success: true, members: rows, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, members: [] });
+  }
+});
+
+app.post('/api/org/members/invite', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const orgId = req.user.role === 'org' ? req.user.id : (req.user.organization_id || req.user.id);
+    const { name, email, role } = req.body;
+    if (!name || !email) {
+      return res.status(400).json({ success: false, message: 'يرجى إدخال اسم العضو والبريد الإلكتروني' });
+    }
+    const memberId = `mem_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    db.prepare(`
+      INSERT INTO org_members (id, org_id, user_id, name, email, role, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(memberId, orgId, null, name.trim(), email.trim().toLowerCase(), role || 'عضو', 'active', Date.now());
+    scheduleCloudSync();
+    res.status(201).json({ success: true, id: memberId, message: 'تم إرسال دعوة الانضمام بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر إرسال الدعوة' });
+  }
+});
+
+app.delete('/api/org/members/:id', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const memberId = req.params.id;
+    db.prepare('DELETE FROM org_members WHERE id = ?').run(memberId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم إزالة العضو بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر إزالة العضو' });
+  }
+});
+
+app.patch('/api/org/members/:id/role', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const memberId = req.params.id;
+    const { role } = req.body;
+    if (!role) return res.status(400).json({ success: false, message: 'الدور مطلوب' });
+    db.prepare('UPDATE org_members SET role = ? WHERE id = ?').run(role, memberId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم تحديث الدور بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر تحديث الدور' });
+  }
+});
+
+// ── Reports Endpoints ───────────────────────────────────────────────────────
+app.post('/api/reports', authenticateToken, (req, res) => {
+  try {
+    const { target_type, target_id, reason } = req.body;
+    if (!target_id) return res.status(400).json({ success: false, message: 'المحتوى المُبلّغ عنه مطلوب' });
+    const id = `rep_${Date.now()}`;
+    db.prepare(`
+      INSERT INTO reports (id, reporter_id, target_type, target_id, reason, status, created_at)
+      VALUES (?, ?, ?, ?, ?, 'pending', ?)
+    `).run(id, req.user?.id || null, target_type || 'post', target_id, reason || 'مخالفة معايير النشر', Date.now());
+    scheduleCloudSync();
+    res.status(201).json({ success: true, message: 'تم إرسال البلاغ لإدارة المنصة بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر تسجيل البلاغ' });
+  }
+});
+
+// ── Settings & Security Endpoints ───────────────────────────────────────────
+app.post('/api/users/change-password', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'يرجى إدخال كلمة المرور الحالية والجديدة' });
+    }
+    const userRow = stmtFindUserById.get(req.user.id);
+    if (!userRow) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+    if (!bcrypt.compareSync(currentPassword, userRow.password_hash)) {
+      return res.status(400).json({ success: false, message: 'كلمة المرور الحالية غير صحيحة' });
+    }
+    const newHash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, req.user.id);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم تغيير كلمة المرور بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر تغيير كلمة المرور' });
+  }
+});
+
+app.delete('/api/users/me', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const userId = req.user.id;
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم حذف الحساب بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر حذف الحساب' });
+  }
+});
+
+// ── Direct Messaging Endpoints ──────────────────────────────────────────────
+app.get('/api/conversations', authenticateToken, (req, res) => {
+  if (!req.user) return res.json({ success: true, conversations: [] });
+  try {
+    const rows = db.prepare(`
+      SELECT c.*,
+             u.name as other_name, u.username as other_username, u.avatar as other_avatar, u.role as other_role
+      FROM conversations c
+      JOIN users u ON (CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END) = u.id
+      WHERE c.user1_id = ? OR c.user2_id = ?
+      ORDER BY c.updated_at DESC
+    `).all(req.user.id, req.user.id, req.user.id);
+    res.json({ success: true, conversations: rows });
+  } catch (err) {
+    res.json({ success: true, conversations: [] });
+  }
+});
+
+app.get('/api/conversations/:id/messages', authenticateToken, (req, res) => {
+  if (!req.user) return res.json({ success: true, messages: [] });
+  try {
+    const convId = req.params.id;
+    const rows = db.prepare(`
+      SELECT m.*, u.name as sender_name, u.avatar as sender_avatar
+      FROM direct_messages m
+      LEFT JOIN users u ON m.sender_id = u.id
+      WHERE m.conversation_id = ?
+      ORDER BY m.created_at ASC
+    `).all(convId);
+    res.json({ success: true, messages: rows });
+  } catch (err) {
+    res.json({ success: true, messages: [] });
+  }
+});
+
+app.post('/api/conversations/:id/messages', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const convId = req.params.id;
+    const { content } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'نص الرسالة فارغ' });
+    }
+    const msgId = `msg_${Date.now()}`;
+    const now = Date.now();
+    db.prepare(`
+      INSERT INTO direct_messages (id, conversation_id, sender_id, content, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(msgId, convId, req.user.id, content.trim(), now);
+    db.prepare(`
+      UPDATE conversations SET last_message = ?, updated_at = ? WHERE id = ?
+    `).run(content.trim(), now, convId);
+    scheduleCloudSync();
+    res.status(201).json({
+      success: true,
+      message: {
+        id: msgId,
+        conversation_id: convId,
+        sender_id: req.user.id,
+        content: content.trim(),
+        created_at: now,
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر إرسال الرسالة' });
   }
 });
 

@@ -13,7 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import ShareModal from '@/components/share/ShareModal';
-import { tokenStorage } from '@/lib/api';
+import { tokenStorage, api } from '@/lib/api';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Flag, Trash2, Copy } from 'lucide-react';
 
 const MAX_CHARS = 280;
 
@@ -240,6 +244,44 @@ export default function Feed() {
     } catch {
       const next = !followingMap[userId];
       setFollowingMap((prev) => ({ ...prev, [userId]: next }));
+    }
+  };
+
+  const handleReportPost = async (postId: string) => {
+    try {
+      await api.post('/reports', {
+        target_type: 'post',
+        target_id: postId,
+        reason: 'محتوى غير لائق أو مخالف لمعايير المجتمع',
+      });
+      toast({
+        title: 'تم إرسال البلاغ بنجاح 🚨',
+        description: 'شكراً لمساعدتنا في الحفاظ على مجتمع سرد آمناً ومحترماً.',
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر إرسال البلاغ',
+        description: 'حدث خطأ أثناء محاولة إرسال البلاغ.',
+      });
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا المنشور؟')) return;
+    const res = await postsService.deletePost(postId);
+    if (res.success) {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      toast({
+        title: 'تم حذف المنشور 🗑️',
+        description: 'تمت إزالة المنشور بنجاح.',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر حذف المنشور',
+        description: res.message || 'غير مصرح لك بحذف هذا المنشور.',
+      });
     }
   };
 
@@ -546,12 +588,44 @@ export default function Feed() {
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer text-xs"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(window.location.origin + '/app/feed');
+                                toast({ title: 'تم نسخ الرابط! 📋', description: 'تم نسخ رابط المنشور إلى الحافظة.' });
+                              }}
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              نسخ رابط المنشور
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer text-xs text-amber-600 dark:text-amber-400"
+                              onClick={() => handleReportPost(post.id)}
+                            >
+                              <Flag className="w-3.5 h-3.5" />
+                              إبلاغ عن محتوى
+                            </DropdownMenuItem>
+                            {(user?.id === post.author?.id || user?.role === 'admin' || user?.role === 'org') && (
+                              <DropdownMenuItem
+                                className="gap-2 cursor-pointer text-xs text-destructive"
+                                onClick={() => handleDeletePost(post.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                حذف المنشور
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
 
                       {/* Content with hashtag highlighting */}

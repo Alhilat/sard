@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/layouts/AppLayout';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/api';
 
 interface MessageItem {
   id: string;
@@ -134,6 +135,9 @@ export default function Messages() {
     );
 
     setInputText('');
+
+    // Persist to backend
+    api.post(`/conversations/${activeConv.id}/messages`, { content }).catch(() => {});
 
     // Simulate genuine friendly reply if recipient is online
     if (activeConv.user.online) {

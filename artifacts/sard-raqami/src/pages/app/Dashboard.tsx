@@ -10,13 +10,30 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { UserAvatar } from '@/layouts/AppLayout';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [coursesList, setCoursesList] = useState<Course[]>([]);
   const [activitiesList, setActivitiesList] = useState<Activity[]>([]);
   const [notificationsList, setNotificationsList] = useState<any[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const [followedMap, setFollowedMap] = useState<Record<string, boolean>>({});
+
+  const handleFollow = async (targetId: string, targetName: string) => {
+    const isFollowing = Boolean(followedMap[targetId]);
+    setFollowedMap((prev) => ({ ...prev, [targetId]: !isFollowing }));
+    try {
+      await api.post(`/users/${targetId}/follow`);
+      toast({
+        title: !isFollowing ? 'تمت المتابعة بنجاح! 👤' : 'تم إلغاء المتابعة',
+        description: !isFollowing ? `أنت الآن تتابع ${targetName}.` : `ألغيت متابعة ${targetName}.`,
+      });
+    } catch {
+      setFollowedMap((prev) => ({ ...prev, [targetId]: isFollowing }));
+    }
+  };
 
   useEffect(() => {
     coursesService.getCourses().then((data) => setCoursesList(data));
@@ -247,11 +264,14 @@ export default function Dashboard() {
                       <p className="text-xs font-semibold truncate">{su.name}</p>
                       <p className="text-[11px] text-muted-foreground truncate">@{su.username}</p>
                     </div>
-                    <Link href="/app/feed">
-                      <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 flex-shrink-0">
-                        متابعة
-                      </Button>
-                    </Link>
+                    <Button
+                      size="sm"
+                      variant={followedMap[su.id] ? 'secondary' : 'outline'}
+                      className="h-7 text-xs px-2.5 flex-shrink-0 cursor-pointer"
+                      onClick={() => handleFollow(su.id, su.name)}
+                    >
+                      {followedMap[su.id] ? 'متابَع' : 'متابعة'}
+                    </Button>
                   </div>
                 ))
               )}

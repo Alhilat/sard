@@ -81,6 +81,21 @@ export const postsService = {
     }
   },
 
+  getPosts: async (page = 1, limit = 20, groupId?: string): Promise<Post[]> => {
+    return postsService.getFeed(page, limit, groupId);
+  },
+
+  deletePost: async (postId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await api.delete<{ success: boolean; message?: string }>(`/posts/${postId}`);
+      inMemoryPosts = inMemoryPosts.filter((p) => p.id !== postId);
+      return res || { success: true };
+    } catch (err: any) {
+      inMemoryPosts = inMemoryPosts.filter((p) => p.id !== postId);
+      return { success: false, message: err?.message || 'تعذر حذف المنشور' };
+    }
+  },
+
   createPost: async (data: {
     content: string;
     scope?: string;

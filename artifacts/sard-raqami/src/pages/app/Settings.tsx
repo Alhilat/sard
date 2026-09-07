@@ -12,10 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserAvatar } from '@/layouts/AppLayout';
+import { api } from '@/lib/api';
+import { useLocation } from 'wouter';
 
 export default function Settings() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const [fullName, setFullName] = useState(user?.name || '');
   const [username, setUsername] = useState(user?.username || '');
@@ -24,6 +27,13 @@ export default function Settings() {
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [saved, setSaved] = useState(false);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -52,6 +62,89 @@ export default function Settings() {
       description: 'تم تحديث بيانات ملفك الشخصي في المنصة.',
     });
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'بيانات غير مكتملة',
+        description: 'يرجى إدخال كلمة المرور الحالية والجديدة.',
+      });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'كلمة مرور قصيرة',
+        description: 'يجب ألا تقل كلمة المرور الجديدة عن 6 أحرف أو أرقام.',
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'عدم تطابق',
+        description: 'كلمة المرور الجديدة وتأكيدها غير متطابقين.',
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await api.post<{ success: boolean; message?: string }>('/users/change-password', {
+        currentPassword,
+        newPassword,
+      });
+      if (res.success) {
+        toast({
+          title: 'تم تغيير كلمة المرور بنجاح! 🔒',
+          description: 'تم تحديث بيانات الأمان لحسابك.',
+        });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'تعذر تغيير كلمة المرور',
+          description: res.message || 'كلمة المرور الحالية غير صحيحة.',
+        });
+      }
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: err?.message || 'تعذر تغيير كلمة المرور.',
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm('تحذير نهائي: هل أنت متأكد تماماً من رغبتك في حذف حسابك؟ سيتم حذف جميع منشوراتك وتفاعلاتك نهائياً ولن تتمكن من استعادتها.')) {
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      await api.delete('/users/me');
+      toast({
+        title: 'تم حذف الحساب بنجاح',
+        description: 'نأمل أن نراك مجدداً في منصة سرد رقمي.',
+      });
+      logout();
+      navigate('/landing');
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر حذف الحساب',
+        description: 'حدث خطأ أثناء محاولة إزالة الحساب.',
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   return (
@@ -175,16 +268,53 @@ export default function Settings() {
               </div>
               <Separator />
               <p className="font-semibold text-sm">تغيير كلمة المرور</p>
-              <div className="space-y-3">
-                <div className="space-y-1.5"><Label>كلمة المرور الحالية</Label><Input type="password" placeholder="••••••••" /></div>
-                <div className="space-y-1.5"><Label>كلمة المرور الجديدة</Label><Input type="password" placeholder="••••••••" /></div>
-                <div className="space-y-1.5"><Label>تأكيد كلمة المرور</Label><Input type="password" placeholder="••••••••" /></div>
-              </div>
-              <Button onClick={handleSaveProfile} className="font-bold rounded-xl">حفظ بيانات الحساب</Button>
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>كلمة المرور الحالية</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>كلمة المرور الجديدة</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>تأكيد كلمة المرور الجديدة</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isChangingPassword || !currentPassword || !newPassword}
+                  className="font-bold rounded-xl cursor-pointer"
+                >
+                  {isChangingPassword ? 'جارٍ التحديث...' : 'تحديث كلمة المرور'}
+                </Button>
+              </form>
               <Separator />
               <div className="space-y-3">
                 <p className="font-semibold text-sm text-destructive">منطقة الخطر</p>
-                <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive hover:text-white">حذف الحساب</Button>
+                <Button
+                  variant="outline"
+                  disabled={isDeletingAccount}
+                  onClick={handleDeleteAccount}
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-white cursor-pointer"
+                >
+                  {isDeletingAccount ? 'جارٍ الحذف...' : 'حذف الحساب نهائياً'}
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -35,7 +35,7 @@ export default function Groups() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isVerified = Boolean(user?.verified || user?.role === 'admin');
+  const isVerified = Boolean(user?.verified || user?.role === 'admin' || user?.role === 'org');
 
   // Load groups on mount and when filter changes
   useEffect(() => {

@@ -32,7 +32,7 @@ export default function CreateActivityModal({ isOpen, onClose, onActivityCreated
   const [capacity, setCapacity] = useState('100');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isVerified = Boolean(user?.verified || user?.role === 'admin');
+  const isVerified = Boolean(user?.verified || user?.role === 'admin' || user?.role === 'org');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
