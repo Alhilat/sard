@@ -889,9 +889,26 @@ app.patch('/api/users/me', authenticateToken, (req, res) => {
   res.json(formatUserResponse(updatedUser));
 });
 
-app.get('/api/users', (_req, res) => {
-  const users = db.prepare('SELECT * FROM users WHERE is_banned = 0 ORDER BY created_at DESC LIMIT 50').all();
-  res.json(users.map(formatUserResponse));
+app.get('/api/users', (req, res) => {
+  try {
+    const q = req.query.q ? req.query.q.trim() : '';
+    let users;
+    if (q) {
+      const searchParam = `%${q}%`;
+      users = db.prepare(`
+        SELECT * FROM users
+        WHERE is_banned = 0 AND (LOWER(name) LIKE LOWER(?) OR LOWER(username) LIKE LOWER(?))
+        ORDER BY created_at DESC
+        LIMIT 30
+      `).all(searchParam, searchParam);
+    } else {
+      users = db.prepare('SELECT * FROM users WHERE is_banned = 0 ORDER BY created_at DESC LIMIT 50').all();
+    }
+    res.json(users.map(formatUserResponse));
+  } catch (err) {
+    console.error('Error getting users:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب المستخدمين' });
+  }
 });
 
 // ── Sard Posts (Feed & Sharing) ─────────────────────────────────────────────
@@ -2407,15 +2424,90 @@ app.get('/api/conversations', authenticateToken, (req, res) => {
   try {
     const rows = db.prepare(`
       SELECT c.*,
-             u.name as other_name, u.username as other_username, u.avatar as other_avatar, u.role as other_role
+             (CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END) as other_user_id,
+             u.name as other_name, u.username as other_username, u.avatar as other_avatar, u.role as other_role, u.verified as other_verified
       FROM conversations c
       JOIN users u ON (CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END) = u.id
       WHERE c.user1_id = ? OR c.user2_id = ?
       ORDER BY c.updated_at DESC
-    `).all(req.user.id, req.user.id, req.user.id);
-    res.json({ success: true, conversations: rows });
+    `).all(req.user.id, req.user.id, req.user.id, req.user.id);
+
+    const conversations = rows.map((r) => ({
+      id: r.id,
+      lastMessage: r.last_message || '',
+      time: formatRelativeTime(r.updated_at),
+      updated_at: r.updated_at,
+      user: {
+        id: r.other_user_id,
+        name: r.other_name || 'مستخدم سرد',
+        username: r.other_username || 'user',
+        avatar: r.other_avatar || '',
+        role: r.other_role || 'عضو',
+        verified: Boolean(r.other_verified),
+        online: true,
+      },
+    }));
+
+    res.json({ success: true, conversations, data: conversations });
   } catch (err) {
+    console.error('Error getting conversations:', err);
     res.json({ success: true, conversations: [] });
+  }
+});
+
+app.post('/api/conversations', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const { recipientId } = req.body;
+    if (!recipientId) return res.status(400).json({ success: false, message: 'معرف المستخدم غير محدد' });
+    if (recipientId === req.user.id) return res.status(400).json({ success: false, message: 'لا يمكنك مراسلة نفسك' });
+
+    const recipient = db.prepare('SELECT id, name, username, avatar, role, verified FROM users WHERE id = ?').get(recipientId);
+    if (!recipient) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+
+    let conv = db.prepare(`
+      SELECT * FROM conversations
+      WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+    `).get(req.user.id, recipientId, recipientId, req.user.id);
+
+    if (!conv) {
+      const convId = `conv_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+      const now = Date.now();
+      db.prepare(`
+        INSERT INTO conversations (id, user1_id, user2_id, last_message, updated_at)
+        VALUES (?, ?, ?, '', ?)
+      `).run(convId, req.user.id, recipientId, now);
+      scheduleCloudSync();
+
+      conv = {
+        id: convId,
+        user1_id: req.user.id,
+        user2_id: recipientId,
+        last_message: '',
+        updated_at: now,
+      };
+    }
+
+    const conversationObj = {
+      id: conv.id,
+      lastMessage: conv.last_message || '',
+      time: formatRelativeTime(conv.updated_at),
+      updated_at: conv.updated_at,
+      user: {
+        id: recipient.id,
+        name: recipient.name,
+        username: recipient.username,
+        avatar: recipient.avatar || '',
+        role: recipient.role || 'عضو',
+        verified: Boolean(recipient.verified),
+        online: true,
+      },
+    };
+
+    res.json({ success: true, conversation: conversationObj, data: conversationObj });
+  } catch (err) {
+    console.error('Error starting conversation:', err);
+    res.status(500).json({ success: false, message: 'تعذر إنشاء أو فتح المحادثة' });
   }
 });
 
@@ -2430,8 +2522,22 @@ app.get('/api/conversations/:id/messages', authenticateToken, (req, res) => {
       WHERE m.conversation_id = ?
       ORDER BY m.created_at ASC
     `).all(convId);
-    res.json({ success: true, messages: rows });
+
+    const messages = rows.map((r) => ({
+      id: r.id,
+      conversation_id: r.conversation_id,
+      sender: r.sender_id === req.user.id ? 'me' : 'other',
+      sender_id: r.sender_id,
+      senderName: r.sender_name,
+      content: r.content,
+      time: formatRelativeTime(r.created_at),
+      created_at: r.created_at,
+      status: 'read',
+    }));
+
+    res.json({ success: true, messages, data: messages });
   } catch (err) {
+    console.error('Error getting direct messages:', err);
     res.json({ success: true, messages: [] });
   }
 });
@@ -2444,27 +2550,50 @@ app.post('/api/conversations/:id/messages', authenticateToken, (req, res) => {
     if (!content || !content.trim()) {
       return res.status(400).json({ success: false, message: 'نص الرسالة فارغ' });
     }
-    const msgId = `msg_${Date.now()}`;
+
+    const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(convId);
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'المحادثة غير موجودة' });
+    }
+    const otherUserId = conv.user1_id === req.user.id ? conv.user2_id : conv.user1_id;
+
+    const msgId = `msg_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const now = Date.now();
     db.prepare(`
       INSERT INTO direct_messages (id, conversation_id, sender_id, content, created_at)
       VALUES (?, ?, ?, ?, ?)
     `).run(msgId, convId, req.user.id, content.trim(), now);
+
     db.prepare(`
       UPDATE conversations SET last_message = ?, updated_at = ? WHERE id = ?
     `).run(content.trim(), now, convId);
+
+    // Notify recipient in their notifications tray
+    createNotification({
+      userId: otherUserId,
+      actorId: req.user.id,
+      type: 'message',
+      title: `رسالة جديدة من ${req.user.name}`,
+      content: content.trim().length > 60 ? content.trim().slice(0, 60) + '...' : content.trim(),
+      link: '/app/messages',
+    });
+
     scheduleCloudSync();
     res.status(201).json({
       success: true,
       message: {
         id: msgId,
         conversation_id: convId,
+        sender: 'me',
         sender_id: req.user.id,
         content: content.trim(),
         created_at: now,
-      }
+        time: 'الآن',
+        status: 'read',
+      },
     });
   } catch (err) {
+    console.error('Error sending direct message:', err);
     res.status(500).json({ success: false, message: 'تعذر إرسال الرسالة' });
   }
 });
