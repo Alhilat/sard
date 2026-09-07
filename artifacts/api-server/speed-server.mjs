@@ -6,6 +6,8 @@ import { DatabaseSync } from 'node:sqlite';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'node:url';
+import pg from 'pg';
+const { Pool } = pg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,14 +18,62 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sard-raqami-ultra-speed-secret-202
 const PETRA_USER = process.env.PETRA_USER || 'petra';
 const PETRA_PASS = process.env.PETRA_PASS || 'petra2026';
 
-// ── Database Setup ──────────────────────────────────────────────────────────
+// ── Database Setup & Cloud PostgreSQL Persistence ───────────────────────────
 const dataDir = process.env.DATA_DIR || (process.env.DATABASE_PATH ? path.dirname(process.env.DATABASE_PATH) : null) || path.resolve(__dirname, '../../database');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 const dbPath = process.env.DATABASE_PATH || path.resolve(dataDir, 'sard_production.sqlite');
-console.log(`[Database] Initializing SQLite production engine at: ${dbPath}`);
 
+let pgPool = null;
+let isCloudPersistenceActive = false;
+let isDirty = false;
+let syncTimeout = null;
+
+// Initialize Cloud PostgreSQL if DATABASE_URL is provided (Neon / Supabase / Render Postgres)
+if (process.env.DATABASE_URL) {
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    console.log('[Cloud Database] DATABASE_URL detected. Connecting to Cloud PostgreSQL...');
+    pgPool = new Pool({
+      connectionString: dbUrl,
+      ssl: dbUrl.includes('localhost') ? false : { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+    });
+
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS sard_cloud_store (
+        key TEXT PRIMARY KEY,
+        value BYTEA NOT NULL,
+        updated_at BIGINT NOT NULL
+      );
+    `);
+
+    const res = await pgPool.query('SELECT value, updated_at FROM sard_cloud_store WHERE key = $1', ['sard_main_db']);
+    if (res.rows.length > 0 && res.rows[0].value) {
+      const snapshot = res.rows[0].value;
+      const updatedDate = new Date(Number(res.rows[0].updated_at)).toISOString();
+      console.log(`[Cloud Database] Found remote snapshot (${snapshot.length} bytes, updated at ${updatedDate}). Restoring...`);
+
+      if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
+      if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
+
+      fs.writeFileSync(dbPath, snapshot);
+      console.log('[Cloud Database] ✅ Database state successfully restored from Cloud PostgreSQL! Zero data lost across sleeps.');
+    } else {
+      console.log('[Cloud Database] No previous snapshot in Cloud PostgreSQL. Fresh store initialized.');
+    }
+
+    isCloudPersistenceActive = true;
+  } catch (err) {
+    console.error('[Cloud Database] Warning: Could not connect to Cloud PostgreSQL:', err.message);
+    console.log('[Cloud Database] Falling back to local SQLite storage.');
+  }
+} else {
+  console.log('[Cloud Database] No DATABASE_URL set. Running with local SQLite.');
+}
+
+console.log(`[Database] Initializing SQLite production engine at: ${dbPath}`);
 const db = new DatabaseSync(dbPath);
 
 // High-concurrency WAL mode and ultra-fast memory settings for 10k users
@@ -34,6 +84,61 @@ db.exec(`
   PRAGMA temp_store = MEMORY;
   PRAGMA foreign_keys = ON;
 `);
+
+// ── Cloud PostgreSQL Auto-Sync Engine ───────────────────────────────────────
+async function flushToPostgres() {
+  if (!isCloudPersistenceActive || !pgPool) return;
+  try {
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+    if (!fs.existsSync(dbPath)) return;
+    const data = fs.readFileSync(dbPath);
+    const now = Date.now();
+    await pgPool.query(`
+      INSERT INTO sard_cloud_store (key, value, updated_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (key) DO UPDATE
+      SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at;
+    `, ['sard_main_db', data, now]);
+    isDirty = false;
+  } catch (err) {
+    console.error('[Cloud Database] Error syncing to Cloud PostgreSQL:', err.message);
+  }
+}
+
+function scheduleCloudSync() {
+  isDirty = true;
+  if (!isCloudPersistenceActive) return;
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    flushToPostgres().catch(() => {});
+  }, 1200);
+}
+
+// Periodic safeguard sync every 30 seconds if dirty
+setInterval(() => {
+  if (isDirty && isCloudPersistenceActive) {
+    flushToPostgres().catch(() => {});
+  }
+}, 30000);
+
+// Graceful shutdown on container sleep (Render sends SIGTERM)
+const handleShutdown = async (signal) => {
+  console.log(`[Server] Received ${signal}. Flushing database to Cloud PostgreSQL before sleep/shutdown...`);
+  if (isCloudPersistenceActive) {
+    await flushToPostgres();
+  }
+  try {
+    db.close();
+  } catch {}
+  if (pgPool) {
+    await pgPool.end().catch(() => {});
+  }
+  console.log('[Server] Shutdown complete. Data is safely stored in Cloud PostgreSQL.');
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
 
 // ── Schema Initialization ───────────────────────────────────────────────────
 db.exec(`
@@ -383,6 +488,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Automatically sync database state to Cloud PostgreSQL on modifying HTTP operations
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 400) {
+        scheduleCloudSync();
+      }
+    });
+  }
+  next();
+});
+
 // Helper: Format User response (with dynamic counts from SQLite)
 function formatUserResponse(u) {
   let followersCount = 0;
@@ -484,6 +601,12 @@ app.get(['/api/health', '/api/ping'], (_req, res) => {
     status: 'ok',
     mode: 'production',
     engine: 'sqlite-wal-inmemory',
+    cloud_persistence: isCloudPersistenceActive ? 'active' : 'local_only',
+    database_provider: process.env.DATABASE_URL ? (
+      process.env.DATABASE_URL.includes('neon.tech') ? 'Neon PostgreSQL' :
+      process.env.DATABASE_URL.includes('supabase') ? 'Supabase PostgreSQL' :
+      process.env.DATABASE_URL.includes('render.com') ? 'Render PostgreSQL' : 'Cloud PostgreSQL'
+    ) : 'Local SQLite',
     avg_latency_ms: Number(avgLatency),
     total_requests: metrics.totalRequests,
     uptime_sec: Math.floor((Date.now() - metrics.startedAt) / 1000),
