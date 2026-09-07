@@ -12,6 +12,7 @@ import {
   Course, ChatMessage, CourseChatSettings, ChatPermissionMode, coursesService
 } from '@/services/coursesService';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CourseGroupChatProps {
   course: Course;
@@ -20,6 +21,16 @@ interface CourseGroupChatProps {
 
 export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const isActualInstructor = Boolean(
+    user?.role === 'admin' ||
+    user?.role === 'org' ||
+    user?.id === course.instructor?.id ||
+    user?.id === course.org_id ||
+    user?.id === (course as any).instructor_id
+  );
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [settings, setSettings] = useState<CourseChatSettings>({
     courseId: course.id,
@@ -29,7 +40,9 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
   const [isSending, setIsSending] = useState(false);
 
   // User Role View Switcher: allows testing both Instructor and Student perspectives
-  const [activeRole, setActiveRole] = useState<'instructor' | 'student'>('instructor');
+  const [activeRole, setActiveRole] = useState<'instructor' | 'student'>(
+    isActualInstructor ? 'instructor' : 'student'
+  );
   const [isInstructorControlOpen, setIsInstructorControlOpen] = useState(true);
 
   // Pinned announcement edit modal/state
@@ -38,16 +51,65 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load chat settings and messages
+  // Load chat settings and messages, with 2.5s polling so everyone receives messages
   useEffect(() => {
-    Promise.all([
-      coursesService.getChatSettings(course.id),
-      coursesService.getChatMessages(course.id),
-    ]).then(([fetchedSettings, fetchedMessages]) => {
-      setSettings(fetchedSettings);
-      setPinText(fetchedSettings.pinnedAnnouncement || '');
-      setMessages(fetchedMessages);
-    });
+    let isMounted = true;
+
+    const fetchInitialData = async () => {
+      try {
+        const [fetchedSettings, fetchedMessages] = await Promise.all([
+          coursesService.getChatSettings(course.id),
+          coursesService.getChatMessages(course.id),
+        ]);
+        if (!isMounted) return;
+        setSettings(fetchedSettings);
+        setPinText(fetchedSettings.pinnedAnnouncement || '');
+        setMessages(fetchedMessages);
+      } catch (err) {
+        console.error('Failed to load initial course chat:', err);
+      }
+    };
+
+    fetchInitialData();
+
+    // Poll every 2.5 seconds to receive messages from other participants live
+    const pollTimer = setInterval(async () => {
+      try {
+        const [newSettings, newMessages] = await Promise.all([
+          coursesService.getChatSettings(course.id),
+          coursesService.getChatMessages(course.id),
+        ]);
+        if (!isMounted) return;
+
+        setSettings((prev) => {
+          if (
+            prev.permissionMode !== newSettings.permissionMode ||
+            prev.pinnedAnnouncement !== newSettings.pinnedAnnouncement
+          ) {
+            return newSettings;
+          }
+          return prev;
+        });
+
+        setMessages((prev) => {
+          if (
+            newMessages.length !== prev.length ||
+            (newMessages.length > 0 &&
+              newMessages[newMessages.length - 1].id !== prev[prev.length - 1]?.id)
+          ) {
+            return newMessages;
+          }
+          return prev;
+        });
+      } catch {
+        // silent polling error
+      }
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+    };
   }, [course.id]);
 
   // Scroll to bottom when new messages arrive
@@ -132,15 +194,24 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
     setIsSending(true);
     try {
       const isInst = activeRole === 'instructor';
+      const senderId = user?.id || (isInst ? course.instructor?.id || 'inst-id' : 'usr-student');
+      const senderName = isInst
+        ? user?.name || course.instructor?.name || 'معلم الدورة'
+        : user?.name || 'طالب مشارك';
+      const senderRole: 'instructor' | 'student' = isInst ? 'instructor' : 'student';
+
       const created = await coursesService.sendChatMessage(course.id, {
-        senderId: isInst ? course.instructor.id : 'user-student',
-        senderName: isInst ? course.instructor.name : 'طالب مشارك (أنت)',
-        senderRole: isInst ? 'instructor' : 'student',
+        senderId,
+        senderName,
+        senderRole,
         content,
         isAnnouncement: isInst && settings.permissionMode === 'instructor_only',
       });
 
-      setMessages((prev) => [...prev, created]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === created.id)) return prev;
+        return [...prev, created];
+      });
       setInputText('');
     } catch {
       toast({
@@ -410,28 +481,33 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
           ) : (
             messages.map((msg) => {
               const isInstructor = msg.senderRole === 'instructor';
+              const isMe = user?.id ? msg.senderId === user.id : (activeRole === 'instructor' ? isInstructor : !isInstructor);
               return (
                 <div
                   key={msg.id}
                   className={`flex items-start gap-3 max-w-2xl ${
-                    isInstructor ? 'me-auto' : 'ms-auto flex-row-reverse'
+                    isMe ? 'ms-auto flex-row-reverse' : 'me-auto'
                   }`}
                 >
                   {/* Monogram Avatar */}
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs border ${
-                      isInstructor
-                        ? 'bg-gradient-to-br from-primary/30 to-primary/10 text-primary border-primary/30'
-                        : 'bg-muted text-muted-foreground border-border'
+                      isMe
+                        ? 'bg-primary text-primary-foreground border-primary/40'
+                        : isInstructor
+                          ? 'bg-gradient-to-br from-primary/30 to-primary/10 text-primary border-primary/30'
+                          : 'bg-muted text-muted-foreground border-border'
                     }`}
                   >
-                    {msg.senderName.slice(0, 1)}
+                    {(msg.senderName || 'م').slice(0, 1)}
                   </div>
 
                   {/* Message Bubble */}
-                  <div className={`space-y-1 ${isInstructor ? 'text-right' : 'text-right'}`}>
+                  <div className={`space-y-1 ${isMe ? 'text-left' : 'text-right'}`}>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-xs text-foreground">{msg.senderName}</span>
+                      <span className="font-bold text-xs text-foreground">
+                        {msg.senderName} {isMe && '(أنت)'}
+                      </span>
                       {isInstructor && (
                         <Badge
                           variant="secondary"
@@ -441,14 +517,25 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                           معلم الدورة
                         </Badge>
                       )}
+                      {msg.isAnnouncement && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] h-4.5 px-1.5 font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 gap-1"
+                        >
+                          <Megaphone className="w-2.5 h-2.5" />
+                          إعلان
+                        </Badge>
+                      )}
                       <span className="text-[10px] text-muted-foreground">{msg.timestamp}</span>
                     </div>
 
                     <div
                       className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
-                        isInstructor
-                          ? 'bg-card border-2 border-primary/25 text-foreground shadow-2xs rounded-tr-xs'
-                          : 'bg-primary text-primary-foreground rounded-tl-xs shadow-2xs'
+                        isMe
+                          ? 'bg-primary text-primary-foreground rounded-tl-xs shadow-2xs'
+                          : isInstructor
+                            ? 'bg-card border-2 border-primary/25 text-foreground shadow-2xs rounded-tr-xs'
+                            : 'bg-card border border-border text-foreground shadow-2xs rounded-tr-xs'
                       }`}
                     >
                       {msg.content}
@@ -471,7 +558,7 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                   <Megaphone className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>
                     <strong>وضع الإعلانات مفعل:</strong> إرسال الرسائل مقتصر على معلم الدورة (
-                    {course.instructor.name}) حالياً.
+                    {course.instructor?.name || 'المعلم'}) حالياً.
                   </span>
                 </>
               ) : (
@@ -491,7 +578,7 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={
                     activeRole === 'instructor'
-                      ? `اكتب توجيهاً أو رداً لطلابك بصفتك (${course.instructor.name})...`
+                      ? `اكتب توجيهاً أو رداً لطلابك بصفتك (${user?.name || course.instructor?.name || 'المعلم'})...`
                       : 'اكتب سؤالك أو استفسارك في نقاش الدورة...'
                   }
                   className="text-xs sm:text-sm h-11 bg-background/80 border-border focus-visible:ring-primary"
@@ -511,7 +598,9 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                 <span className="flex items-center gap-1">
                   <span>أنت ترسل الآن بصفتك:</span>
                   <strong className="text-foreground">
-                    {activeRole === 'instructor' ? 'معلم الدورة 👨‍🏫' : 'طالب مشارك 🎓'}
+                    {activeRole === 'instructor'
+                      ? `معلم الدورة 👨‍🏫 (${user?.name || course.instructor?.name || 'المعلم'})`
+                      : `طالب مشارك 🎓 (${user?.name || 'أنت'})`}
                   </strong>
                 </span>
 

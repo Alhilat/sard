@@ -165,6 +165,15 @@ export const coursesService = {
   },
 
   getChatSettings: async (courseId: string): Promise<CourseChatSettings> => {
+    try {
+      const res = await api.get<CourseChatSettings>(`/courses/${courseId}/chat/settings`);
+      if (res && res.courseId) {
+        chatSettingsStore[courseId] = res;
+        return res;
+      }
+    } catch {
+      // fallback
+    }
     if (!chatSettingsStore[courseId]) {
       chatSettingsStore[courseId] = {
         courseId,
@@ -178,6 +187,15 @@ export const coursesService = {
     courseId: string,
     updates: Partial<CourseChatSettings>
   ): Promise<CourseChatSettings> => {
+    try {
+      const res = await api.patch<CourseChatSettings>(`/courses/${courseId}/chat/settings`, updates);
+      if (res && res.courseId) {
+        chatSettingsStore[courseId] = res;
+        return res;
+      }
+    } catch {
+      // fallback
+    }
     const current = chatSettingsStore[courseId] || {
       courseId,
       permissionMode: 'all',
@@ -192,6 +210,16 @@ export const coursesService = {
   },
 
   getChatMessages: async (courseId: string): Promise<ChatMessage[]> => {
+    try {
+      const res = await api.get<any>(`/courses/${courseId}/chat/messages`);
+      const list = Array.isArray(res) ? res : (res?.messages || res?.data);
+      if (Array.isArray(list)) {
+        chatMessagesStore[courseId] = list;
+        return list;
+      }
+    } catch {
+      // fallback
+    }
     return chatMessagesStore[courseId] || [];
   },
 
@@ -205,6 +233,18 @@ export const coursesService = {
       isAnnouncement?: boolean;
     }
   ): Promise<ChatMessage> => {
+    try {
+      const res = await api.post<any>(`/courses/${courseId}/chat/messages`, data);
+      const msg = res?.message || res?.data || (res?.id ? res : null);
+      if (msg && msg.id) {
+        if (!chatMessagesStore[courseId]) chatMessagesStore[courseId] = [];
+        chatMessagesStore[courseId].push(msg);
+        return msg;
+      }
+    } catch {
+      // fallback
+    }
+
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       courseId,

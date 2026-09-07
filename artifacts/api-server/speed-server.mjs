@@ -332,6 +332,26 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS course_chat_settings (
+    course_id TEXT PRIMARY KEY,
+    permission_mode TEXT DEFAULT 'all',
+    pinned_announcement TEXT DEFAULT '',
+    slow_mode_seconds INTEGER DEFAULT 0,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS course_chat_messages (
+    id TEXT PRIMARY KEY,
+    course_id TEXT NOT NULL,
+    sender_id TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    sender_role TEXT NOT NULL DEFAULT 'student',
+    content TEXT NOT NULL,
+    is_announcement INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
   CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
@@ -344,6 +364,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
   CREATE INDEX IF NOT EXISTS idx_direct_messages_conv ON direct_messages(conversation_id, created_at ASC);
+  CREATE INDEX IF NOT EXISTS idx_course_chat_messages_course ON course_chat_messages(course_id, created_at ASC);
 `);
 
 // Flush initial snapshot immediately so public.sard_cloud_store is populated right away
@@ -507,6 +528,29 @@ const stmtInsertCourse = db.prepare(`
 const stmtEnrollCourse = db.prepare('INSERT OR IGNORE INTO course_enrollments (course_id, user_id, progress, created_at) VALUES (?, ?, 0, ?)');
 const stmtIncrementCourseStudents = db.prepare('UPDATE courses SET students = students + 1 WHERE id = ?');
 const stmtCheckCourseEnrollment = db.prepare('SELECT progress FROM course_enrollments WHERE course_id = ? AND user_id = ?');
+
+// ── Course Chat Prepared Statements ──────────────────────────────────────────
+const stmtGetCourseChatSettings = db.prepare('SELECT * FROM course_chat_settings WHERE course_id = ?');
+const stmtUpsertCourseChatSettings = db.prepare(`
+  INSERT INTO course_chat_settings (course_id, permission_mode, pinned_announcement, slow_mode_seconds, updated_at)
+  VALUES (?, ?, ?, ?, ?)
+  ON CONFLICT(course_id) DO UPDATE SET
+    permission_mode = excluded.permission_mode,
+    pinned_announcement = excluded.pinned_announcement,
+    slow_mode_seconds = excluded.slow_mode_seconds,
+    updated_at = excluded.updated_at
+`);
+const stmtGetCourseChatMessages = db.prepare(`
+  SELECT id, course_id, sender_id, sender_name, sender_role, content, is_announcement, created_at
+  FROM course_chat_messages
+  WHERE course_id = ?
+  ORDER BY created_at ASC
+  LIMIT 300
+`);
+const stmtInsertCourseChatMessage = db.prepare(`
+  INSERT INTO course_chat_messages (id, course_id, sender_id, sender_name, sender_role, content, is_announcement, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`);
 
 // ── Notifications Prepared Statements ───────────────────────────────────────
 const stmtGetNotifications = db.prepare(`
@@ -2029,6 +2073,150 @@ app.post('/api/courses/:id/enroll', authenticateToken, (req, res) => {
   } catch (err) {
     console.error('Error enrolling in course:', err);
     res.status(500).json({ success: false, message: 'تعذر الانضمام إلى الدورة' });
+  }
+});
+
+// ── Course Chat Endpoints ───────────────────────────────────────────────────
+app.get('/api/courses/:id/chat/settings', authenticateToken, (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const row = stmtGetCourseChatSettings.get(courseId);
+    if (!row) {
+      return res.json({
+        courseId,
+        permissionMode: 'all',
+        pinnedAnnouncement: '',
+        slowModeSeconds: 0,
+      });
+    }
+    res.json({
+      courseId: row.course_id,
+      permissionMode: row.permission_mode || 'all',
+      pinnedAnnouncement: row.pinned_announcement || '',
+      slowModeSeconds: row.slow_mode_seconds || 0,
+    });
+  } catch (err) {
+    console.error('Error getting course chat settings:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب إعدادات المحادثة' });
+  }
+});
+
+const updateCourseChatSettingsHandler = (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const courseId = req.params.id;
+    const { permissionMode, pinnedAnnouncement, slowModeSeconds } = req.body;
+    
+    // Check permission: admin or org or course creator
+    const course = stmtGetCourseById.get(courseId);
+    const isOwner = course && course.org_id === req.user.id;
+    const isPrivileged = req.user.role === 'admin' || req.user.role === 'org' || isOwner;
+    if (!isPrivileged) {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بتعديل إعدادات هذه الغرفة' });
+    }
+
+    const current = stmtGetCourseChatSettings.get(courseId) || {};
+    const newMode = permissionMode || current.permission_mode || 'all';
+    const newPin = pinnedAnnouncement !== undefined ? pinnedAnnouncement : (current.pinned_announcement || '');
+    const newSlow = slowModeSeconds !== undefined ? slowModeSeconds : (current.slow_mode_seconds || 0);
+
+    stmtUpsertCourseChatSettings.run(courseId, newMode, newPin, newSlow, Date.now());
+    scheduleCloudSync();
+
+    res.json({
+      courseId,
+      permissionMode: newMode,
+      pinnedAnnouncement: newPin,
+      slowModeSeconds: newSlow,
+    });
+  } catch (err) {
+    console.error('Error updating course chat settings:', err);
+    res.status(500).json({ success: false, message: 'تعذر تحديث إعدادات المحادثة' });
+  }
+};
+
+app.patch('/api/courses/:id/chat/settings', authenticateToken, updateCourseChatSettingsHandler);
+app.post('/api/courses/:id/chat/settings', authenticateToken, updateCourseChatSettingsHandler);
+
+app.get('/api/courses/:id/chat/messages', authenticateToken, (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const rows = stmtGetCourseChatMessages.all(courseId);
+    const messages = rows.map((r) => ({
+      id: r.id,
+      courseId: r.course_id,
+      senderId: r.sender_id,
+      senderName: r.sender_name,
+      senderRole: r.sender_role,
+      content: r.content,
+      isAnnouncement: Boolean(r.is_announcement),
+      timestamp: formatRelativeTime(r.created_at),
+      created_at: r.created_at,
+    }));
+    res.json({ success: true, messages, data: messages });
+  } catch (err) {
+    console.error('Error getting course chat messages:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب رسائل الغرفة' });
+  }
+});
+
+app.post('/api/courses/:id/chat/messages', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const courseId = req.params.id;
+    const { content, senderName, senderRole, isAnnouncement } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'محتوى الرسالة فارغ' });
+    }
+
+    // Verify chat permissions
+    const settings = stmtGetCourseChatSettings.get(courseId);
+    const mode = settings ? settings.permission_mode : 'all';
+    const course = stmtGetCourseById.get(courseId);
+    const isCourseStaff = req.user.role === 'admin' || req.user.role === 'org' || (course && course.org_id === req.user.id);
+
+    if (mode === 'muted' && !isCourseStaff && senderRole !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'المحادثة متوقفة مؤقتاً بواسطة المعلم' });
+    }
+
+    if (mode === 'instructor_only' && !isCourseStaff && senderRole !== 'instructor') {
+      return res.status(403).json({ success: false, message: 'إرسال الرسائل مقتصر على المعلم حالياً' });
+    }
+
+    const msgId = `cmsg_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const effectiveSenderName = senderName || req.user.name || 'طالب مشارك';
+    const effectiveRole = (isCourseStaff || senderRole === 'instructor') ? 'instructor' : 'student';
+    const effectiveAnnouncement = (isAnnouncement && effectiveRole === 'instructor') ? 1 : 0;
+    const now = Date.now();
+
+    stmtInsertCourseChatMessage.run(
+      msgId,
+      courseId,
+      req.user.id,
+      effectiveSenderName,
+      effectiveRole,
+      content.trim(),
+      effectiveAnnouncement,
+      now
+    );
+    scheduleCloudSync();
+
+    const createdMsg = {
+      id: msgId,
+      courseId,
+      senderId: req.user.id,
+      senderName: effectiveSenderName,
+      senderRole: effectiveRole,
+      content: content.trim(),
+      isAnnouncement: Boolean(effectiveAnnouncement),
+      timestamp: 'الآن',
+      created_at: now,
+    };
+
+    res.json({ success: true, message: createdMsg, data: createdMsg });
+  } catch (err) {
+    console.error('Error sending course chat message:', err);
+    res.status(500).json({ success: false, message: 'تعذر إرسال الرسالة' });
   }
 });
 
