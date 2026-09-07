@@ -42,14 +42,14 @@ if (process.env.DATABASE_URL) {
     });
 
     await pgPool.query(`
-      CREATE TABLE IF NOT EXISTS sard_cloud_store (
+      CREATE TABLE IF NOT EXISTS public.sard_cloud_store (
         key TEXT PRIMARY KEY,
         value BYTEA NOT NULL,
         updated_at BIGINT NOT NULL
       );
     `);
 
-    const res = await pgPool.query('SELECT value, updated_at FROM sard_cloud_store WHERE key = $1', ['sard_main_db']);
+    const res = await pgPool.query('SELECT value, updated_at FROM public.sard_cloud_store WHERE key = $1', ['sard_main_db']);
     if (res.rows.length > 0 && res.rows[0].value) {
       const snapshot = res.rows[0].value;
       const updatedDate = new Date(Number(res.rows[0].updated_at)).toISOString();
@@ -94,7 +94,7 @@ async function flushToPostgres() {
     const data = fs.readFileSync(dbPath);
     const now = Date.now();
     await pgPool.query(`
-      INSERT INTO sard_cloud_store (key, value, updated_at)
+      INSERT INTO public.sard_cloud_store (key, value, updated_at)
       VALUES ($1, $2, $3)
       ON CONFLICT (key) DO UPDATE
       SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at;
@@ -306,6 +306,15 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
 `);
+
+// Flush initial snapshot immediately so public.sard_cloud_store is populated right away
+if (isCloudPersistenceActive) {
+  flushToPostgres().then(() => {
+    console.log('[Cloud Database] ✅ Initial snapshot successfully synced to Cloud PostgreSQL.');
+  }).catch((err) => {
+    console.error('[Cloud Database] Initial snapshot sync warning:', err.message);
+  });
+}
 
 // ── In-Memory Fast Caches & Metrics (Sub-Millisecond O(1) Speed) ─────────────
 const bannedUserIds = new Set();
@@ -603,9 +612,9 @@ app.get(['/api/health', '/api/ping'], (_req, res) => {
     engine: 'sqlite-wal-inmemory',
     cloud_persistence: isCloudPersistenceActive ? 'active' : 'local_only',
     database_provider: process.env.DATABASE_URL ? (
+      (process.env.DATABASE_URL.includes('supabase') || process.env.DATABASE_URL.includes('pooler.')) ? 'Supabase PostgreSQL' :
       process.env.DATABASE_URL.includes('neon.tech') ? 'Neon PostgreSQL' :
-      process.env.DATABASE_URL.includes('supabase') ? 'Supabase PostgreSQL' :
-      process.env.DATABASE_URL.includes('render.com') ? 'Render PostgreSQL' : 'Cloud PostgreSQL'
+      (process.env.DATABASE_URL.includes('render.com') || process.env.DATABASE_URL.includes('dpg-')) ? 'Render PostgreSQL' : 'Cloud PostgreSQL'
     ) : 'Local SQLite',
     avg_latency_ms: Number(avgLatency),
     total_requests: metrics.totalRequests,
