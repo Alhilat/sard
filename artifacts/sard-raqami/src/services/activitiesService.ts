@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 
 export interface Activity {
   id: string;
+  org_id?: string;
   title: string;
   organization?: {
     id: string;
@@ -49,6 +50,33 @@ export const activitiesService = {
       return await api.get<Activity>(`/activities/${activityId}`);
     } catch {
       return undefined;
+    }
+  },
+
+  createActivity: async (data: {
+    title: string;
+    description?: string;
+    category?: string;
+    date: string;
+    time?: string;
+    location?: string;
+    locationType?: string;
+    capacity?: number;
+  }): Promise<{ success: boolean; id?: string; message?: string }> => {
+    try {
+      const res = await api.post<{ success: boolean; id?: string; message?: string }>('/activities', data);
+      return res;
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر إنشاء الفعالية' };
+    }
+  },
+
+  deleteActivity: async (activityId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await api.delete<{ success: boolean; message?: string }>(`/activities/${activityId}`);
+      return res;
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر حذف الفعالية' };
     }
   },
 

@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Calendar, Search, Filter, Sparkles, CheckCircle2 } from 'lucide-react';
+import { MapPin, Clock, Users, Calendar, Search, Filter, Sparkles, CheckCircle2, Plus, Lock, Trash2 } from 'lucide-react';
 import { activitiesService, Activity } from '@/services/activitiesService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import CreateActivityModal from '@/components/activities/CreateActivityModal';
 
 const categories = ['الكل', 'تطوع', 'تقنية', 'بيئة', 'ريادة أعمال', 'صحة', 'ثقافة'];
 
 export default function Activities() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [activitiesList, setActivitiesList] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('الكل');
   const [registeredMap, setRegisteredMap] = useState<Record<string, boolean>>({});
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const isVerified = Boolean(user?.verified || user?.role === 'admin');
 
   useEffect(() => {
     let mounted = true;
@@ -47,6 +54,41 @@ export default function Activities() {
     return matchSearch && matchCat;
   });
 
+  const handleOpenCreate = () => {
+    if (!isVerified) {
+      toast({
+        variant: 'destructive',
+        title: 'خاصية مخصصة للحسابات الموثقة',
+        description: 'تنظيم وإضافة الفعاليات متاح حصرياً للحسابات الموثقة والمنظمات. بصفتك عضواً، يمكنك التسجيل والمشاركة في كافة الفعاليات.',
+      });
+      return;
+    }
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteActivity = async (e: React.MouseEvent, activityId: string, activityTitle: string) => {
+    e.stopPropagation();
+    if (!confirm(`هل أنت متأكد من رغبتك في حذف فعالية "${activityTitle}" نهائياً؟`)) {
+      return;
+    }
+    setDeletingId(activityId);
+    const res = await activitiesService.deleteActivity(activityId);
+    setDeletingId(null);
+    if (res.success) {
+      setActivitiesList((prev) => prev.filter((a) => a.id !== activityId));
+      toast({
+        title: 'تم حذف الفعالية بنجاح',
+        description: `تم إزالة فعالية "${activityTitle}" من جدول الأنشطة.`,
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر حذف الفعالية',
+        description: res.message || 'حدث خطأ أثناء محاولة الحذف.',
+      });
+    }
+  };
+
   const handleRegister = async (id: string) => {
     const isCurrentlyRegistered = Boolean(registeredMap[id]);
     const success = await activitiesService.register(id);
@@ -69,13 +111,38 @@ export default function Activities() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6" dir="rtl">
-      <div>
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-1">
-          <Calendar className="w-4 h-4" />
-          <span>الفعاليات والمبادرات</span>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
+        <div>
+          <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-1">
+            <Calendar className="w-4 h-4" />
+            <span>الفعاليات والمبادرات</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black mb-1 font-display">الأنشطة المجتمعية والفعاليات</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm">اكتشف الأنشطة والفعاليات وسجّل حضورك ومشاركتك</p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black mb-1 font-display">الأنشطة المجتمعية والفعاليات</h1>
-        <p className="text-muted-foreground text-xs sm:text-sm">اكتشف الأنشطة والفعاليات وسجّل حضورك ومشاركتك</p>
+
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          <Button
+            onClick={handleOpenCreate}
+            variant={isVerified ? 'default' : 'outline'}
+            className={`gap-2 font-bold shadow-xs h-10 px-4 ${
+              !isVerified ? 'border-dashed border-border text-muted-foreground hover:text-foreground' : ''
+            }`}
+          >
+            {isVerified ? (
+              <Plus className="w-4 h-4" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+            <span>تنظيم فعالية جديدة</span>
+            {!isVerified && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted">
+                للموثقين
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Search & Filter */}
@@ -136,6 +203,7 @@ export default function Activities() {
             const full = attendees >= capacity && !registered;
             const percent = Math.min(Math.round((attendees / capacity) * 100), 100);
             const orgName = activity.org?.name || activity.orgName || 'جهة منظمة';
+            const canManage = Boolean((activity.org_id && user?.id && activity.org_id === user.id) || user?.role === 'admin');
 
             return (
               <Card
@@ -145,13 +213,28 @@ export default function Activities() {
                 <div>
                   <div className="h-3 bg-gradient-to-r from-primary to-amber-700" />
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <Badge variant="secondary" className="text-xs font-bold">
-                        {activity.category || 'عام'}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs text-primary bg-primary/10 border-primary/20">
-                        {activity.status || 'متاح للتسجيل'}
-                      </Badge>
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant="secondary" className="text-xs font-bold">
+                          {activity.category || 'عام'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs text-primary bg-primary/10 border-primary/20">
+                          {activity.status || 'متاح للتسجيل'}
+                        </Badge>
+                      </div>
+
+                      {canManage && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={deletingId === activity.id}
+                          onClick={(e) => handleDeleteActivity(e, activity.id, activity.title)}
+                          title="حذف الفعالية"
+                          className="w-7 h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
 
                     <h3 className="font-bold text-base mb-1 text-foreground line-clamp-1">{activity.title}</h3>
@@ -225,6 +308,13 @@ export default function Activities() {
           })}
         </div>
       )}
+
+      {/* Create Activity Modal */}
+      <CreateActivityModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onActivityCreated={(newAct) => setActivitiesList((prev) => [newAct, ...prev])}
+      />
     </div>
   );
 }

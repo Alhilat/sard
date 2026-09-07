@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { groupsService, Group } from '@/services/groupsService';
-import { Users, Lock, Globe, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Users, Lock, Globe, Plus, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -28,14 +29,26 @@ const CATEGORIES = [
 
 export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGroupModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0].id);
   const [privacy, setPrivacy] = useState<'عام' | 'خاص'>('عام');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isVerified = Boolean(user?.verified || user?.role === 'admin');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isVerified) {
+      toast({
+        variant: 'destructive',
+        title: 'خاصية مخصصة للحسابات الموثقة',
+        description: 'تأسيس وإدارة المجتمعات متاح حصرياً للحسابات الموثقة والمنظمات. يمكنك كعضو الانضمام لجميع المجتمعات والتفاعل فيها.',
+      });
+      return;
+    }
+
     if (!name.trim()) {
       toast({
         variant: 'destructive',
@@ -65,11 +78,11 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       setName('');
       setDescription('');
       onClose();
-    } catch {
+    } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'تعذر تأسيس المجتمع',
-        description: 'حدث خطأ أثناء الإنشاء، يرجى المحاولة مرة أخرى.',
+        description: err?.message || 'حدث خطأ أثناء الإنشاء، يرجى المحاولة مرة أخرى.',
       });
     } finally {
       setIsSubmitting(false);

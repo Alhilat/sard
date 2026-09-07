@@ -18,6 +18,7 @@ export interface PetraUser {
   email: string;
   username: string;
   role: string;
+  verified?: boolean;
   is_banned: boolean;
   ban_reason: string;
   join_date: string;
@@ -164,6 +165,32 @@ export const petraService = {
       return { success: res.ok && data.success, message: data.message };
     } catch {
       return { success: false, message: 'فشل إلغاء الحظر' };
+    }
+  },
+
+  verifyUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await fetch(`/api/petra/users/${userId}/verify`, {
+        method: 'POST',
+        headers: getPetraAuthHeaders(),
+      });
+      const data = await res.json();
+      return { success: res.ok && data.success, message: data.message };
+    } catch {
+      return { success: false, message: 'فشل توثيق الحساب' };
+    }
+  },
+
+  unverifyUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await fetch(`/api/petra/users/${userId}/unverify`, {
+        method: 'POST',
+        headers: getPetraAuthHeaders(),
+      });
+      const data = await res.json();
+      return { success: res.ok && data.success, message: data.message };
+    } catch {
+      return { success: false, message: 'فشل إلغاء التوثيق' };
     }
   },
 

@@ -22,6 +22,7 @@ export interface CourseSyllabusItem {
 
 export interface Course {
   id: string;
+  org_id?: string;
   title: string;
   tagline?: string;
   category: string;
@@ -80,8 +81,9 @@ const defaultInstructor: CourseInstructor = {
 
 const normalizeCourse = (c: any): Course => ({
   ...c,
+  org_id: c.org_id || c.org?.id,
   instructor: c.instructor || defaultInstructor,
-  org: c.org || { id: 'org_sard', name: 'أكاديمية سرد' },
+  org: c.org || { id: c.org_id || 'org_sard', name: 'أكاديمية سرد' },
   syllabus: c.syllabus || [],
   outcomes: c.outcomes || [],
   prerequisites: c.prerequisites || [],
@@ -123,6 +125,34 @@ export const coursesService = {
     }
     const found = coursesState.find((c) => c.id === courseId);
     return found ? normalizeCourse(found) : undefined;
+  },
+
+  createCourse: async (data: {
+    title: string;
+    tagline?: string;
+    description?: string;
+    category?: string;
+    level?: string;
+    duration?: string;
+    totalHours?: number;
+    lectures?: number;
+    price?: string;
+  }): Promise<{ success: boolean; id?: string; message?: string }> => {
+    try {
+      const res = await api.post<{ success: boolean; id?: string; message?: string }>('/courses', data);
+      return res;
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر إنشاء الدورة' };
+    }
+  },
+
+  deleteCourse: async (courseId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await api.delete<{ success: boolean; message?: string }>(`/courses/${courseId}`);
+      return res;
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر حذف الدورة' };
+    }
   },
 
   enrollInCourse: async (courseId: string): Promise<boolean> => {

@@ -1230,6 +1230,12 @@ app.post('/api/groups', authenticateToken, (req, res) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'يجب تسجيل الدخول لإنشاء مجموعة' });
     }
+    if (!req.user.verified) {
+      return res.status(403).json({
+        success: false,
+        message: 'إنشاء المجموعات متاح حصرياً للحسابات والمنظمات الموثقة. يمكنك كعضو الانضمام لجميع المجموعات والتفاعل معها.',
+      });
+    }
     const creatorId = req.user.id;
     const { name, tagline, description, category, privacy, coverGradient, accentColor, rules, visibility } = req.body;
     const cleanName = (name || '').trim();
@@ -1346,6 +1352,25 @@ app.delete('/api/groups/:id/leave', authenticateToken, (req, res) => {
   }
 });
 
+app.delete('/api/groups/:id', authenticateToken, (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: 'يجب تسجيل الدخول' });
+    const groupId = req.params.id;
+    const group = stmtGetGroupById.get(groupId);
+    if (!group) return res.status(404).json({ success: false, message: 'المجموعة غير موجودة' });
+    if (group.creator_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بإدارة أو حذف هذه المجموعة' });
+    }
+    stmtDeleteGroup.run(groupId);
+    stmtDeleteGroupPosts.run(groupId);
+    stmtDeleteGroupMembers.run(groupId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم حذف المجموعة بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر حذف المجموعة' });
+  }
+});
+
 // ── PETRA CENTRAL CONTROL (بوابة بترا للتحكم المركزي) ────────────────────────
 app.post('/api/petra/login', (req, res) => {
   const { username, password } = req.body;
@@ -1410,7 +1435,7 @@ app.get('/api/petra/stats', authenticatePetra, (_req, res) => {
 app.get('/api/petra/users', authenticatePetra, (_req, res) => {
   try {
     const users = db.prepare(`
-      SELECT u.id, u.name, u.email, u.username, u.role, u.is_banned, u.ban_reason, u.join_date, u.created_at,
+      SELECT u.id, u.name, u.email, u.username, u.role, u.verified, u.is_banned, u.ban_reason, u.join_date, u.created_at,
              (SELECT COUNT(*) FROM posts WHERE author_id = u.id) as posts_count,
              (SELECT COUNT(*) FROM comments WHERE author_id = u.id) as comments_count
       FROM users u
@@ -1421,11 +1446,45 @@ app.get('/api/petra/users', authenticatePetra, (_req, res) => {
       success: true,
       users: users.map((u) => ({
         ...u,
+        verified: Boolean(u.verified),
         is_banned: Boolean(u.is_banned),
       })),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'تعذر جلب قائمة المستخدمين' });
+  }
+});
+
+// Petra: Toggle User Verification
+app.post('/api/petra/users/:id/verify', authenticatePetra, (req, res) => {
+  try {
+    const userId = req.params.id;
+    db.prepare('UPDATE users SET verified = 1 WHERE id = ?').run(userId);
+    const user = stmtFindUserById.get(userId);
+    createNotification({
+      userId,
+      actorId: null,
+      type: 'system',
+      title: 'تهانينا! تم توثيق حسابك 🎉',
+      content: 'تم توثيق حسابك رسمياً من قبل الإدارة. يمكنك الآن إنشاء وإدارة المجموعات، الدورات، والأنشطة بحرية كاملة.',
+      link: '/app/profile',
+    });
+    scheduleCloudSync();
+    res.json({ success: true, message: `تم توثيق حساب (${user ? user.name : userId}) بنجاح` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر توثيق الحساب' });
+  }
+});
+
+app.post('/api/petra/users/:id/unverify', authenticatePetra, (req, res) => {
+  try {
+    const userId = req.params.id;
+    db.prepare('UPDATE users SET verified = 0 WHERE id = ?').run(userId);
+    const user = stmtFindUserById.get(userId);
+    scheduleCloudSync();
+    res.json({ success: true, message: `تم إلغاء توثيق حساب (${user ? user.name : userId})` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر إلغاء التوثيق' });
   }
 });
 
@@ -1713,6 +1772,7 @@ app.get('/api/activities', authenticateToken, (req, res) => {
       const isRegistered = currentUserId ? Boolean(stmtCheckActivityRegistration.get(a.id, currentUserId)) : false;
       return {
         id: a.id,
+        org_id: a.org_id,
         title: a.title,
         description: a.description,
         category: a.category,
@@ -1737,6 +1797,12 @@ app.get('/api/activities', authenticateToken, (req, res) => {
 
 app.post('/api/activities', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  if (!req.user.verified) {
+    return res.status(403).json({
+      success: false,
+      message: 'تنظيم وإضافة الفعاليات متاح حصرياً للحسابات الموثقة والمنظمات. يمكنك كعضو التسجيل والمشاركة في كافة الفعاليات.',
+    });
+  }
   try {
     const { title, description, category, date, time, location, locationType, capacity } = req.body;
     if (!title || !date) return res.status(400).json({ success: false, message: 'يرجى إدخال عنوان وتاريخ الفعالية' });
@@ -1756,10 +1822,29 @@ app.post('/api/activities', authenticateToken, (req, res) => {
       'متاح للتسجيل',
       Date.now()
     );
+    scheduleCloudSync();
     res.status(201).json({ success: true, id, message: 'تم إنشاء الفعالية بنجاح' });
   } catch (err) {
     console.error('Error creating activity:', err);
     res.status(500).json({ success: false, message: 'تعذر إنشاء الفعالية' });
+  }
+});
+
+app.delete('/api/activities/:id', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const actId = req.params.id;
+    const act = db.prepare('SELECT * FROM activities WHERE id = ?').get(actId);
+    if (!act) return res.status(404).json({ success: false, message: 'الفعالية غير موجودة' });
+    if (act.org_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بإدارة أو حذف هذه الفعالية' });
+    }
+    db.prepare('DELETE FROM activities WHERE id = ?').run(actId);
+    db.prepare('DELETE FROM activity_registrations WHERE activity_id = ?').run(actId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم حذف الفعالية بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر حذف الفعالية' });
   }
 });
 
@@ -1769,6 +1854,7 @@ app.post('/api/activities/:id/register', authenticateToken, (req, res) => {
     const activityId = req.params.id;
     stmtRegisterActivity.run(activityId, req.user.id, Date.now());
     stmtIncrementActivityAttendees.run(activityId);
+    scheduleCloudSync();
     res.json({ success: true, message: 'تم تأكيد تسجيلك في النشاط بنجاح' });
   } catch (err) {
     console.error('Error registering for activity:', err);
@@ -1798,7 +1884,19 @@ app.get('/api/courses', authenticateToken, (req, res) => {
         price: c.price,
         enrolled: Boolean(enrollment),
         progress: enrollment ? enrollment.progress : 0,
+        org_id: c.org_id,
         org: { id: c.org_id, name: c.org_name, avatar: c.org_avatar },
+        instructor: {
+          id: c.org_id,
+          name: c.org_name || 'مدرب معتمد',
+          title: 'مدرب وخبير تقني',
+          role: 'instructor',
+          avatar: c.org_avatar,
+          bio: '',
+          experience: 'خبرة تدريبية عملية',
+          rating: c.rating || 5.0,
+          studentsTaught: c.students || 0,
+        },
       };
     });
     res.json({ success: true, courses });
@@ -1810,6 +1908,12 @@ app.get('/api/courses', authenticateToken, (req, res) => {
 
 app.post('/api/courses', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  if (!req.user.verified) {
+    return res.status(403).json({
+      success: false,
+      message: 'إضافة وإدارة الدورات متاح حصرياً للحسابات الموثقة والمدربين المعتمدين. يمكنك كعضو الانضمام والتعلم في كافة الدورات.',
+    });
+  }
   try {
     const { title, tagline, description, category, level, duration, totalHours, lectures, price } = req.body;
     if (!title) return res.status(400).json({ success: false, message: 'يرجى إدخال عنوان الدورة' });
@@ -1830,10 +1934,29 @@ app.post('/api/courses', authenticateToken, (req, res) => {
       price || 'مجاني',
       Date.now()
     );
+    scheduleCloudSync();
     res.status(201).json({ success: true, id, message: 'تم إضافة الدورة بنجاح' });
   } catch (err) {
     console.error('Error creating course:', err);
     res.status(500).json({ success: false, message: 'تعذر إضافة الدورة' });
+  }
+});
+
+app.delete('/api/courses/:id', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const courseId = req.params.id;
+    const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(courseId);
+    if (!course) return res.status(404).json({ success: false, message: 'الدورة غير موجودة' });
+    if (course.org_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بإدارة أو حذف هذه الدورة' });
+    }
+    db.prepare('DELETE FROM courses WHERE id = ?').run(courseId);
+    db.prepare('DELETE FROM course_enrollments WHERE course_id = ?').run(courseId);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم حذف الدورة بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر حذف الدورة' });
   }
 });
 

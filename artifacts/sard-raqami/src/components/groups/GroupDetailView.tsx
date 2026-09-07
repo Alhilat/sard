@@ -7,25 +7,57 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { groupsService, Group, GroupMember } from '@/services/groupsService';
 import { Post } from '@/services/postsService';
+import { useAuth } from '@/contexts/AuthContext';
 import GroupPostCard from './GroupPostCard';
 import {
   Users, ArrowRight, Lock, Globe, MessageSquare, Plus,
   CheckCircle2, ShieldCheck, Calendar, Send, Sparkles,
-  Award, HeartHandshake, Share2
+  Award, HeartHandshake, Share2, Trash2
 } from 'lucide-react';
 
 interface GroupDetailViewProps {
   group: Group;
   onBack: () => void;
   onMembershipChanged?: (groupId: string, joined: boolean) => void;
+  onGroupDeleted?: (groupId: string) => void;
 }
 
-export default function GroupDetailView({ group, onBack, onMembershipChanged }: GroupDetailViewProps) {
+export default function GroupDetailView({ group, onBack, onMembershipChanged, onGroupDeleted }: GroupDetailViewProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [currentGroup, setCurrentGroup] = useState<Group>(group);
   const [posts, setPosts] = useState<Post[]>([]);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const canManage = Boolean(
+    (currentGroup.creator_id && user?.id && currentGroup.creator_id === user.id) ||
+    user?.role === 'admin'
+  );
+
+  const handleDeleteGroup = async () => {
+    if (!confirm(`هل أنت متأكد من رغبتك في حذف مجتمع "${currentGroup.name}" نهائياً؟`)) {
+      return;
+    }
+    setIsDeleting(true);
+    const res = await groupsService.deleteGroup(currentGroup.id);
+    setIsDeleting(false);
+    if (res.success) {
+      toast({
+        title: 'تم حذف المجتمع بنجاح',
+        description: `تم إزالة مجتمع "${currentGroup.name}" من المنصة.`,
+      });
+      onGroupDeleted?.(currentGroup.id);
+      onBack();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر حذف المجتمع',
+        description: res.message || 'حدث خطأ أثناء محاولة الحذف.',
+      });
+    }
+  };
 
   // New post state
   const [newPostContent, setNewPostContent] = useState('');
@@ -204,8 +236,20 @@ export default function GroupDetailView({ group, onBack, onMembershipChanged }: 
               </div>
             </div>
 
-            {/* Membership Button */}
-            <div className="flex items-center gap-2 self-start md:self-end shrink-0">
+            {/* Actions: Membership & Admin Delete */}
+            <div className="flex items-center gap-2 self-start md:self-end shrink-0 flex-wrap">
+              {canManage && (
+                <Button
+                  onClick={handleDeleteGroup}
+                  variant="outline"
+                  disabled={isDeleting}
+                  className="gap-1.5 font-bold px-3.5 h-10 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-2xs"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isDeleting ? 'جاري الحذف...' : 'حذف وإدارة المجتمع'}</span>
+                </Button>
+              )}
+
               <Button
                 onClick={handleToggleMembership}
                 variant={currentGroup.joined ? 'outline' : 'default'}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Shield, Zap, Users, MessageSquare, Trash2, Ban, CheckCircle,
   AlertTriangle, RefreshCw, LogOut, Search, Activity, Layers, Lock,
-  FileText, CornerDownLeft, Eye, Clock, ShieldAlert, Cpu
+  FileText, CornerDownLeft, Eye, Clock, ShieldAlert, Cpu, ShieldCheck
 } from 'lucide-react';
 import {
   petraService, PetraStats, PetraUser, PetraPost, PetraComment, PetraGroup, PetraAuditLog
@@ -137,6 +137,40 @@ export default function Petra() {
     } else {
       toast({
         title: 'فشل إلغاء الحظر',
+        description: res.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleVerify = async (userId: string, userName: string) => {
+    const res = await petraService.verifyUser(userId);
+    if (res.success) {
+      toast({
+        title: 'تم توثيق الحساب بنجاح 🛡️',
+        description: `تمت ترقية حساب (${userName}) إلى موثق، وأصبح بإمكانه إنشاء المجموعات والدورات والأنشطة`,
+      });
+      loadAllData();
+    } else {
+      toast({
+        title: 'فشل التوثيق',
+        description: res.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUnverify = async (userId: string, userName: string) => {
+    const res = await petraService.unverifyUser(userId);
+    if (res.success) {
+      toast({
+        title: 'تم إلغاء التوثيق',
+        description: `تم تحويل حساب (${userName}) إلى حساب عادي (انضمام فقط)`,
+      });
+      loadAllData();
+    } else {
+      toast({
+        title: 'فشل إلغاء التوثيق',
         description: res.message,
         variant: 'destructive',
       });
@@ -638,11 +672,12 @@ export default function Petra() {
                       <th className="p-3.5">المستخدم</th>
                       <th className="p-3.5">البريد الإلكتروني</th>
                       <th className="p-3.5">النوع</th>
+                      <th className="p-3.5">التوثيق والصلاحيات</th>
                       <th className="p-3.5">تاريخ الانضمام</th>
                       <th className="p-3.5">المنشورات</th>
                       <th className="p-3.5">الردود</th>
                       <th className="p-3.5">الحالة</th>
-                      <th className="p-3.5 text-center">إجراءات الرقابة</th>
+                      <th className="p-3.5 text-center">إجراءات الرقابة والترقية</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#281F31]">
@@ -659,6 +694,18 @@ export default function Petra() {
                           <Badge className={u.role === 'org' ? 'bg-amber-900/60 text-amber-300' : 'bg-blue-900/60 text-blue-300'}>
                             {u.role === 'org' ? 'منظمة' : 'فرد'}
                           </Badge>
+                        </td>
+                        <td className="p-3.5">
+                          {u.verified ? (
+                            <Badge className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 gap-1 font-bold">
+                              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                              <span>موثق (إنشاء وإدارة)</span>
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[#A898B5] border-[#3E3048]">
+                              عادي (انضمام فقط)
+                            </Badge>
+                          )}
                         </td>
                         <td className="p-3.5 text-[#A898B5]">{u.join_date}</td>
                         <td className="p-3.5 font-mono text-white">{u.posts_count || 0}</td>
@@ -682,30 +729,55 @@ export default function Petra() {
                           )}
                         </td>
                         <td className="p-3.5 text-center">
-                          {u.is_banned ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUnban(u.id, u.name)}
-                              className="bg-emerald-900/40 hover:bg-emerald-900/70 border-emerald-600 text-emerald-300 text-xs h-7 px-3"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5 ml-1" />
-                              إلغاء الحظر
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setBanTargetUser(u);
-                                setBanReasonInput('مخالفة معايير المجتمع وشروط النشر');
-                              }}
-                              className="bg-red-900/40 hover:bg-red-900/70 border-red-700 text-red-300 text-xs h-7 px-3"
-                            >
-                              <Ban className="w-3.5 h-3.5 ml-1" />
-                              حظر الحساب
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            {u.verified ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUnverify(u.id, u.name)}
+                                className="bg-amber-950/40 hover:bg-amber-900/60 border-amber-700 text-amber-300 text-[11px] h-7 px-2"
+                                title="تحويل الحساب إلى عادي (انضمام فقط)"
+                              >
+                                إلغاء التوثيق
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleVerify(u.id, u.name)}
+                                className="bg-emerald-950/50 hover:bg-emerald-900/70 border-emerald-600 text-emerald-300 text-[11px] h-7 px-2"
+                                title="منح صلاحية إنشاء المجموعات والدورات والأنشطة"
+                              >
+                                <ShieldCheck className="w-3 h-3 ml-1 text-emerald-400" />
+                                توثيق الحساب
+                              </Button>
+                            )}
+
+                            {u.is_banned ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUnban(u.id, u.name)}
+                                className="bg-emerald-900/40 hover:bg-emerald-900/70 border-emerald-600 text-emerald-300 text-xs h-7 px-3"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 ml-1" />
+                                إلغاء الحظر
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setBanTargetUser(u);
+                                  setBanReasonInput('مخالفة معايير المجتمع وشروط النشر');
+                                }}
+                                className="bg-red-900/40 hover:bg-red-900/70 border-red-700 text-red-300 text-xs h-7 px-3"
+                              >
+                                <Ban className="w-3.5 h-3.5 ml-1" />
+                                حظر الحساب
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Star, Users, Clock, BookOpen, Search, Filter, PlayCircle,
   Award, Sparkles, MessageSquare, CheckCircle2, ArrowRight,
-  GraduationCap, ChevronRight
+  GraduationCap, ChevronRight, Plus, Lock, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Course, coursesService } from '@/services/coursesService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import CourseDetailView from '@/components/courses/CourseDetailView';
 import CourseGroupChat from '@/components/courses/CourseGroupChat';
+import CreateCourseModal from '@/components/courses/CreateCourseModal';
 
 const CATEGORIES = [
   'الكل',
@@ -31,12 +34,18 @@ const LEVEL_BADGES: Record<string, string> = {
 };
 
 export default function Courses() {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('الكل');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeChatCourse, setActiveChatCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+
+  const isVerified = Boolean(user?.verified || user?.role === 'admin');
 
   // Load courses
   useEffect(() => {
@@ -46,6 +55,41 @@ export default function Courses() {
       setIsLoading(false);
     });
   }, [category]);
+
+  const handleOpenCreateCourse = () => {
+    if (!isVerified) {
+      toast({
+        variant: 'destructive',
+        title: 'خاصية مخصصة للحسابات الموثقة',
+        description: 'إضافة وإدارة الدورات متاح حصرياً للحسابات الموثقة والمدربين المعتمدين. يمكنك كعضو الانضمام والتعلم في كافة الدورات.',
+      });
+      return;
+    }
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteCourse = async (e: React.MouseEvent, courseId: string, courseTitle: string) => {
+    e.stopPropagation();
+    if (!confirm(`هل أنت متأكد من رغبتك في حذف دورة "${courseTitle}" نهائياً؟`)) {
+      return;
+    }
+    setDeletingCourseId(courseId);
+    const res = await coursesService.deleteCourse(courseId);
+    setDeletingCourseId(null);
+    if (res.success) {
+      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+      toast({
+        title: 'تم حذف الدورة بنجاح',
+        description: `تم إزالة دورة "${courseTitle}" من الأكاديمية.`,
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر حذف الدورة',
+        description: res.message || 'حدث خطأ أثناء محاولة الحذف.',
+      });
+    }
+  };
 
   const filtered = courses.filter((c) => {
     const s = search.trim().toLowerCase();
@@ -82,6 +126,10 @@ export default function Courses() {
         <CourseDetailView
           course={selectedCourse}
           onBack={() => setSelectedCourse(null)}
+          onCourseDeleted={(deletedCourseId) => {
+            setCourses((prev) => prev.filter((c) => c.id !== deletedCourseId));
+            setSelectedCourse(null);
+          }}
           onOpenChat={(course) => {
             setActiveChatCourse(course);
           }}
@@ -96,6 +144,11 @@ export default function Courses() {
   }
 
   function CourseCard({ course }: { course: Course }) {
+    const canManage = Boolean(
+      (course.org_id && user?.id && course.org_id === user.id) ||
+      user?.role === 'admin'
+    );
+
     return (
       <Card
         onClick={() => setSelectedCourse(course)}
@@ -196,32 +249,47 @@ export default function Courses() {
                 شهادة إتمام معتمدة
               </span>
 
-              {course.enrolled ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 text-xs font-bold gap-1 text-primary border-primary/30 hover:bg-primary/5"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveChatCourse(course);
-                  }}
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>غرفة المحادثة</span>
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  className="h-8 px-3 text-xs font-bold gap-1 shadow-2xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCourse(course);
-                  }}
-                >
-                  <span>عرض التفاصيل</span>
-                  <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
-                </Button>
-              )}
+              <div className="flex items-center gap-1.5">
+                {canManage && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={deletingCourseId === course.id}
+                    onClick={(e) => handleDeleteCourse(e, course.id, course.title)}
+                    title="حذف وإدارة الدورة"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+
+                {course.enrolled ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3 text-xs font-bold gap-1 text-primary border-primary/30 hover:bg-primary/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveChatCourse(course);
+                    }}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>غرفة المحادثة</span>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="h-8 px-3 text-xs font-bold gap-1 shadow-2xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCourse(course);
+                    }}
+                  >
+                    <span>عرض التفاصيل</span>
+                    <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -244,6 +312,28 @@ export default function Courses() {
           <p className="text-muted-foreground text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
             طوّر مهاراتك مع برامج تدريبية تخصصية يقودها نخبة من الخبراء، مع مجتمعات وغرف محادثة تفاعلية لكل دورة.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          <Button
+            onClick={handleOpenCreateCourse}
+            variant={isVerified ? 'default' : 'outline'}
+            className={`gap-2 font-bold shadow-xs h-10 px-4 ${
+              !isVerified ? 'border-dashed border-border text-muted-foreground hover:text-foreground' : ''
+            }`}
+          >
+            {isVerified ? (
+              <Plus className="w-4 h-4" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+            <span>إضافة دورة تدريبية</span>
+            {!isVerified && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted">
+                للموثقين والمدربين
+              </Badge>
+            )}
+          </Button>
         </div>
       </div>
 
@@ -332,6 +422,13 @@ export default function Courses() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Create Course Modal */}
+      <CreateCourseModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCourseCreated={(newCourse) => setCourses((prev) => [newCourse, ...prev])}
+      />
     </div>
   );
 }

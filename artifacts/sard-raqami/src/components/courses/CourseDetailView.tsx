@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import {
   BookOpen, Star, Users, Clock, Award, CheckCircle2, ArrowRight,
   Sparkles, MessageSquare, ShieldCheck, GraduationCap, ChevronDown,
-  ChevronUp, UserCheck, Calendar, PlayCircle, ExternalLink
+  ChevronUp, UserCheck, Calendar, PlayCircle, ExternalLink, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Course, coursesService } from '@/services/coursesService';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CourseDetailViewProps {
   course: Course;
   onBack: () => void;
   onOpenChat: (course: Course) => void;
   onEnrollSuccess?: (courseId: string) => void;
+  onCourseDeleted?: (courseId: string) => void;
 }
 
 export default function CourseDetailView({
@@ -22,11 +24,42 @@ export default function CourseDetailView({
   onBack,
   onOpenChat,
   onEnrollSuccess,
+  onCourseDeleted,
 }: CourseDetailViewProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [currentCourse, setCurrentCourse] = useState<Course>(course);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [expandedSyllabus, setExpandedSyllabus] = useState<number | null>(0); // First unit open by default
+
+  const canManage = Boolean(
+    (currentCourse.org_id && user?.id && currentCourse.org_id === user.id) ||
+    user?.role === 'admin'
+  );
+
+  const handleDeleteCourse = async () => {
+    if (!confirm(`هل أنت متأكد من رغبتك في حذف دورة "${currentCourse.title}" نهائياً؟`)) {
+      return;
+    }
+    setIsDeleting(true);
+    const res = await coursesService.deleteCourse(currentCourse.id);
+    setIsDeleting(false);
+    if (res.success) {
+      toast({
+        title: 'تم حذف الدورة بنجاح',
+        description: `تم إزالة دورة "${currentCourse.title}" من الأكاديمية.`,
+      });
+      onCourseDeleted?.(currentCourse.id);
+      onBack();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'تعذر حذف الدورة',
+        description: res.message || 'حدث خطأ أثناء محاولة الحذف.',
+      });
+    }
+  };
 
   const handleJoinCourse = async () => {
     if (currentCourse.enrolled) {
@@ -167,7 +200,19 @@ export default function CourseDetailView({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {canManage && (
+              <Button
+                variant="outline"
+                disabled={isDeleting}
+                onClick={handleDeleteCourse}
+                className="gap-2 font-bold px-4 h-11 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-2xs"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isDeleting ? 'جاري الحذف...' : 'حذف وإدارة الدورة'}</span>
+              </Button>
+            )}
+
             {currentCourse.enrolled ? (
               <Button
                 onClick={() => onOpenChat(currentCourse)}

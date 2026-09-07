@@ -21,6 +21,7 @@ function getActiveGroupAuthor() {
 
 export interface Group {
   id: string;
+  creator_id?: string;
   name: string;
   description: string;
   category: string;
@@ -155,6 +156,16 @@ export const groupsService = {
     ];
 
     return newGroup;
+  },
+
+  deleteGroup: async (groupId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await api.delete<{ success: boolean; message?: string }>(`/groups/${groupId}`);
+      currentGroups = currentGroups.filter((g) => g.id !== groupId);
+      return { success: true, message: res?.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر حذف المجموعة' };
+    }
   },
 
   toggleMembership: async (groupId: string, currentlyJoined: boolean): Promise<boolean> => {

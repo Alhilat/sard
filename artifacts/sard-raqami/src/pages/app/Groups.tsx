@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Lock, Globe, Search, Plus, Sparkles, MessageSquare,
   ArrowLeft, CheckCircle2, BookOpen, Briefcase, HeartHandshake,
-  Palette, Leaf, Cpu, Compass
+  Palette, Leaf, Cpu, Compass, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { groupsService, Group } from '@/services/groupsService';
+import { useAuth } from '@/contexts/AuthContext';
 import CreateGroupModal from '@/components/groups/CreateGroupModal';
 import GroupDetailView from '@/components/groups/GroupDetailView';
 import { useToast } from '@/hooks/use-toast';
@@ -26,12 +27,15 @@ const CATEGORIES = [
 
 export default function Groups() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('الكل');
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isVerified = Boolean(user?.verified || user?.role === 'admin');
 
   // Load groups on mount and when filter changes
   useEffect(() => {
@@ -75,6 +79,18 @@ export default function Groups() {
     setSelectedGroup(newGroup); // Open new group right away
   };
 
+  const handleOpenCreateModal = () => {
+    if (!isVerified) {
+      toast({
+        variant: 'destructive',
+        title: 'خاصية مخصصة للحسابات الموثقة',
+        description: 'تأسيس وإدارة المجتمعات متاح حصرياً للحسابات الموثقة والمنظمات. يمكنك كعضو الانضمام لجميع المجتمعات والتفاعل فيها بحرية.',
+      });
+      return;
+    }
+    setIsCreateModalOpen(true);
+  };
+
   // If a group is selected, show its full dedicated view
   if (selectedGroup) {
     return (
@@ -82,6 +98,10 @@ export default function Groups() {
         <GroupDetailView
           group={selectedGroup}
           onBack={() => setSelectedGroup(null)}
+          onGroupDeleted={(deletedGroupId) => {
+            setGroups((prev) => prev.filter((g) => g.id !== deletedGroupId));
+            setSelectedGroup(null);
+          }}
           onMembershipChanged={(groupId, joined) => {
             setGroups((prev) =>
               prev.map((g) =>
@@ -223,13 +243,27 @@ export default function Groups() {
           </p>
         </div>
 
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="gap-2 font-bold shrink-0 self-start sm:self-auto shadow-xs h-10 px-4"
-        >
-          <Plus className="w-4 h-4" />
-          <span>تأسيس مجتمع جديد</span>
-        </Button>
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          <Button
+            onClick={handleOpenCreateModal}
+            variant={isVerified ? 'default' : 'outline'}
+            className={`gap-2 font-bold shadow-xs h-10 px-4 ${
+              !isVerified ? 'border-dashed border-border text-muted-foreground hover:text-foreground' : ''
+            }`}
+          >
+            {isVerified ? (
+              <Plus className="w-4 h-4" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+            )}
+            <span>تأسيس مجتمع جديد</span>
+            {!isVerified && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted">
+                للموثقين
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Search & Category Filter */}
