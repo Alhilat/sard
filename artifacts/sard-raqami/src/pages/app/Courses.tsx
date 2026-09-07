@@ -50,10 +50,10 @@ export default function Courses() {
   const filtered = courses.filter((c) => {
     const s = search.trim().toLowerCase();
     const matchSearch =
-      c.title.toLowerCase().includes(s) ||
-      c.instructor.name.toLowerCase().includes(s) ||
-      c.org.name.toLowerCase().includes(s) ||
-      c.description.toLowerCase().includes(s);
+      (c.title || '').toLowerCase().includes(s) ||
+      (c.instructor?.name || '').toLowerCase().includes(s) ||
+      (c.org?.name || '').toLowerCase().includes(s) ||
+      (c.description || '').toLowerCase().includes(s);
     return matchSearch;
   });
 
@@ -165,11 +165,11 @@ export default function Courses() {
             {/* Teacher info snippet */}
             <div className="flex items-center gap-2 my-2.5 py-2 px-2.5 rounded-xl bg-muted/40 border border-border/60">
               <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                {course.instructor.name.slice(0, 1)}
+                {(course.instructor?.name || 'م').slice(0, 1)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-foreground truncate">{course.instructor.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{course.instructor.title}</p>
+                <p className="text-xs font-bold text-foreground truncate">{course.instructor?.name || 'مدرب معتمد'}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{course.instructor?.title || 'مدرب وخبير تقني'}</p>
               </div>
             </div>
 

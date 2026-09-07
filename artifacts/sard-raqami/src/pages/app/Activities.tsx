@@ -1,58 +1,107 @@
-import { useState } from 'react';
-import { MapPin, Clock, Users, Calendar, Search, Filter, ChevronDown } from 'lucide-react';
-import { activities } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { MapPin, Clock, Users, Calendar, Search, Filter, Sparkles, CheckCircle2 } from 'lucide-react';
+import { activitiesService, Activity } from '@/services/activitiesService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 const categories = ['الكل', 'تطوع', 'تقنية', 'بيئة', 'ريادة أعمال', 'صحة', 'ثقافة'];
 
 export default function Activities() {
+  const { toast } = useToast();
+  const [activitiesList, setActivitiesList] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('الكل');
   const [registeredMap, setRegisteredMap] = useState<Record<string, boolean>>({});
 
-  const filtered = activities.filter(a => {
-    const matchSearch = a.title.includes(search) || a.org.name.includes(search) || a.location.includes(search);
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    activitiesService.getActivities().then((data) => {
+      if (mounted) {
+        setActivitiesList(data);
+        const map: Record<string, boolean> = {};
+        data.forEach((a) => {
+          if (a.isRegistered) map[a.id] = true;
+        });
+        setRegisteredMap(map);
+        setLoading(false);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filtered = activitiesList.filter((a) => {
+    const orgTitle = a.org?.name || a.orgName || '';
+    const loc = a.location || '';
+    const matchSearch =
+      (a.title || '').toLowerCase().includes(search.toLowerCase()) ||
+      orgTitle.toLowerCase().includes(search.toLowerCase()) ||
+      loc.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'الكل' || a.category === category;
     return matchSearch && matchCat;
   });
 
-  const register = (id: string) => setRegisteredMap(prev => ({ ...prev, [id]: !prev[id] }));
+  const handleRegister = async (id: string) => {
+    const isCurrentlyRegistered = Boolean(registeredMap[id]);
+    const success = await activitiesService.register(id);
+    if (success) {
+      setRegisteredMap((prev) => ({ ...prev, [id]: !isCurrentlyRegistered }));
+      toast({
+        title: isCurrentlyRegistered ? 'تم إلغاء التسجيل' : 'تم التسجيل بنجاح',
+        description: isCurrentlyRegistered
+          ? 'تم إلغاء مشاركتك في النشاط'
+          : 'تم تأكيد مقعدك في النشاط بنجاح!',
+      });
+    } else {
+      toast({
+        title: 'خطأ',
+        description: 'تعذر تحديث حالة التسجيل، يرجى المحاولة لاحقاً',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black mb-1">الأنشطة والفعاليات</h1>
-        <p className="text-muted-foreground text-sm">اكتشف الأنشطة والفعاليات القريبة منك وسجّل مشاركتك</p>
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6" dir="rtl">
+      <div>
+        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-1">
+          <Calendar className="w-4 h-4" />
+          <span>الفعاليات والمبادرات</span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-black mb-1 font-display">الأنشطة المجتمعية والفعاليات</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm">اكتشف الأنشطة والفعاليات وسجّل حضورك ومشاركتك</p>
       </div>
 
       {/* Search & Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute top-1/2 -translate-y-1/2 end-3 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute top-1/2 -translate-y-1/2 start-3.5 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="ابحث عن نشاط أو فعالية..."
+            placeholder="ابحث عن نشاط أو فعالية أو جهة منظمة..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pe-9"
+            onChange={(e) => setSearch(e.target.value)}
+            className="ps-10 h-11 text-xs sm:text-sm bg-card border-border shadow-2xs"
           />
         </div>
-        <Button variant="outline" className="gap-2 shrink-0">
-          <Filter className="w-4 h-4" />
-          تصفية
-          <ChevronDown className="w-3 h-3" />
-        </Button>
       </div>
 
       {/* Category tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-        {categories.map(cat => (
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${cat === category ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-colors flex-shrink-0 cursor-pointer ${
+              cat === category
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+            }`}
           >
             {cat}
           </button>
@@ -60,76 +109,122 @@ export default function Activities() {
       </div>
 
       {/* Results count */}
-      <p className="text-sm text-muted-foreground mb-4">{filtered.length} نشاط متاح</p>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{filtered.length} نشاط متاح</span>
+      </div>
 
-      {/* Activity cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map(activity => {
-          const registered = registeredMap[activity.id];
-          const full = activity.registered >= activity.seats && !registered;
-          const percent = Math.round((activity.registered / activity.seats) * 100);
-          return (
-            <Card key={activity.id} className="border-card-border hover:shadow-md transition-shadow overflow-hidden">
-              {/* Card top */}
-              <div className="h-3 bg-gradient-to-r from-primary to-amber-700" />
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <Badge variant="secondary" className="text-xs">{activity.category}</Badge>
-                  <Badge variant={activity.price === 'مجاني' ? 'secondary' : 'outline'} className={`text-xs ${activity.price === 'مجاني' ? 'text-primary bg-primary/10 border-primary/20' : ''}`}>
-                    {activity.price}
-                  </Badge>
+      {/* Activity Cards or Empty State */}
+      {loading ? (
+        <div className="py-16 text-center text-muted-foreground text-sm space-y-2">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p>جاري تحميل الأنشطة المتاحة...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="border-card-border text-center py-16 text-muted-foreground p-6 space-y-3 bg-card rounded-2xl">
+          <Calendar className="w-12 h-12 mx-auto opacity-30 text-primary" />
+          <p className="font-bold text-foreground text-base">لا توجد أنشطة معلنة حالياً</p>
+          <p className="text-xs max-w-sm mx-auto leading-relaxed">
+            لم تقم المنظمات بإدراج أنشطة جديدة في هذا القسم بعد. يمكنك متابعة الساحة العامة للاطلاع على المستجدات أولاً بأول.
+          </p>
+        </Card>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((activity) => {
+            const registered = Boolean(registeredMap[activity.id]);
+            const capacity = activity.capacity || 100;
+            const attendees = (activity.attendeesCount || 0) + (registered ? 1 : 0);
+            const full = attendees >= capacity && !registered;
+            const percent = Math.min(Math.round((attendees / capacity) * 100), 100);
+            const orgName = activity.org?.name || activity.orgName || 'جهة منظمة';
+
+            return (
+              <Card
+                key={activity.id}
+                className="border-card-border hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between"
+              >
+                <div>
+                  <div className="h-3 bg-gradient-to-r from-primary to-amber-700" />
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <Badge variant="secondary" className="text-xs font-bold">
+                        {activity.category || 'عام'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs text-primary bg-primary/10 border-primary/20">
+                        {activity.status || 'متاح للتسجيل'}
+                      </Badge>
+                    </div>
+
+                    <h3 className="font-bold text-base mb-1 text-foreground line-clamp-1">{activity.title}</h3>
+                    <p className="text-xs text-muted-foreground mb-3 truncate">{orgName}</p>
+
+                    {activity.description && (
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+                        {activity.description}
+                      </p>
+                    )}
+
+                    <div className="space-y-1.5 mb-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 flex-shrink-0 text-primary" />
+                        <span>{activity.date} {activity.time ? `· ${activity.time}` : ''}</span>
+                      </div>
+                      {activity.location && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-primary" />
+                          <span className="truncate">{activity.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Seats progress */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {attendees} مسجّل
+                        </span>
+                        <span className="text-muted-foreground">{capacity} مقعد</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            percent >= 90 ? 'bg-red-500' : 'bg-primary'
+                          }`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
                 </div>
 
-                <h3 className="font-bold mb-1">{activity.title}</h3>
-                <p className="text-xs text-muted-foreground mb-3">{activity.org.name}</p>
-
-                <div className="space-y-1.5 mb-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 flex-shrink-0" />{activity.date} · {activity.time}</div>
-                  <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 flex-shrink-0" />{activity.location}</div>
-                </div>
-
-                {/* Seats progress */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" />{activity.registered} مسجّل</span>
-                    <span className="text-muted-foreground">{activity.seats} مقعد</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${percent >= 90 ? 'bg-red-400' : 'bg-primary'}`}
-                      style={{ width: `${Math.min(percent, 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
+                <div className="p-5 pt-0">
                   {full ? (
-                    <Button variant="outline" className="flex-1" disabled>القائمة الانتظار</Button>
+                    <Button variant="outline" className="w-full text-xs font-bold" disabled>
+                      اكتمل العدد
+                    </Button>
                   ) : (
                     <Button
-                      className={`flex-1 ${registered ? 'bg-primary/80 hover:bg-primary' : ''}`}
-                      onClick={() => register(activity.id)}
+                      className={`w-full text-xs font-bold gap-1.5 shadow-2xs ${
+                        registered ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
+                      }`}
+                      onClick={() => handleRegister(activity.id)}
                     >
-                      {registered ? '✓ مسجّل' : 'سجّل الآن'}
+                      {registered ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>أنت مسجل في هذا النشاط</span>
+                        </>
+                      ) : (
+                        'سجّل حضورك الآن'
+                      )}
                     </Button>
                   )}
-                  <Button variant="outline" size="icon">
-                    <Clock className="w-4 h-4" />
-                  </Button>
                 </div>
-
-                {activity.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {activity.tags.map(tag => (
-                      <span key={tag} className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">#{tag}</span>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,12 +24,15 @@ const TRENDS = [
   { id: 't5', tag: 'عمل_تطوعي', category: 'مبادرات مجتمعية' },
 ];
 
-const SUGGESTED_USERS = [
-  { id: 'u1', name: 'سارة عبدالله الأحمد', username: 'sara.ahmad', role: 'مهندسة حلول سحابية', verified: true },
-  { id: 'u2', name: 'م. طارق بن خالد العتيبي', username: 'tariq.otaibi', role: 'مستشار بنيات برمجية', verified: true },
-  { id: 'u3', name: 'د. ليلى السليمان', username: 'layla.sulaiman', role: 'أستاذة الأدب والنقد', verified: true },
-  { id: 'u4', name: 'منظمة رواد التطوع', username: 'rwad', role: 'مؤسسة غير ربحية معتمدة', verified: true, isOrg: true },
-];
+interface SuggestedUser {
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string;
+  verified?: boolean;
+  role?: string;
+  isFollowing?: boolean;
+}
 
 export default function Feed() {
   const { toast } = useToast();
@@ -55,19 +58,40 @@ export default function Feed() {
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
-  // Followed users state
-  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({
-    u1: true,
-  });
+  // Real Followed users and dynamic suggestions state
+  const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
+  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
 
   // Bookmarks
   const [bookmarkedMap, setBookmarkedMap] = useState<Record<string, boolean>>({});
+
+  // Fetch real suggestions from SQLite
+  useEffect(() => {
+    fetch('/api/users/suggestions', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('sard_token') || ''}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.users;
+        if (Array.isArray(list)) {
+          setSuggestedUsers(list);
+          const map: Record<string, boolean> = {};
+          list.forEach((u: SuggestedUser) => {
+            if (u.isFollowing) map[u.id] = true;
+          });
+          setFollowingMap(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Load and continuously sync posts across all connected devices in real time
   useEffect(() => {
     const fetchLatestFeed = () => {
       postsService.getFeed().then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setPosts(data);
         }
       });
@@ -185,14 +209,26 @@ export default function Feed() {
     });
   };
 
-  // Toggle Follow
-  const handleToggleFollow = (userId: string, name: string) => {
-    const next = !followingMap[userId];
-    setFollowingMap((prev) => ({ ...prev, [userId]: next }));
-    toast({
-      title: next ? `بدأت متابعة ${name}` : `تم إلغاء متابعة ${name}`,
-      description: next ? 'ستصلك سردات هذا الحساب في تبويب المتابعين.' : '',
-    });
+  // Toggle Follow (persisted in SQLite)
+  const handleToggleFollow = async (userId: string, name: string) => {
+    try {
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('sard_token') || ''}`,
+        },
+      });
+      const data = await res.json();
+      const isNowFollowing = Boolean(data?.following);
+      setFollowingMap((prev) => ({ ...prev, [userId]: isNowFollowing }));
+      toast({
+        title: isNowFollowing ? `بدأت متابعة ${name}` : `تم إلغاء متابعة ${name}`,
+        description: isNowFollowing ? 'ستصلك سردات هذا الحساب في تبويب المتابعين.' : '',
+      });
+    } catch {
+      const next = !followingMap[userId];
+      setFollowingMap((prev) => ({ ...prev, [userId]: next }));
+    }
   };
 
   // Character calculation
@@ -204,7 +240,7 @@ export default function Feed() {
   if (selectedTagFilter) {
     displayPosts = displayPosts.filter((p) => p.tags && p.tags.includes(selectedTagFilter));
   } else if (activeTab === 'following') {
-    displayPosts = displayPosts.filter((p) => p.author.username !== 'future.academy');
+    displayPosts = displayPosts.filter((p) => Boolean(followingMap[p.author.id] || followingMap[p.author.username]));
   } else if (activeTab === 'trending') {
     displayPosts = [...displayPosts].sort((a, b) => b.likes + b.comments - (a.likes + a.comments));
   }
@@ -728,40 +764,46 @@ export default function Feed() {
             </h3>
 
             <div className="space-y-3">
-              {SUGGESTED_USERS.map((user) => {
-                const isFollowing = !!followingMap[user.id];
-                return (
-                  <div key={user.id} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                        {user.name.slice(0, 1)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="font-bold text-xs text-foreground truncate">{user.name}</p>
-                          {user.verified && (
-                            <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
-                          )}
+              {suggestedUsers.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4 leading-relaxed">
+                  لا توجد اقتراحات حالياً. عند انضمام أعضاء جدد ستظهر حساباتهم هنا تلقائياً.
+                </p>
+              ) : (
+                suggestedUsers.map((u) => {
+                  const isFollowing = !!followingMap[u.id];
+                  return (
+                    <div key={u.id} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                          {u.name.slice(0, 1)}
                         </div>
-                        <p className="text-[10px] text-muted-foreground truncate">@{user.username}</p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="font-bold text-xs text-foreground truncate">{u.name}</p>
+                            {u.verified && (
+                              <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground truncate">@{u.username}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <Button
-                      size="sm"
-                      variant={isFollowing ? 'outline' : 'default'}
-                      onClick={() => handleToggleFollow(user.id, user.name)}
-                      className={`h-7 px-3 text-xs font-bold shadow-2xs ${
-                        isFollowing
-                          ? 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/40'
-                          : ''
-                      }`}
-                    >
-                      {isFollowing ? 'تتابع' : 'متابعة'}
-                    </Button>
-                  </div>
-                );
-              })}
+                      <Button
+                        size="sm"
+                        variant={isFollowing ? 'outline' : 'default'}
+                        onClick={() => handleToggleFollow(u.id, u.name)}
+                        className={`h-7 px-3 text-xs font-bold shadow-2xs ${
+                          isFollowing
+                            ? 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/40'
+                            : ''
+                        }`}
+                      >
+                        {isFollowing ? 'تتابع' : 'متابعة'}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
 

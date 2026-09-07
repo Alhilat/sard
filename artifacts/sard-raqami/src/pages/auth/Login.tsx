@@ -182,36 +182,6 @@ export default function Login() {
             متابعة مع Google
           </Button>
 
-          {/* Quick Demo Accounts for Easy Testing */}
-          <div className="mt-5 p-3.5 rounded-2xl bg-muted/50 border border-border/70 text-xs">
-            <p className="font-bold text-foreground mb-2 flex items-center justify-between">
-              <span>حسابات تجريبية جاهزة للاختبار:</span>
-              <span className="text-[10px] text-muted-foreground font-normal">كلمة المرور: sard123456</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => { setEmail('sara@sard.sa'); setPassword('sard123456'); }}
-                className="px-2.5 py-1.5 rounded-xl bg-background border border-border text-foreground hover:border-primary/60 font-semibold cursor-pointer transition-colors"
-              >
-                👤 حساب فرد (سارة)
-              </button>
-              <button
-                type="button"
-                onClick={() => { setEmail('contact@rwad.org'); setPassword('sard123456'); }}
-                className="px-2.5 py-1.5 rounded-xl bg-background border border-border text-amber-600 dark:text-amber-400 hover:border-amber-500 font-semibold cursor-pointer transition-colors"
-              >
-                🏛️ حساب منظمة (رواد التطوع)
-              </button>
-              <Link
-                href="/petra"
-                className="px-2.5 py-1.5 rounded-xl bg-background border border-border text-primary hover:border-primary font-semibold cursor-pointer transition-colors"
-              >
-                🛡️ بوابة بترا المركزية
-              </Link>
-            </div>
-          </div>
-
           <p className="text-center text-sm text-muted-foreground mt-6">
             ليس لديك حساب؟{' '}
             <Link href="/auth/register" className="text-primary font-semibold hover:underline">

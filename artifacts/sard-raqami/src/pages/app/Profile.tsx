@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { MapPin, Calendar, BookOpen, Activity, Settings, Edit, CheckCircle2, Sparkles, MessageSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Calendar, BookOpen, Settings, Edit, CheckCircle2, Sparkles, Users, Award } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { courses, activities } from '@/lib/mock-data';
+import { coursesService, Course } from '@/services/coursesService';
+import { activitiesService, Activity } from '@/services/activitiesService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,17 @@ const tabs = ['المنشورات', 'الأنشطة', 'الدورات'];
 export default function Profile() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('المنشورات');
+  const [userCourses, setUserCourses] = useState<Course[]>([]);
+  const [userActivities, setUserActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    coursesService.getCourses().then((data) => {
+      setUserCourses(data.filter((c) => c.enrolled));
+    });
+    activitiesService.getActivities().then((data) => {
+      setUserActivities(data.filter((a) => a.isRegistered));
+    });
+  }, []);
 
   const name = user?.name || 'مستخدم سرد';
   const username = user?.username || (user?.email ? user.email.split('@')[0] : 'user');
@@ -21,9 +33,6 @@ export default function Profile() {
   const joinDate = user?.joinDate || 'سبتمبر ٢٠٢٦';
   const initials = name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('') || 'س';
   const isOrg = user?.role === 'org';
-
-  const userCourses = courses.filter((c) => c.enrolled);
-  const userActivities = activities.slice(0, 3);
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6" dir="rtl">
@@ -80,19 +89,19 @@ export default function Profile() {
 
           <Separator className="my-4" />
 
-          {/* Clean Real Metrics (No Fake Numbers) */}
+          {/* Clean Real Metrics (Zero Fake Numbers) */}
           <div className="grid grid-cols-3 gap-3 max-w-md">
             <div className="p-3 rounded-2xl bg-muted/40 text-center border border-border/50">
               <p className="font-bold text-xs text-muted-foreground mb-1">حالة الحساب</p>
               <p className="font-bold text-xs text-emerald-600">نشط وموثق</p>
             </div>
             <div className="p-3 rounded-2xl bg-muted/40 text-center border border-border/50">
-              <p className="font-bold text-xs text-muted-foreground mb-1">الدورات</p>
+              <p className="font-bold text-xs text-muted-foreground mb-1">الدورات المسجلة</p>
               <p className="font-bold text-xs text-foreground">{userCourses.length} دورات</p>
             </div>
             <div className="p-3 rounded-2xl bg-muted/40 text-center border border-border/50">
-              <p className="font-bold text-xs text-muted-foreground mb-1">الأنشطة</p>
-              <p className="font-bold text-xs text-foreground">{userActivities.length} مسجلة</p>
+              <p className="font-bold text-xs text-muted-foreground mb-1">الأنشطة المسجلة</p>
+              <p className="font-bold text-xs text-foreground">{userActivities.length} نشاط</p>
             </div>
           </div>
         </div>
@@ -137,57 +146,86 @@ export default function Profile() {
         )}
 
         {activeTab === 'الأنشطة' && (
-          <div className="grid sm:grid-cols-2 gap-4">
-            {userActivities.map((activity) => (
-              <Card key={activity.id} className="border-border">
-                <CardContent className="p-4">
-                  <Badge variant="secondary" className="text-xs mb-2">
-                    {activity.category}
-                  </Badge>
-                  <p className="font-bold text-sm mb-1">{activity.title}</p>
-                  <p className="text-xs text-muted-foreground">{activity.org.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {activity.date} · {activity.time}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          userActivities.length === 0 ? (
+            <Card className="border-border text-center py-12 p-6 space-y-3 bg-card">
+              <Calendar className="w-10 h-10 mx-auto opacity-30 text-primary" />
+              <p className="font-bold text-sm text-foreground">لم تقم بالتسجيل في أي نشاط بعد</p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                استكشف الأنشطة والفعاليات المتاحة في المنصة وسجّل مشاركتك.
+              </p>
+              <Link href="/app/activities">
+                <Button size="sm" variant="outline" className="font-bold text-xs rounded-xl mt-2">
+                  استكشاف الأنشطة
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {userActivities.map((activity) => (
+                <Card key={activity.id} className="border-border">
+                  <CardContent className="p-4">
+                    <Badge variant="secondary" className="text-xs mb-2">
+                      {activity.category || 'عام'}
+                    </Badge>
+                    <p className="font-bold text-sm mb-1">{activity.title}</p>
+                    <p className="text-xs text-muted-foreground">{activity.org?.name || activity.orgName || 'جهة منظمة'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {activity.date} {activity.time ? `· ${activity.time}` : ''}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
         )}
 
         {activeTab === 'الدورات' && (
-          <div className="grid sm:grid-cols-2 gap-4">
-            {userCourses.map((course) => (
-              <Card key={course.id} className="border-border">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {course.category}
-                    </Badge>
-                    {course.progress === 100 && (
-                      <Badge className="text-xs bg-emerald-100 text-emerald-700 border-emerald-200">
-                        مكتملة
+          userCourses.length === 0 ? (
+            <Card className="border-border text-center py-12 p-6 space-y-3 bg-card">
+              <BookOpen className="w-10 h-10 mx-auto opacity-30 text-primary" />
+              <p className="font-bold text-sm text-foreground">لم تنضم إلى أي دورة تدريبية بعد</p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                تصفح قائمة الدورات التخصصية المتاحة في أكاديمية سرد الرقمية وابدأ رحلتك.
+              </p>
+              <Link href="/app/courses">
+                <Button size="sm" variant="outline" className="font-bold text-xs rounded-xl mt-2">
+                  تصفح الدورات
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {userCourses.map((course) => (
+                <Card key={course.id} className="border-border">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {course.category}
                       </Badge>
-                    )}
-                  </div>
-                  <p className="font-bold text-sm mb-1">{course.title}</p>
-                  <p className="text-xs text-muted-foreground mb-2">{course.org.name}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${course.progress}%` }}
-                      />
+                      {course.progress === 100 && (
+                        <Badge className="text-xs bg-emerald-100 text-emerald-700 border-emerald-200">
+                          مكتملة
+                        </Badge>
+                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground">{course.progress}%</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <p className="font-bold text-sm mb-1">{course.title}</p>
+                    <p className="text-xs text-muted-foreground mb-2">{course.org?.name || 'أكاديمية سرد'}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full"
+                          style={{ width: `${course.progress || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{course.progress || 0}%</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>
   );
 }
-

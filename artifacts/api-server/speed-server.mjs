@@ -123,11 +123,83 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS user_follows (
+    follower_id TEXT NOT NULL,
+    following_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (follower_id, following_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS activities (
+    id TEXT PRIMARY KEY,
+    org_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    category TEXT DEFAULT 'عام',
+    date TEXT NOT NULL,
+    time TEXT DEFAULT '',
+    location TEXT DEFAULT '',
+    location_type TEXT DEFAULT 'in_person',
+    capacity INTEGER DEFAULT 100,
+    attendees_count INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'متاح للتسجيل',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS activity_registrations (
+    activity_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (activity_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS courses (
+    id TEXT PRIMARY KEY,
+    org_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    tagline TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    category TEXT DEFAULT 'تقنية',
+    level TEXT DEFAULT 'مبتدئ',
+    duration TEXT DEFAULT '',
+    total_hours INTEGER DEFAULT 0,
+    lectures INTEGER DEFAULT 0,
+    students INTEGER DEFAULT 0,
+    rating REAL DEFAULT 5.0,
+    price TEXT DEFAULT 'مجاني',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS course_enrollments (
+    course_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    progress INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (course_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    actor_id TEXT,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    link TEXT DEFAULT '',
+    is_read INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
   CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
   CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+  CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id);
+  CREATE INDEX IF NOT EXISTS idx_user_follows_following ON user_follows(following_id);
+  CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date);
+  CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
 `);
 
 // ── In-Memory Fast Caches & Metrics (Sub-Millisecond O(1) Speed) ─────────────
@@ -233,264 +305,66 @@ const stmtIncrementGroupMembers = db.prepare('UPDATE groups SET members_count = 
 const stmtDecrementGroupMembers = db.prepare('UPDATE groups SET members_count = MAX(1, members_count - 1) WHERE id = ?');
 const stmtCheckGroupMember = db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?');
 
+// ── Follows Prepared Statements ─────────────────────────────────────────────
+const stmtFollowUser = db.prepare('INSERT OR IGNORE INTO user_follows (follower_id, following_id, created_at) VALUES (?, ?, ?)');
+const stmtUnfollowUser = db.prepare('DELETE FROM user_follows WHERE follower_id = ? AND following_id = ?');
+const stmtIsFollowing = db.prepare('SELECT 1 FROM user_follows WHERE follower_id = ? AND following_id = ?');
+const stmtCountFollowers = db.prepare('SELECT COUNT(*) as count FROM user_follows WHERE following_id = ?');
+const stmtCountFollowing = db.prepare('SELECT COUNT(*) as count FROM user_follows WHERE follower_id = ?');
+const stmtGetSuggestions = db.prepare('SELECT id, name, username, avatar, verified, role, bio FROM users WHERE id != ? AND is_banned = 0 ORDER BY created_at DESC LIMIT 10');
+
+// ── Activities Prepared Statements ──────────────────────────────────────────
+const stmtGetActivities = db.prepare(`
+  SELECT a.*, u.name as org_name, u.avatar as org_avatar
+  FROM activities a
+  JOIN users u ON a.org_id = u.id
+  ORDER BY a.created_at DESC
+`);
+const stmtGetActivityById = db.prepare(`
+  SELECT a.*, u.name as org_name, u.avatar as org_avatar
+  FROM activities a
+  JOIN users u ON a.org_id = u.id
+  WHERE a.id = ?
+`);
+const stmtInsertActivity = db.prepare(`
+  INSERT INTO activities (id, org_id, title, description, category, date, time, location, location_type, capacity, attendees_count, status, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+const stmtRegisterActivity = db.prepare('INSERT OR IGNORE INTO activity_registrations (activity_id, user_id, created_at) VALUES (?, ?, ?)');
+const stmtIncrementActivityAttendees = db.prepare('UPDATE activities SET attendees_count = attendees_count + 1 WHERE id = ?');
+const stmtCheckActivityRegistration = db.prepare('SELECT 1 FROM activity_registrations WHERE activity_id = ? AND user_id = ?');
+
+// ── Courses Prepared Statements ─────────────────────────────────────────────
+const stmtGetCourses = db.prepare(`
+  SELECT c.*, u.name as org_name, u.avatar as org_avatar
+  FROM courses c
+  JOIN users u ON c.org_id = u.id
+  ORDER BY c.created_at DESC
+`);
+const stmtGetCourseById = db.prepare(`
+  SELECT c.*, u.name as org_name, u.avatar as org_avatar
+  FROM courses c
+  JOIN users u ON c.org_id = u.id
+  WHERE c.id = ?
+`);
+const stmtInsertCourse = db.prepare(`
+  INSERT INTO courses (id, org_id, title, tagline, description, category, level, duration, total_hours, lectures, students, rating, price, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+const stmtEnrollCourse = db.prepare('INSERT OR IGNORE INTO course_enrollments (course_id, user_id, progress, created_at) VALUES (?, ?, 0, ?)');
+const stmtIncrementCourseStudents = db.prepare('UPDATE courses SET students = students + 1 WHERE id = ?');
+const stmtCheckCourseEnrollment = db.prepare('SELECT progress FROM course_enrollments WHERE course_id = ? AND user_id = ?');
+
+// ── Notifications Prepared Statements ───────────────────────────────────────
+const stmtGetNotifications = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50');
+const stmtInsertNotification = db.prepare('INSERT INTO notifications (id, user_id, actor_id, type, title, content, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)');
+const stmtMarkNotificationRead = db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?');
+
 const stmtInsertAuditLog = db.prepare(`
   INSERT INTO petra_audit_logs (id, admin_user, action, target_type, target_id, details, created_at)
   VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 const stmtGetAuditLogs = db.prepare('SELECT * FROM petra_audit_logs ORDER BY created_at DESC LIMIT 100');
-
-// ── Seed Default Verified Accounts & Data If Empty ─────────────────────────
-function seedInitialData() {
-  const countRow = db.prepare('SELECT COUNT(*) as count FROM users').get();
-  if (countRow.count > 0) return;
-
-  console.log('[Seed] Database is empty. Seeding initial accounts, posts, and groups...');
-
-  const defaultPasswordHash = bcrypt.hashSync('sard123456', 10);
-  const now = Date.now();
-
-  const seedUsers = [
-    {
-      id: 'usr_sara',
-      name: 'سارة عبدالله الأحمد',
-      email: 'sara@sard.sa',
-      username: 'sara.ahmad',
-      password_hash: defaultPasswordHash,
-      role: 'individual',
-      bio: 'مهندسة حلول سحابية وذكاء اصطناعي، شغوفة بإثراء المحتوى المعرفي العربي.',
-      verified: 1,
-      join_date: 'يناير ٢٠٢٤',
-    },
-    {
-      id: 'usr_tariq',
-      name: 'م. طارق بن خالد العتيبي',
-      email: 'tariq@sard.sa',
-      username: 'tariq.otaibi',
-      password_hash: defaultPasswordHash,
-      role: 'individual',
-      bio: 'مستشار بنيات برمجية ونظم سحابية عالية الموثوقية.',
-      verified: 1,
-      join_date: 'مارس ٢٠٢٤',
-    },
-    {
-      id: 'usr_layla',
-      name: 'د. ليلى السليمان',
-      email: 'layla@sard.sa',
-      username: 'layla.sulaiman',
-      password_hash: defaultPasswordHash,
-      role: 'individual',
-      bio: 'أستاذة الأدب والنقد الرقمي وباحثة في الثقافة العربية المعاصرة.',
-      verified: 1,
-      join_date: 'فبراير ٢٠٢٤',
-    },
-    {
-      id: 'usr_org_rwad',
-      name: 'منظمة رواد التطوع',
-      email: 'contact@rwad.org',
-      username: 'rwad',
-      password_hash: defaultPasswordHash,
-      role: 'org',
-      bio: 'مؤسسة غير ربحية معتمدة تسعى لتمكين الشباب في المبادرات المجتمعية وصناعة الأثر.',
-      verified: 1,
-      join_date: 'يناير ٢٠٢٤',
-    },
-    {
-      id: 'usr_ahmed',
-      name: 'أحمد محمد الزهراني',
-      email: 'ahmed@sard.sa',
-      username: 'ahmed.zahrani',
-      password_hash: defaultPasswordHash,
-      role: 'individual',
-      bio: 'مطور برمجيات وعضو شغوف بالتقنيات الناشئة والمجتمعات المعرفية.',
-      verified: 0,
-      join_date: 'أبريل ٢٠٢٤',
-    },
-  ];
-
-  for (const u of seedUsers) {
-    stmtInsertUser.run({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      username: u.username,
-      password_hash: u.password_hash,
-      role: u.role,
-      phone: '',
-      avatar: '',
-      bio: u.bio,
-      location: 'المملكة العربية السعودية',
-      country: 'المملكة العربية السعودية',
-      join_date: u.join_date,
-      verified: u.verified,
-      is_banned: 0,
-      ban_reason: '',
-      created_at: now - 30 * 86400000,
-    });
-  }
-
-  // Seed Groups
-  const seedGroups = [
-    {
-      id: 'g1',
-      name: 'مجتمع مطوري البرمجيات العرب',
-      tagline: 'منصة لتبادل المعرفة البرمجية وبناء حلول تقنية عربية رائدة',
-      description: 'ملتقى يجمع نخبة المطورين والمهندسين العرب لتبادل الخبرات المعمارية، ونقاش أحدث التقنيات وأفضل ممارسات البرمجة وهندسة البرمجيات.',
-      category: 'تقنية',
-      privacy: 'عام',
-      members_count: 1,
-      posts_count: 1,
-      cover_gradient: 'from-[#6B1B1B] via-[#8C2424] to-[#3B0E0E]',
-      accent_color: '#8C2424',
-      rules: JSON.stringify(['الاحترام المتبادل', 'دعم المحتوى التقني العربي البناء']),
-      creator_id: 'usr_tariq',
-    },
-    {
-      id: 'g2',
-      name: 'رواد العمل التطوعي وصنّاع الأثر',
-      tagline: 'مبادرات ميدانية ورقمية لخدمة المجتمع وبناء التكافل',
-      description: 'مجتمع يربط المتطوعين والناشطين لتنسيق المبادرات المجتمعية والمشاريع الخيرية ونشر ثقافة العطاء.',
-      category: 'تطوع',
-      privacy: 'عام',
-      members_count: 1,
-      posts_count: 1,
-      cover_gradient: 'from-[#1B4D3E] via-[#236854] to-[#123329]',
-      accent_color: '#236854',
-      rules: JSON.stringify(['الالتزام بالشفافية', 'المبادرات المرخصة ذات الأثر']),
-      creator_id: 'usr_org_rwad',
-    },
-    {
-      id: 'g3',
-      name: 'شبكة رواد الأعمال والمشاريع الناشئة',
-      tagline: 'فضاء بناء الشركات، الشراكات الاستثمارية، والابتكار الريادي',
-      description: 'فضاء مخصص لرواد الأعمال والمستثمرين لتبادل دراسات الجدوى، ونماذج الأعمال واستراتيجيات التوسع.',
-      category: 'ريادة أعمال',
-      privacy: 'عام',
-      members_count: 1,
-      posts_count: 0,
-      cover_gradient: 'from-[#7A4B17] via-[#A06522] to-[#452707]',
-      accent_color: '#A06522',
-      rules: JSON.stringify(['دعم الابتكار', 'منع الإعلانات العشوائية']),
-      creator_id: 'usr_sara',
-    },
-  ];
-
-  for (const g of seedGroups) {
-    stmtInsertGroup.run({
-      id: g.id,
-      name: g.name,
-      tagline: g.tagline,
-      description: g.description,
-      category: g.category,
-      privacy: g.privacy,
-      members_count: g.members_count,
-      posts_count: g.posts_count,
-      cover_gradient: g.cover_gradient,
-      accent_color: g.accent_color,
-      rules: g.rules,
-      creator_id: g.creator_id,
-      created_at: now - 20 * 86400000,
-    });
-    stmtInsertGroupMember.run(g.id, g.creator_id, 'مؤسس', now - 20 * 86400000);
-  }
-
-  // Seed Posts
-  const seedPosts = [
-    {
-      id: 'p1',
-      author_id: 'usr_sara',
-      content: 'المستقبل يصنعه أولئك الذين يبنون اليوم. مع تسارع تقنيات الذكاء الاصطناعي، تظل القيمة الحقيقية في فهم الاحتياج البشري وصياغة الحلول التي تمكّن الإنسان، لا أن تلغيه. ما هو أكثر مجال ترون فيه أثراً واعداً؟ #سرد_رقمي #الذكاء_الاصطناعي',
-      tags: JSON.stringify(['سرد_رقمي', 'الذكاء_الاصطناعي']),
-      group_id: null,
-      likes_count: 0,
-      comments_count: 2,
-      created_at: now - 15 * 60000,
-      timestamp_text: 'منذ ١٥ دقيقة',
-    },
-    {
-      id: 'p2',
-      author_id: 'usr_org_rwad',
-      content: 'يسعدنا الإعلان رسمياً عن فتح باب الانضمام إلى "ملتقى التطوع الرقمي ٢٠٢٦". نسعى لتدريب الشباب والشابات على إطلاق مبادرات مجتمعية نوعية. لا تنتظر الفرصة، بل اصنعها بنفسك! 🌿✨ #عمل_تطوعي #صناع_الأثر',
-      tags: JSON.stringify(['عمل_تطوعي', 'صناع_الأثر']),
-      group_id: 'g2',
-      likes_count: 0,
-      comments_count: 1,
-      created_at: now - 2 * 3600000,
-      timestamp_text: 'منذ ساعتين',
-    },
-    {
-      id: 'p3',
-      author_id: 'usr_tariq',
-      content: 'نصيحة أشاركها دائماً مع المطورين الشباب:\n١. احرص على فهم المعمارية قبل كتابة أول سطر كود.\n٢. وثّق قراراتك البرمجية (ADRs).\n٣. بسّط الحلول قدر المستطاع، فالكود الأفضل هو الكود الذي يسهل حذفه واستبداله لاحقاً. #تطوير_البرمجيات #هندسة_النظم',
-      tags: JSON.stringify(['تطوير_البرمجيات', 'هندسة_النظم']),
-      group_id: 'g1',
-      likes_count: 0,
-      comments_count: 0,
-      created_at: now - 4 * 3600000,
-      timestamp_text: 'منذ ٤ ساعات',
-    },
-    {
-      id: 'p4',
-      author_id: 'usr_layla',
-      content: 'في فضاء "سرد"، كل حرف يُكتب هو لبنة في صرح الثقافة والمعرفة. جميل أن نرى منصة عربية تجمع المطور والكاتب والمصمم في حوار مفتوح يثري المحتوى الرقمي بلغتنا العربية الأصيلة. فخورين بهذا الحراك! 🖋️📖 #سرد_رقمي #اللغة_العربية',
-      tags: JSON.stringify(['سرد_رقمي', 'اللغة_العربية']),
-      group_id: null,
-      likes_count: 0,
-      comments_count: 0,
-      created_at: now - 18 * 3600000,
-      timestamp_text: 'أمس الساعة ٦:٠٠ م',
-    },
-  ];
-
-  for (const p of seedPosts) {
-    stmtInsertPost.run({
-      id: p.id,
-      author_id: p.author_id,
-      content: p.content,
-      tags: p.tags,
-      group_id: p.group_id,
-      likes_count: p.likes_count,
-      comments_count: p.comments_count,
-      shares_count: 0,
-      created_at: p.created_at,
-      timestamp_text: p.timestamp_text,
-    });
-  }
-
-  // Seed Comments
-  stmtInsertComment.run({
-    id: 'c101',
-    post_id: 'p1',
-    author_id: 'usr_tariq',
-    content: 'أتفق معك تماماً يا سارة. الأتمتة والذكاء الاصطناعي في قطاعات التعليم والصحة سيكون لهما أعظم الأثر الاجتماعي خلال العقد الحالي.',
-    likes_count: 5,
-    created_at: now - 10 * 60000,
-    timestamp_text: 'منذ ١٠ دقائق',
-  });
-
-  stmtInsertComment.run({
-    id: 'c102',
-    post_id: 'p1',
-    author_id: 'usr_layla',
-    content: 'المعضلة الأخلاقية تظل هي التحدي الأكبر: كيف نحافظ على أصالة التفكير الإنساني مع كل هذه الأدوات التوليدية؟ طرح ملهم ومحفز للتأمل.',
-    likes_count: 3,
-    created_at: now - 5 * 60000,
-    timestamp_text: 'منذ ٥ دقائق',
-  });
-
-  stmtInsertComment.run({
-    id: 'c201',
-    post_id: 'p2',
-    author_id: 'usr_ahmed',
-    content: 'تم التسجيل في البرنامج بحمد الله! متحمس جداً للمشاركة في مسار المبادرات التقنية المجتمعية.',
-    likes_count: 4,
-    created_at: now - 3600000,
-    timestamp_text: 'منذ ساعة',
-  });
-
-  console.log('[Seed] Database initialization complete!');
-}
-
-seedInitialData();
 
 // ── Express Application ─────────────────────────────────────────────────────
 const app = express();
@@ -509,8 +383,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Helper: Format User response
+// Helper: Format User response (with dynamic counts from SQLite)
 function formatUserResponse(u) {
+  let followersCount = 0;
+  let followingCount = 0;
+  let postsCount = 0;
+  try {
+    followersCount = stmtCountFollowers.get(u.id)?.count || 0;
+    followingCount = stmtCountFollowing.get(u.id)?.count || 0;
+    postsCount = db.prepare('SELECT COUNT(*) as count FROM posts WHERE author_id = ?').get(u.id)?.count || 0;
+  } catch {}
+
   return {
     id: u.id,
     name: u.name,
@@ -525,6 +408,9 @@ function formatUserResponse(u) {
     joinDate: u.join_date,
     verified: Boolean(u.verified),
     status: u.is_banned ? 'banned' : 'active',
+    followers: followersCount,
+    following: followingCount,
+    postsCount: postsCount,
   };
 }
 
@@ -1565,114 +1451,206 @@ app.get('/api/petra/logs', authenticatePetra, (_req, res) => {
   }
 });
 
-// ── Activities & Courses Public Endpoints ──────────────────────────────────
-app.get('/api/activities', (_req, res) => {
-  res.json({
-    success: true,
-    activities: [
-      {
-        id: 'act-1',
-        title: 'ملتقى السرد الرقمي وصناعة المحتوى الإبداعي ٢٠٢٦',
-        org: { id: 'usr_org_rwad', name: 'منظمة رواد التطوع' },
-        orgName: 'منظمة رواد التطوع',
-        date: '١٥ أكتوبر ٢٠٢٦',
-        time: '٦:٠٠ م - ٩:٠٠ م',
-        location: 'مركز الملك عبدالله المالي (KAFD) - الرياض',
-        locationType: 'in_person',
-        capacity: 150,
-        attendeesCount: 94,
-        category: 'تقنية وثقافة',
-        status: 'متاح للتسجيل',
-        description: 'جلسات تفاعلية تجمع نخبة صناع المحتوى ورواد التقنية لمناقشة أحدث ممارسات السرد الرقمي.',
-      },
-      {
-        id: 'act-2',
-        title: 'مبادرة غراس الرياض للتشجير المجتمعي',
-        org: { id: 'usr_org_rwad', name: 'منظمة رواد التطوع' },
-        orgName: 'منظمة رواد التطوع',
-        date: '٢٢ أكتوبر ٢٠٢٦',
-        time: '٤:٠٠ م - ٧:٠٠ م',
-        location: 'منتزه وادي حنيفة - الرياض',
-        locationType: 'in_person',
-        capacity: 200,
-        attendeesCount: 140,
-        category: 'تطوع وبيئة',
-        status: 'متاح للتسجيل',
-        description: 'مبادرة تطوعية لزراعة ٥٠٠ شتلة برية محلية لتعزيز الاستدامة والغطاء النباتي.',
-      },
-      {
-        id: 'act-3',
-        title: 'هاكاثون الذكاء الاصطناعي للحلول المجتمعية',
-        org: { id: 'usr_org_rwad', name: 'منظمة رواد التطوع' },
-        orgName: 'منظمة رواد التطوع',
-        date: '٥ نوفمبر ٢٠٢٦',
-        time: '٩:٠٠ ص - ٥:٠٠ م',
-        location: 'عبر الإنترنت (جلسة تفاعلية مباشرة)',
-        locationType: 'online',
-        capacity: 500,
-        attendeesCount: 380,
-        category: 'ذكاء اصطناعي',
-        status: 'متاح للتسجيل',
-        description: 'منافسة برمجية مكثفة لبناء تطبيقات ذكية تسهم في تمكين المنظمات غير الربحية.',
-      },
-    ],
+// ── Users Follow & Suggestions Endpoints ────────────────────────────────────
+app.post('/api/users/:id/follow', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  const targetId = req.params.id;
+  if (targetId === req.user.id) {
+    return res.status(400).json({ success: false, message: 'لا يمكنك متابعة نفسك' });
+  }
+  const isFollowing = stmtIsFollowing.get(req.user.id, targetId);
+  if (isFollowing) {
+    stmtUnfollowUser.run(req.user.id, targetId);
+    return res.json({ success: true, following: false });
+  } else {
+    stmtFollowUser.run(req.user.id, targetId, Date.now());
+    return res.json({ success: true, following: true });
+  }
+});
+
+app.get('/api/users/suggestions', authenticateToken, (req, res) => {
+  const currentUserId = req.user ? req.user.id : '';
+  const rows = stmtGetSuggestions.all(currentUserId);
+  const suggestions = rows.map((u) => {
+    const isFollowing = currentUserId ? Boolean(stmtIsFollowing.get(currentUserId, u.id)) : false;
+    return {
+      id: u.id,
+      name: u.name,
+      username: u.username,
+      avatar: u.avatar || '',
+      verified: Boolean(u.verified),
+      role: u.role === 'org' ? 'منظمة معتمدة' : (u.bio || 'عضو في مجتمع سرد'),
+      isFollowing,
+    };
   });
+  res.json(suggestions);
+});
+
+// ── Activities SQLite Endpoints ─────────────────────────────────────────────
+app.get('/api/activities', authenticateToken, (req, res) => {
+  try {
+    const currentUserId = req.user ? req.user.id : null;
+    const rows = stmtGetActivities.all();
+    const activities = rows.map((a) => {
+      const isRegistered = currentUserId ? Boolean(stmtCheckActivityRegistration.get(a.id, currentUserId)) : false;
+      return {
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        category: a.category,
+        date: a.date,
+        time: a.time,
+        location: a.location,
+        locationType: a.location_type,
+        capacity: a.capacity,
+        attendeesCount: a.attendees_count,
+        status: a.status,
+        org: { id: a.org_id, name: a.org_name, avatar: a.org_avatar },
+        orgName: a.org_name,
+        isRegistered,
+      };
+    });
+    res.json({ success: true, activities });
+  } catch (err) {
+    console.error('Error fetching activities:', err);
+    res.status(500).json({ success: false, activities: [] });
+  }
+});
+
+app.post('/api/activities', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const { title, description, category, date, time, location, locationType, capacity } = req.body;
+    if (!title || !date) return res.status(400).json({ success: false, message: 'يرجى إدخال عنوان وتاريخ الفعالية' });
+    const id = `act_${Date.now()}`;
+    stmtInsertActivity.run(
+      id,
+      req.user.id,
+      title.trim(),
+      (description || '').trim(),
+      category || 'عام',
+      date,
+      time || '',
+      location || '',
+      locationType || 'in_person',
+      Number(capacity) || 100,
+      0,
+      'متاح للتسجيل',
+      Date.now()
+    );
+    res.status(201).json({ success: true, id, message: 'تم إنشاء الفعالية بنجاح' });
+  } catch (err) {
+    console.error('Error creating activity:', err);
+    res.status(500).json({ success: false, message: 'تعذر إنشاء الفعالية' });
+  }
 });
 
 app.post('/api/activities/:id/register', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    message: 'تم تأكيد تسجيلك في النشاط بنجاح',
-  });
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const activityId = req.params.id;
+    stmtRegisterActivity.run(activityId, req.user.id, Date.now());
+    stmtIncrementActivityAttendees.run(activityId);
+    res.json({ success: true, message: 'تم تأكيد تسجيلك في النشاط بنجاح' });
+  } catch (err) {
+    console.error('Error registering for activity:', err);
+    res.status(500).json({ success: false, message: 'تعذر التسجيل في النشاط' });
+  }
 });
 
-app.get('/api/courses', (_req, res) => {
-  res.json({
-    success: true,
-    courses: [
-      {
-        id: 'c1',
-        title: 'مقدمة في البرمجة وهندسة البرمجيات بلغة Python',
-        tagline: 'تأسيس احترافي من الصفر حتى بناء التطبيقات وقواعد البيانات المتكاملة',
-        category: 'برمجة',
-        level: 'مبتدئ',
-        duration: '٨ أسابيع',
-        totalHours: 48,
-        lectures: 24,
-        students: 24,
-        rating: 4.9,
-        price: 'مجاني',
-        enrolled: true,
-        progress: 35,
-        org: { id: 'usr_org_rwad', name: 'أكاديمية سرد الرقمية' },
-        description: 'دورة تطبيقية شاملة تركز على البناء المعرفي والعملي لمفاهيم البرمجة الحديثة.',
-      },
-      {
-        id: 'c2',
-        title: 'تطبيقات الذكاء الاصطناعي التوليدي في بيئات العمل',
-        tagline: 'استراتيجيات توظيف النماذج اللغوية الكبيرة في أتمتة الأعمال وتحليل البيانات',
-        category: 'ذكاء اصطناعي',
-        level: 'متوسط',
-        duration: '٦ أسابيع',
-        totalHours: 36,
-        lectures: 18,
-        students: 48,
-        rating: 4.8,
-        price: 'مجاني',
-        enrolled: false,
-        progress: 0,
-        org: { id: 'usr_org_rwad', name: 'مركز سرد للابتكار' },
-        description: 'فهم أصول الذكاء الاصطناعي وهندسة الأوامر (Prompt Engineering) وتطبيقاتها.',
-      },
-    ],
-  });
+// ── Courses SQLite Endpoints ────────────────────────────────────────────────
+app.get('/api/courses', authenticateToken, (req, res) => {
+  try {
+    const currentUserId = req.user ? req.user.id : null;
+    const rows = stmtGetCourses.all();
+    const courses = rows.map((c) => {
+      const enrollment = currentUserId ? stmtCheckCourseEnrollment.get(c.id, currentUserId) : null;
+      return {
+        id: c.id,
+        title: c.title,
+        tagline: c.tagline,
+        description: c.description,
+        category: c.category,
+        level: c.level,
+        duration: c.duration,
+        totalHours: c.total_hours,
+        lectures: c.lectures,
+        students: c.students,
+        rating: c.rating,
+        price: c.price,
+        enrolled: Boolean(enrollment),
+        progress: enrollment ? enrollment.progress : 0,
+        org: { id: c.org_id, name: c.org_name, avatar: c.org_avatar },
+      };
+    });
+    res.json({ success: true, courses });
+  } catch (err) {
+    console.error('Error fetching courses:', err);
+    res.status(500).json({ success: false, courses: [] });
+  }
+});
+
+app.post('/api/courses', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const { title, tagline, description, category, level, duration, totalHours, lectures, price } = req.body;
+    if (!title) return res.status(400).json({ success: false, message: 'يرجى إدخال عنوان الدورة' });
+    const id = `crs_${Date.now()}`;
+    stmtInsertCourse.run(
+      id,
+      req.user.id,
+      title.trim(),
+      tagline || '',
+      description || '',
+      category || 'تقنية',
+      level || 'مبتدئ',
+      duration || '٤ أسابيع',
+      Number(totalHours) || 20,
+      Number(lectures) || 10,
+      0,
+      5.0,
+      price || 'مجاني',
+      Date.now()
+    );
+    res.status(201).json({ success: true, id, message: 'تم إضافة الدورة بنجاح' });
+  } catch (err) {
+    console.error('Error creating course:', err);
+    res.status(500).json({ success: false, message: 'تعذر إضافة الدورة' });
+  }
 });
 
 app.post('/api/courses/:id/enroll', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    message: 'تم الانضمام إلى الدورة بنجاح',
-  });
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const courseId = req.params.id;
+    stmtEnrollCourse.run(courseId, req.user.id, Date.now());
+    stmtIncrementCourseStudents.run(courseId);
+    res.json({ success: true, message: 'تم الانضمام إلى الدورة بنجاح' });
+  } catch (err) {
+    console.error('Error enrolling in course:', err);
+    res.status(500).json({ success: false, message: 'تعذر الانضمام إلى الدورة' });
+  }
+});
+
+// ── Notifications SQLite Endpoints ──────────────────────────────────────────
+app.get('/api/notifications', authenticateToken, (req, res) => {
+  if (!req.user) return res.json({ success: true, notifications: [] });
+  try {
+    const rows = stmtGetNotifications.all(req.user.id);
+    res.json({ success: true, notifications: rows });
+  } catch {
+    res.json({ success: true, notifications: [] });
+  }
+});
+
+app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false });
+  try {
+    stmtMarkNotificationRead.run(req.params.id, req.user.id);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ success: false });
+  }
 });
 
 // ── Static Frontend Serving (Render & Production Support) ───────────────────

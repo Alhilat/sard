@@ -1,10 +1,14 @@
 import { api } from '@/lib/api';
-import { activities as mockActivities } from '@/lib/mock-data';
 
 export interface Activity {
   id: string;
   title: string;
   organization?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  org?: {
     id: string;
     name: string;
     avatar?: string;
@@ -15,12 +19,16 @@ export interface Activity {
   location: string;
   locationType?: 'in_person' | 'online';
   capacity?: number;
+  seats?: number;
   attendeesCount?: number;
+  registered?: number;
+  price?: string;
   category: string;
   image?: string;
   status?: string;
   description?: string;
   isRegistered?: boolean;
+  tags?: string[];
 }
 
 export const activitiesService = {
@@ -30,9 +38,9 @@ export const activitiesService = {
       if (Array.isArray(response)) return response;
       if (response && Array.isArray((response as any).activities)) return (response as any).activities;
       if (response && Array.isArray((response as any).data)) return (response as any).data;
-      return mockActivities;
+      return [];
     } catch {
-      return mockActivities;
+      return [];
     }
   },
 
@@ -40,7 +48,7 @@ export const activitiesService = {
     try {
       return await api.get<Activity>(`/activities/${activityId}`);
     } catch {
-      return mockActivities.find((a) => a.id === activityId);
+      return undefined;
     }
   },
 
@@ -49,7 +57,7 @@ export const activitiesService = {
       await api.post(`/activities/${activityId}/register`);
       return true;
     } catch {
-      return true;
+      return false;
     }
   },
 };

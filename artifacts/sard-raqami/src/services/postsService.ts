@@ -60,133 +60,8 @@ export interface Comment {
   isLiked?: boolean;
 }
 
-// Initial Twitter-style Sard Posts
-const initialSardPosts: Post[] = [
-  {
-    id: 'p1',
-    author: {
-      id: '2',
-      name: 'سارة عبدالله الأحمد',
-      username: 'sara.ahmad',
-      verified: true,
-      role: 'مهندسة حلول سحابية',
-    },
-    content: 'المستقبل يصنعه أولئك الذين يبنون اليوم. مع تسارع تقنيات الذكاء الاصطناعي، تظل القيمة الحقيقية في فهم الاحتياج البشري وصياغة الحلول التي تمكّن الإنسان، لا أن تلغيه. ما هو أكثر مجال ترون فيه أثراً واعداً؟ #سرد_رقمي #الذكاء_الاصطناعي',
-    likes: 0,
-    comments: 2,
-    shares: 0,
-    timestamp: 'منذ ١٥ دقيقة',
-    isLiked: false,
-    tags: ['سرد_رقمي', 'الذكاء_الاصطناعي'],
-  },
-  {
-    id: 'p2',
-    author: {
-      id: 'org1',
-      name: 'منظمة رواد التطوع',
-      username: 'rwad',
-      verified: true,
-      role: 'مؤسسة غير ربحية معتمدة',
-    },
-    content: 'يسعدنا الإعلان رسمياً عن فتح باب الانضمام إلى "ملتقى التطوع الرقمي ٢٠٢٥". نسعى لتدريب الشباب والشابات على إطلاق مبادرات مجتمعية نوعية. لا تنتظر الفرصة، بل اصنعها بنفسك! 🌿✨ #عمل_تطوعي #صناع_الأثر',
-    likes: 0,
-    comments: 1,
-    shares: 0,
-    timestamp: 'منذ ساعتين',
-    isLiked: false,
-    tags: ['عمل_تطوعي', 'صناع_الأثر'],
-  },
-  {
-    id: 'p3',
-    author: {
-      id: '3',
-      name: 'م. طارق بن خالد العتيبي',
-      username: 'tariq.otaibi',
-      verified: true,
-      role: 'مستشار بنيات برمجية',
-    },
-    content: 'نصيحة أشاركها دائماً مع المطورين الشباب:\n١. احرص على فهم المعمارية قبل كتابة أول سطر كود.\n٢. وثّق قراراتك البرمجية (ADRs).\n٣. بسّط الحلول قدر المستطاع، فالكود الأفضل هو الكود الذي يسهل حذفه واستبداله لاحقاً. #تطوير_البرمجيات #هندسة_النظم',
-    likes: 0,
-    comments: 1,
-    shares: 0,
-    timestamp: 'منذ ٤ ساعات',
-    isLiked: false,
-    tags: ['تطوير_البرمجيات', 'هندسة_النظم'],
-  },
-  {
-    id: 'p4',
-    author: {
-      id: '4',
-      name: 'د. ليلى السليمان',
-      username: 'layla.sulaiman',
-      verified: true,
-      role: 'أستاذة الأدب والنقد',
-    },
-    content: 'في فضاء "سرد"، كل حرف يُكتب هو لبنة في صرح الثقافة والمعرفة. جميل أن نرى منصة عربية تجمع المطور والكاتب والمصمم في حوار مفتوح يثري المحتوى الرقمي بلغتنا العربية الأصيلة. فخورين بهذا الحراك! 🖋️📖 #سرد_رقمي #اللغة_العربية',
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    timestamp: 'أمس الساعة ٦:٠٠ م',
-    isLiked: false,
-    tags: ['سرد_رقمي', 'اللغة_العربية'],
-  },
-  {
-    id: 'p5',
-    author: {
-      id: '1',
-      name: 'أحمد محمد الزهراني',
-      username: 'ahmed.zahrani',
-      verified: false,
-      role: 'عضو نشط',
-    },
-    content: 'أنهيت اليوم تطبيق نظام محادثة جماعي متكامل مع صلاحيات تحكم المعلم. الشعور بالإنجاز لا يُضاهى حين ترى الكود يتحول إلى تجربة مستخدم حية وتفاعلية. شكراً لكل من ساعد وقدّم ملاحظات! 🚀💻 #سرد #تحدي_البرمجة',
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    timestamp: 'أمس',
-    isLiked: false,
-    tags: ['سرد', 'تحدي_البرمجة'],
-  },
-];
-
-let inMemoryPosts: Post[] = [...initialSardPosts];
-
-const sessionComments: Record<string, Comment[]> = {
-  p1: [
-    {
-      id: 'c101',
-      author: { id: '3', name: 'م. طارق بن خالد العتيبي', username: 'tariq.otaibi', verified: true },
-      content: 'أتفق معك تماماً يا سارة. الأتمتة والذكاء الاصطناعي التوليدي في مجال الرعاية الصحية والتعليم سيكون لهما أعظم الأثر الاجتماعي خلال العقد الحالي.',
-      created_at: 'منذ ١٠ دقائق',
-      likes_count: 12,
-    },
-    {
-      id: 'c102',
-      author: { id: '4', name: 'د. ليلى السليمان', username: 'layla.sulaiman', verified: true },
-      content: 'المعضلة الأخلاقية تظل هي التحدي الأكبر: كيف نحافظ على أصالة التفكير الإنساني مع كل هذه الأدوات التوليدية؟ طرح ملهم ومحفز للتأمل.',
-      created_at: 'منذ ٥ دقائق',
-      likes_count: 8,
-    },
-  ],
-  p2: [
-    {
-      id: 'c201',
-      author: { id: '1', name: 'أحمد محمد الزهراني', username: 'ahmed.zahrani' },
-      content: 'تم التسجيل في البرنامج بحمد الله! متحمس جداً للمشاركة في مسار المبادرات التقنية.',
-      created_at: 'منذ ساعة',
-      likes_count: 4,
-    },
-  ],
-  p3: [
-    {
-      id: 'c301',
-      author: { id: '2', name: 'سارة عبدالله الأحمد', username: 'sara.ahmad', verified: true },
-      content: 'القاعدة الثالثة ذهبية: "الكود الأفضل هو الكود الذي يسهل حذفه". البساطة هي قمة الاحترافية دائماً.',
-      created_at: 'منذ ٣ ساعات',
-      likes_count: 24,
-    },
-  ],
-};
+let inMemoryPosts: Post[] = [];
+const sessionComments: Record<string, Comment[]> = {};
 
 export const postsService = {
   getFeed: async (page = 1, limit = 20, groupId?: string): Promise<Post[]> => {
@@ -196,18 +71,14 @@ export const postsService = {
         limit,
         group_id: groupId,
       });
-      if (Array.isArray(response) && response.length > 0) return response;
-      if (response && Array.isArray((response as any).posts) && (response as any).posts.length > 0) {
+      if (Array.isArray(response)) return response;
+      if (response && Array.isArray((response as any).posts)) {
         return (response as any).posts;
       }
+      return [];
     } catch {
-      // fallback
+      return groupId ? inMemoryPosts.filter((p) => p.groupId === groupId) : inMemoryPosts;
     }
-
-    if (groupId) {
-      return inMemoryPosts.filter((p) => p.groupId === groupId);
-    }
-    return [...inMemoryPosts];
   },
 
   createPost: async (data: {

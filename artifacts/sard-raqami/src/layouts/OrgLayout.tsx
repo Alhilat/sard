@@ -178,7 +178,7 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
             <OrgAvatar name={orgDisplayName} />
           </div>
         </header>
-        <main className="flex-1 page-enter">{children}</main>
+        <main className="flex-1 page-enter pb-16 lg:pb-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

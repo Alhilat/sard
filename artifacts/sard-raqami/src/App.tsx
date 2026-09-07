@@ -133,8 +133,8 @@ function Router() {
       <Route path="/org/profile" component={() => <ProtectedRoute role="org"><OrgLayout><OrgProfile /></OrgLayout></ProtectedRoute>} />
       <Route path="/org/settings" component={() => <ProtectedRoute role="org"><OrgLayout><OrgSettings /></OrgLayout></ProtectedRoute>} />
 
-      {/* Secret Petra Central Control Route (Dedicated password gate only) */}
-      <Route path="/petra" component={Petra} />
+      {/* Secret Petra Central Control Route (Dedicated obscure gate only) */}
+      <Route path="/system-control-gate-9921" component={Petra} />
 
       <Route component={NotFound} />
     </Switch>
