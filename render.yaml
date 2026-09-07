@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sard-raqami
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PETRA_USER
+        value: petra
+      - key: PETRA_PASS
+        value: petra2026

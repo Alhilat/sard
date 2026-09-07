@@ -47,3 +47,11 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Environment and local databases
+.env
+.env.local
+database/*.sqlite
+database/*.sqlite-shm
+database/*.sqlite-wal
+uploads/

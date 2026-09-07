@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "سرد رقمي"
+version = "1.0.0"
+id = "artifacts/sard-raqami"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23465
+
+[services.development]
+run = "pnpm --filter @workspace/sard-raqami run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sard-raqami", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sard-raqami/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23465"
+BASE_PATH = "/"

@@ -1,0 +1,485 @@
+Act as a Senior Frontend Software Engineer and UI/UX Architect.
+
+Your task is to build the complete frontend of a professional community platform.
+
+Do NOT build any backend.
+
+Do NOT use mock designs only. Build a production-ready frontend architecture.
+
+----------------------------------
+Technology Stack
+----------------------------------
+
+- React
+- TypeScript
+- Tailwind CSS
+- React Router
+- Axios
+- React Hook Form
+- Zod
+- React Query (TanStack Query)
+- Framer Motion
+- Lucide React Icons
+
+----------------------------------
+Project Overview
+----------------------------------
+
+The platform connects individuals with verified organizations.
+
+There are THREE different user roles:
+
+1. Individual User
+2. Verified Organization
+3. System Admin
+
+Each role has its own interface, dashboard, pages, permissions and navigation.
+
+----------------------------------
+Authentication
+----------------------------------
+
+Build:
+
+- Login Page
+- Register Page (Individual)
+- Register Organization Request
+- Forgot Password
+- Reset Password
+- Email Verification UI
+- Unauthorized Page
+- 404 Page
+
+----------------------------------
+Landing Website
+----------------------------------
+
+Create:
+
+- Hero Section
+- About Platform
+- Features
+- Statistics
+- Organizations Showcase
+- Latest Activities
+- Latest Courses
+- Latest Blog Posts
+- Call To Action
+- Footer
+- Contact Section
+
+----------------------------------
+Navigation
+----------------------------------
+
+Responsive Navigation
+
+Desktop
+
+Tablet
+
+Mobile
+
+Sidebar
+
+Role-based Navigation
+
+----------------------------------
+Individual Interface
+----------------------------------
+
+Create complete pages for:
+
+Dashboard
+
+Profile
+
+Edit Profile
+
+News Feed
+
+Create Post
+
+Post Details
+
+Comments
+
+Followers
+
+Following
+
+Saved Posts
+
+Notifications
+
+Messages
+
+Groups
+
+My Groups
+
+Activities
+
+Activity Details
+
+My Activity Registrations
+
+Courses
+
+Course Details
+
+My Courses
+
+AI Chat
+
+Search
+
+Settings
+
+----------------------------------
+Organization Interface
+----------------------------------
+
+Dashboard
+
+Organization Profile
+
+Edit Organization
+
+Create Activity
+
+Manage Activities
+
+Activity Registrations
+
+Create Course
+
+Manage Courses
+
+Organization Feed
+
+Followers
+
+Members
+
+Messages
+
+Notifications
+
+Analytics
+
+Settings
+
+----------------------------------
+Admin Interface
+----------------------------------
+
+Admin Dashboard
+
+Users Management
+
+Organizations Management
+
+Verify Organizations
+
+Activities Management
+
+Courses Management
+
+Posts Management
+
+Reports
+
+Blog Management
+
+Categories
+
+Notifications
+
+Platform Settings
+
+Analytics
+
+Logs
+
+----------------------------------
+Blog
+----------------------------------
+
+Blog Home
+
+Article Details
+
+Categories
+
+Search
+
+----------------------------------
+Social Feed
+----------------------------------
+
+Implement UI for:
+
+Posts
+
+Comments
+
+Replies
+
+Likes
+
+Shares
+
+Bookmarks
+
+Images
+
+Videos
+
+User Tags
+
+Organization Tags
+
+----------------------------------
+Activities
+----------------------------------
+
+Activity Cards
+
+Activity Details
+
+Registration Form
+
+Participants List
+
+Calendar View
+
+----------------------------------
+Courses
+----------------------------------
+
+Course Cards
+
+Course Details
+
+Registration
+
+Progress UI
+
+Certificates UI
+
+----------------------------------
+Groups
+----------------------------------
+
+Group List
+
+Group Details
+
+Group Feed
+
+Members
+
+----------------------------------
+AI Assistant
+----------------------------------
+
+Build an AI Chat Interface similar to ChatGPT.
+
+Include:
+
+Conversation History
+
+Sidebar
+
+Suggested Questions
+
+Typing Animation
+
+Message Bubbles
+
+Code Blocks
+
+Markdown Rendering
+
+Auto Scroll
+
+----------------------------------
+Notifications
+----------------------------------
+
+Notification Center
+
+Unread Counter
+
+Notification Details
+
+----------------------------------
+Search
+----------------------------------
+
+Global Search
+
+Search Users
+
+Search Organizations
+
+Search Courses
+
+Search Activities
+
+Search Blog
+
+----------------------------------
+Common Components
+----------------------------------
+
+Create reusable components:
+
+Navbar
+
+Sidebar
+
+Footer
+
+Buttons
+
+Inputs
+
+Cards
+
+Dialogs
+
+Tables
+
+Badges
+
+Tabs
+
+Dropdowns
+
+Pagination
+
+Breadcrumb
+
+Avatar
+
+Empty States
+
+Error States
+
+Loading Skeletons
+
+Modals
+
+Toasts
+
+----------------------------------
+UI Requirements
+----------------------------------
+
+Modern
+
+Minimal
+
+Clean
+
+Professional
+
+Accessible
+
+Responsive
+
+Dark Mode Ready
+
+Light Mode
+
+RTL Ready
+
+Reusable Components
+
+Animations
+
+Consistent Design System
+
+----------------------------------
+Folder Structure
+----------------------------------
+
+Create a scalable project architecture including:
+
+assets
+
+components
+
+layouts
+
+pages
+
+hooks
+
+contexts
+
+services
+
+api
+
+routes
+
+types
+
+constants
+
+utils
+
+styles
+
+----------------------------------
+Code Quality
+----------------------------------
+
+Use:
+
+TypeScript everywhere.
+
+Strong typing.
+
+Reusable components.
+
+Clean architecture.
+
+Feature-based organization.
+
+No duplicated code.
+
+----------------------------------
+Deliverables
+----------------------------------
+
+Generate:
+
+1. Complete React Frontend
+
+2. Folder Structure
+
+3. Routing Structure
+
+4. Components Structure
+
+5. State Management Structure
+
+6. Responsive Design
+
+7. API Integration Layer (without backend implementation)
+
+8. Frontend Documentation
+
+9. Component Documentation
+
+10. Project Setup Instructions
+
+Do not build backend.
+
+Do not build database.
+
+Focus only on creating a complete production-ready frontend.
