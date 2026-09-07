@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import ShareModal from '@/components/share/ShareModal';
+import { tokenStorage } from '@/lib/api';
 
 const MAX_CHARS = 280;
 
@@ -110,10 +111,8 @@ export default function Feed() {
     }
 
     setExpandedPostId(postId);
-    if (!commentsMap[postId]) {
-      const fetched = await postsService.getComments(postId);
-      setCommentsMap((prev) => ({ ...prev, [postId]: fetched }));
-    }
+    const fetched = await postsService.getComments(postId);
+    setCommentsMap((prev) => ({ ...prev, [postId]: fetched }));
   };
 
   // Submit new tweet / sard
@@ -183,6 +182,7 @@ export default function Feed() {
 
   // Toggle Like on post
   const handleToggleLike = async (postId: string) => {
+    // Optimistic toggle
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
@@ -196,7 +196,17 @@ export default function Feed() {
         return p;
       })
     );
-    await postsService.likePost(postId);
+
+    const result = await postsService.likePost(postId);
+    if (result && typeof result.liked === 'boolean') {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? { ...p, isLiked: result.liked, likes: result.likes }
+            : p
+        )
+      );
+    }
   };
 
   // Toggle Bookmark
@@ -212,10 +222,12 @@ export default function Feed() {
   // Toggle Follow (persisted in SQLite)
   const handleToggleFollow = async (userId: string, name: string) => {
     try {
+      const token = tokenStorage.get() || localStorage.getItem('sard_token') || '';
       const res = await fetch(`/api/users/${userId}/follow`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('sard_token') || ''}`,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
       const data = await res.json();

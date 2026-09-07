@@ -134,26 +134,42 @@ export const postsService = {
     return newPost;
   },
 
-  likePost: async (postId: string): Promise<boolean> => {
+  likePost: async (postId: string): Promise<{ success: boolean; liked: boolean; likes: number }> => {
+    let serverResult: { liked?: boolean; likes?: number } | null = null;
     try {
-      await api.post(`/posts/${postId}/like`);
+      const res = await api.post<{ liked?: boolean; likes?: number; success?: boolean }>(`/posts/${postId}/like`);
+      if (res && typeof res.liked === 'boolean') {
+        serverResult = res;
+      }
     } catch {
       // fallback
     }
 
+    let finalLiked = false;
+    let finalLikes = 0;
+
     inMemoryPosts = inMemoryPosts.map((p) => {
       if (p.id === postId) {
-        const nextLiked = !p.isLiked;
+        const nextLiked = serverResult ? Boolean(serverResult.liked) : !p.isLiked;
+        const nextLikes = serverResult && typeof serverResult.likes === 'number'
+          ? serverResult.likes
+          : (nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1));
+        finalLiked = nextLiked;
+        finalLikes = nextLikes;
         return {
           ...p,
           isLiked: nextLiked,
-          likes: nextLiked ? p.likes + 1 : Math.max(0, p.likes - 1),
+          likes: nextLikes,
         };
       }
       return p;
     });
 
-    return true;
+    return {
+      success: true,
+      liked: serverResult ? Boolean(serverResult.liked) : finalLiked,
+      likes: serverResult && typeof serverResult.likes === 'number' ? serverResult.likes : finalLikes,
+    };
   },
 
   sharePost: async (
@@ -179,8 +195,10 @@ export const postsService = {
 
   getComments: async (postId: string): Promise<Comment[]> => {
     try {
-      const res = await api.get<{ comments: Comment[] }>(`/posts/${postId}/comments`);
+      const res = await api.get<any>(`/posts/${postId}/comments`);
+      if (Array.isArray(res)) return res;
       if (res && Array.isArray(res.comments)) return res.comments;
+      if (res && Array.isArray(res.data)) return res.data;
     } catch {
       // fallback
     }
@@ -189,8 +207,18 @@ export const postsService = {
 
   addComment: async (postId: string, content: string): Promise<Comment> => {
     try {
-      const res = await api.post<Comment>(`/posts/${postId}/comments`, { content });
-      if (res && res.id) return res;
+      const res = await api.post<any>(`/posts/${postId}/comments`, { content });
+      const commentObj: Comment = res?.comment || (res?.id ? res : null);
+      if (commentObj && commentObj.id) {
+        if (!sessionComments[postId]) {
+          sessionComments[postId] = [];
+        }
+        sessionComments[postId].unshift(commentObj);
+        inMemoryPosts = inMemoryPosts.map((p) =>
+          p.id === postId ? { ...p, comments: p.comments + 1 } : p
+        );
+        return commentObj;
+      }
     } catch {
       // fallback
     }

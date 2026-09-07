@@ -35,10 +35,11 @@ export default function Notifications() {
   const filters = ['الكل', 'غير مقروءة', 'إعجابات', 'تعليقات', 'متابعون'];
 
   useEffect(() => {
-    api.get<{ notifications?: NotificationItem[] }>('/notifications')
+    api.get<any>('/notifications')
       .then((res) => {
-        if (res?.notifications && Array.isArray(res.notifications)) {
-          setNotifs(res.notifications);
+        const list = Array.isArray(res) ? res : (res?.notifications || res?.data || []);
+        if (Array.isArray(list)) {
+          setNotifs(list);
         }
       })
       .catch(() => {})

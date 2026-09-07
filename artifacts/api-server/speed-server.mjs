@@ -350,7 +350,7 @@ const stmtUpdateUserBan = db.prepare('UPDATE users SET is_banned = ?, ban_reason
 const stmtGetPosts = db.prepare(`
   SELECT p.*, u.name as author_name, u.username as author_username, u.avatar as author_avatar, u.role as author_role, u.verified as author_verified
   FROM posts p
-  JOIN users u ON p.author_id = u.id
+  LEFT JOIN users u ON p.author_id = u.id
   ORDER BY p.created_at DESC
   LIMIT ? OFFSET ?
 `);
@@ -358,7 +358,7 @@ const stmtGetPosts = db.prepare(`
 const stmtGetGroupPosts = db.prepare(`
   SELECT p.*, u.name as author_name, u.username as author_username, u.avatar as author_avatar, u.role as author_role, u.verified as author_verified
   FROM posts p
-  JOIN users u ON p.author_id = u.id
+  LEFT JOIN users u ON p.author_id = u.id
   WHERE p.group_id = ?
   ORDER BY p.created_at DESC
   LIMIT ? OFFSET ?
@@ -377,7 +377,7 @@ const stmtIncrementPostShares = db.prepare('UPDATE posts SET shares_count = shar
 const stmtGetComments = db.prepare(`
   SELECT c.*, u.name as author_name, u.username as author_username, u.avatar as author_avatar, u.verified as author_verified
   FROM comments c
-  JOIN users u ON c.author_id = u.id
+  LEFT JOIN users u ON c.author_id = u.id
   WHERE c.post_id = ?
   ORDER BY c.created_at ASC
 `);
@@ -470,9 +470,41 @@ const stmtIncrementCourseStudents = db.prepare('UPDATE courses SET students = st
 const stmtCheckCourseEnrollment = db.prepare('SELECT progress FROM course_enrollments WHERE course_id = ? AND user_id = ?');
 
 // ── Notifications Prepared Statements ───────────────────────────────────────
-const stmtGetNotifications = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50');
+const stmtGetNotifications = db.prepare(`
+  SELECT n.*, u.name as actor_name, u.avatar as actor_avatar, u.username as actor_username
+  FROM notifications n
+  LEFT JOIN users u ON n.actor_id = u.id
+  WHERE n.user_id = ?
+  ORDER BY n.created_at DESC
+  LIMIT 50
+`);
+const stmtGetUnreadNotificationsCount = db.prepare('SELECT COUNT(*) as unread_count FROM notifications WHERE user_id = ? AND is_read = 0');
 const stmtInsertNotification = db.prepare('INSERT INTO notifications (id, user_id, actor_id, type, title, content, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)');
 const stmtMarkNotificationRead = db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?');
+const stmtMarkAllNotificationsRead = db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?');
+
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return 'الآن';
+  const diffSec = Math.floor((Date.now() - Number(timestamp)) / 1000);
+  if (diffSec < 60) return 'الآن';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `منذ ${diffMin} دقيقة`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `منذ ${diffDays} يوم`;
+}
+
+function createNotification({ userId, actorId, type, title, content, link = '' }) {
+  if (!userId || (actorId && userId === actorId)) return; // Don't self-notify
+  try {
+    const notifId = `notif_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    stmtInsertNotification.run(notifId, userId, actorId || null, type, title, content, link, Date.now());
+    scheduleCloudSync();
+  } catch (err) {
+    console.error('[Notification] Error creating notification:', err.message);
+  }
+}
 
 const stmtInsertAuditLog = db.prepare(`
   INSERT INTO petra_audit_logs (id, admin_user, action, target_type, target_id, details, created_at)
@@ -918,6 +950,9 @@ app.post('/api/posts/:id/like', authenticateToken, (req, res) => {
     }
     const userId = req.user.id;
 
+    // Check post for notification
+    const post = db.prepare('SELECT id, author_id, content FROM posts WHERE id = ?').get(postId);
+
     const existing = stmtGetLike.get(postId, userId);
     let isLiked = false;
 
@@ -929,13 +964,32 @@ app.post('/api/posts/:id/like', authenticateToken, (req, res) => {
       stmtInsertLike.run(postId, userId, Date.now());
       stmtIncrementPostLikes.run(postId);
       isLiked = true;
+
+      // Send notification to post author if not self
+      if (post && post.author_id && post.author_id !== userId) {
+        const snippet = post.content ? (post.content.length > 35 ? post.content.slice(0, 35) + '...' : post.content) : 'سردتك';
+        createNotification({
+          userId: post.author_id,
+          actorId: userId,
+          type: 'like',
+          title: 'إعجاب جديد',
+          content: `أعجب ${req.user.name} بسردتك: "${snippet}"`,
+          link: '/app/feed',
+        });
+      }
     }
 
+    scheduleCloudSync();
+
     const updatedPost = db.prepare('SELECT likes_count FROM posts WHERE id = ?').get(postId);
+    const likesCount = updatedPost ? updatedPost.likes_count : (isLiked ? 1 : 0);
+
     res.json({
       success: true,
       liked: isLiked,
-      likes: updatedPost ? updatedPost.likes_count : 0,
+      likes: likesCount,
+      likes_count: likesCount,
+      isLiked,
     });
   } catch (err) {
     console.error('Error liking post:', err);
@@ -948,6 +1002,7 @@ app.post('/api/posts/:id/share', (_req, res) => {
   try {
     const postId = _req.params.id;
     stmtIncrementPostShares.run(postId);
+    scheduleCloudSync();
     const updated = db.prepare('SELECT shares_count FROM posts WHERE id = ?').get(postId);
     res.json({
       success: true,
@@ -968,14 +1023,14 @@ app.get('/api/posts/:id/comments', (_req, res) => {
       id: c.id,
       author: {
         id: c.author_id,
-        name: c.author_name,
-        username: c.author_username,
+        name: c.author_name || 'مستخدم سرد',
+        username: c.author_username || 'user',
         avatar: c.author_avatar || '',
         verified: Boolean(c.author_verified),
       },
       content: c.content,
-      created_at: c.timestamp_text,
-      likes_count: c.likes_count,
+      created_at: c.timestamp_text || formatRelativeTime(c.created_at),
+      likes_count: c.likes_count || 0,
       isLiked: false,
     }));
 
@@ -1020,6 +1075,22 @@ app.post('/api/posts/:id/comments', authenticateToken, (req, res) => {
 
     stmtIncrementPostComments.run(postId);
 
+    // Send notification to post author if not self
+    const post = db.prepare('SELECT id, author_id, content FROM posts WHERE id = ?').get(postId);
+    if (post && post.author_id && post.author_id !== author.id) {
+      const snippet = cleanContent.length > 35 ? cleanContent.slice(0, 35) + '...' : cleanContent;
+      createNotification({
+        userId: post.author_id,
+        actorId: author.id,
+        type: 'comment',
+        title: 'رد جديد على سردتك',
+        content: `علق ${author.name}: "${snippet}"`,
+        link: '/app/feed',
+      });
+    }
+
+    scheduleCloudSync();
+
     const createdComment = {
       id: commentId,
       author: {
@@ -1035,7 +1106,12 @@ app.post('/api/posts/:id/comments', authenticateToken, (req, res) => {
       isLiked: false,
     };
 
-    res.status(201).json(createdComment);
+    res.status(201).json({
+      success: true,
+      ...createdComment,
+      comment: createdComment,
+      data: createdComment,
+    });
   } catch (err) {
     console.error('Error posting comment:', err);
     res.status(500).json({ success: false, message: 'تعذر إضافة التعليق' });
@@ -1593,9 +1669,19 @@ app.post('/api/users/:id/follow', authenticateToken, (req, res) => {
   const isFollowing = stmtIsFollowing.get(req.user.id, targetId);
   if (isFollowing) {
     stmtUnfollowUser.run(req.user.id, targetId);
+    scheduleCloudSync();
     return res.json({ success: true, following: false });
   } else {
     stmtFollowUser.run(req.user.id, targetId, Date.now());
+    createNotification({
+      userId: targetId,
+      actorId: req.user.id,
+      type: 'follow',
+      title: 'متابع جديد',
+      content: `بدأ ${req.user.name} بمتابعة حسابك في سرد رقمي`,
+      link: '/app/profile',
+    });
+    scheduleCloudSync();
     return res.json({ success: true, following: true });
   }
 });
@@ -1766,12 +1852,53 @@ app.post('/api/courses/:id/enroll', authenticateToken, (req, res) => {
 
 // ── Notifications SQLite Endpoints ──────────────────────────────────────────
 app.get('/api/notifications', authenticateToken, (req, res) => {
-  if (!req.user) return res.json({ success: true, notifications: [] });
+  if (!req.user) return res.json({ success: true, notifications: [], data: [] });
   try {
     const rows = stmtGetNotifications.all(req.user.id);
-    res.json({ success: true, notifications: rows });
+    const notifications = rows.map((r) => ({
+      id: r.id,
+      type: r.type || 'system',
+      title: r.title || 'إشعار جديد',
+      content: r.content,
+      link: r.link || '',
+      read: Boolean(r.is_read),
+      is_read: Boolean(r.is_read),
+      time: formatRelativeTime(r.created_at),
+      created_at: r.created_at,
+      user: {
+        id: r.actor_id || '',
+        name: r.actor_name || 'مستخدم سرد',
+        avatar: r.actor_avatar || '',
+        username: r.actor_username || 'user',
+      },
+    }));
+
+    res.json({ success: true, notifications, data: notifications });
+  } catch (err) {
+    console.error('Error getting notifications:', err);
+    res.json({ success: true, notifications: [], data: [] });
+  }
+});
+
+app.get('/api/notifications/unread-count', authenticateToken, (req, res) => {
+  if (!req.user) return res.json({ count: 0, unreadCount: 0 });
+  try {
+    const row = stmtGetUnreadNotificationsCount.get(req.user.id);
+    const count = row ? Number(row.unread_count) : 0;
+    res.json({ count, unreadCount: count });
   } catch {
-    res.json({ success: true, notifications: [] });
+    res.json({ count: 0, unreadCount: 0 });
+  }
+});
+
+app.patch('/api/notifications/mark-all-read', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false });
+  try {
+    stmtMarkAllNotificationsRead.run(req.user.id);
+    scheduleCloudSync();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر تحديث الإشعارات' });
   }
 });
 
@@ -1779,6 +1906,7 @@ app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false });
   try {
     stmtMarkNotificationRead.run(req.params.id, req.user.id);
+    scheduleCloudSync();
     res.json({ success: true });
   } catch {
     res.status(500).json({ success: false });

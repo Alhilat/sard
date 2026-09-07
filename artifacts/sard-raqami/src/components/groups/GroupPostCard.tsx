@@ -15,8 +15,8 @@ interface GroupPostCardProps {
 
 export default function GroupPostCard({ post, groupName }: GroupPostCardProps) {
   const { toast } = useToast();
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likes);
+  const [liked, setLiked] = useState(Boolean(post.isLiked));
+  const [likesCount, setLikesCount] = useState(post.likes || 0);
   const [sharesCount, setSharesCount] = useState(post.shares || 0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -25,7 +25,14 @@ export default function GroupPostCard({ post, groupName }: GroupPostCardProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newCommentText, setNewCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [commentsCount, setCommentsCount] = useState(post.comments);
+  const [commentsCount, setCommentsCount] = useState(post.comments || 0);
+
+  // Keep state synced with props
+  useEffect(() => {
+    setLiked(Boolean(post.isLiked));
+    setLikesCount(post.likes || 0);
+    setCommentsCount(post.comments || 0);
+  }, [post.isLiked, post.likes, post.comments]);
 
   // Load comments when drawer is opened
   useEffect(() => {
@@ -41,7 +48,11 @@ export default function GroupPostCard({ post, groupName }: GroupPostCardProps) {
     setLikesCount((prev) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)));
 
     try {
-      await postsService.likePost(post.id);
+      const res = await postsService.likePost(post.id);
+      if (res && typeof res.liked === 'boolean') {
+        setLiked(res.liked);
+        setLikesCount(res.likes);
+      }
     } catch {
       setLiked(!nextLiked);
       setLikesCount((prev) => (!nextLiked ? prev + 1 : Math.max(0, prev - 1)));

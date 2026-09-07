@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   Home, Sparkles, Newspaper, Calendar, BookOpen, Users, MessageSquare,
@@ -6,6 +6,7 @@ import {
   Building2, User as UserIcon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -41,7 +42,23 @@ export { UserAvatar };
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = () => {
+      api.get<any>('/notifications/unread-count')
+        .then((data) => {
+          const count = typeof data?.count === 'number' ? data.count : (data?.unreadCount || 0);
+          setUnreadCount(count);
+        })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 8000);
+    return () => clearInterval(interval);
+  }, [user, location]);
 
   const displayName = user?.name || 'مستخدم سرد';
   const displayUsername = user?.username || (user?.email ? user.email.split('@')[0] : 'user');
@@ -122,6 +139,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon className="w-5 h-5 flex-shrink-0" />
                   <span className="text-sm font-medium flex-1">{item.label}</span>
+                  {item.href === '/app/notifications' && unreadCount > 0 && (
+                    <Badge variant="destructive" className="h-5 px-1.5 text-[10px] font-bold rounded-full">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Badge>
+                  )}
                 </div>
               </Link>
             );
@@ -193,10 +215,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 ms-auto">
             <Link href="/app/notifications">
               <button
-                className="p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
+                className="relative p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
                 title="الإشعارات"
               >
                 <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 end-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
             </Link>
             <Link href="/app/messages">
