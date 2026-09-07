@@ -136,7 +136,7 @@ function Router() {
       {/* Secret Petra Central Control Route (Dedicated password gate only) */}
       <Route path="/petra" component={Petra} />
 
-      <Route component={RootRedirect} />
+      <Route component={NotFound} />
     </Switch>
   );
 }

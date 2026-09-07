@@ -1,5 +1,5 @@
 import { api, tokenStorage } from '@/lib/api';
-import { Post } from './postsService';
+import { postsService, Post } from './postsService';
 
 function getActiveGroupAuthor() {
   const user = tokenStorage.getUser<any>();
@@ -372,7 +372,7 @@ export const groupsService = {
 
   getGroupPosts: async (groupId: string): Promise<Post[]> => {
     try {
-      const posts = await postsService.getPosts(groupId);
+      const posts = await postsService.getFeed(1, 50, groupId);
       if (Array.isArray(posts) && posts.length > 0) {
         groupPostsStore[groupId] = posts;
         return posts;
