@@ -8,6 +8,8 @@ import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 const { Pool } = pg;
+import { startBackupScheduler, getSchedulerStatus } from '../../scripts/backup-scheduler.mjs';
+import { runBackupSync } from '../../scripts/sync-and-verify-backup.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -363,8 +365,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_org_members_org ON org_members(org_id);
+  CREATE TABLE IF NOT EXISTS backup_audit_logs (
+    id TEXT PRIMARY KEY,
+    trigger_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    tables_synced INTEGER DEFAULT 0,
+    total_records INTEGER DEFAULT 0,
+    discrepancies TEXT DEFAULT '[]',
+    duration_ms INTEGER DEFAULT 0,
+    details TEXT DEFAULT '',
+    created_at INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_direct_messages_conv ON direct_messages(conversation_id, created_at ASC);
   CREATE INDEX IF NOT EXISTS idx_course_chat_messages_course ON course_chat_messages(course_id, created_at ASC);
+  CREATE INDEX IF NOT EXISTS idx_backup_audit_created_at ON backup_audit_logs(created_at DESC);
 `);
 
 // Flush initial snapshot immediately so public.sard_cloud_store is populated right away
@@ -594,6 +609,7 @@ const stmtInsertAuditLog = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 const stmtGetAuditLogs = db.prepare('SELECT * FROM petra_audit_logs ORDER BY created_at DESC LIMIT 100');
+const stmtGetLatestBackupAudit = db.prepare('SELECT * FROM backup_audit_logs ORDER BY created_at DESC LIMIT 10');
 
 // ── Express Application ─────────────────────────────────────────────────────
 const app = express();
@@ -1838,6 +1854,64 @@ app.get('/api/petra/logs', authenticatePetra, (_req, res) => {
   }
 });
 
+// ── Automated Backup & Data Check Telemetry (Render -> Supabase) ────────────
+app.get('/api/backup/status', (_req, res) => {
+  try {
+    const scheduler = getSchedulerStatus();
+    let latestLogs = [];
+    try {
+      latestLogs = stmtGetLatestBackupAudit.all().map(item => ({
+        ...item,
+        discrepancies: typeof item.discrepancies === 'string' ? JSON.parse(item.discrepancies || '[]') : item.discrepancies
+      }));
+    } catch {}
+
+    res.json({
+      success: true,
+      active: scheduler.enabled,
+      scheduler,
+      latest_audit: latestLogs[0] || null,
+      history: latestLogs,
+      target: (process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL) ? 'Supabase PostgreSQL (Configured)' : 'Standby (SUPABASE_DATABASE_URL not set)',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر جلب حالة النسخ الاحتياطي', error: err.message });
+  }
+});
+
+// Petra / Admin Manual Backup Trigger Endpoint
+app.post('/api/petra/backup/trigger', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const backupKey = req.headers['x-backup-key'] || req.query.key;
+
+  const isPetraAdmin = token && token.startsWith('petra_session_');
+  const isKeyAuthorized = Boolean(backupKey && process.env.BACKUP_SECRET_KEY && backupKey === process.env.BACKUP_SECRET_KEY);
+
+  if (!isPetraAdmin && !isKeyAuthorized) {
+    return res.status(401).json({
+      success: false,
+      message: 'غير مصرح لك ببدء عملية النسخ الاحتياطي اليدوي (Admin Token or Backup Key required)'
+    });
+  }
+
+  try {
+    const result = await runBackupSync({ triggerType: 'manual_api' });
+    res.json({
+      success: result.success,
+      status: result.status,
+      message: result.success ? 'اكتمل النسخ الاحتياطي وفحص البيانات بنجاح' : 'اكتمل النسخ مع وجود تباينات',
+      result
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: `فشلت عملية النسخ الاحتياطي: ${err.message}`
+    });
+  }
+});
+
 // ── Users Follow & Suggestions Endpoints ────────────────────────────────────
 app.post('/api/users/:id/follow', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
@@ -2618,6 +2692,16 @@ app.use((req, res, next) => {
 
 // ── Start Server ────────────────────────────────────────────────────────────
 app.listen(PORT, HOST, () => {
+  let backupStatusText = 'STANDBY (Set SUPABASE_DATABASE_URL to enable 2x daily backup)';
+  if (process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL) {
+    try {
+      startBackupScheduler({ immediate: false });
+      backupStatusText = 'ACTIVE (2x Daily: 03:00 UTC & 15:00 UTC)';
+    } catch (schedErr) {
+      backupStatusText = `ERROR: ${schedErr.message}`;
+    }
+  }
+
   console.log(`
   ══════════════════════════════════════════════════════════════════════════
   🚀 SARD RAQAMI HIGH-SPEED PRODUCTION ENGINE (محرك سرد رقمي فائق السرعة)
@@ -2625,6 +2709,7 @@ app.listen(PORT, HOST, () => {
   📡 Server Listening on : http://${HOST}:${PORT}
   ⚡ Mode                : Production-Ready SQLite WAL + O(1) Cache
   🛡️ Petra Gate Path     : /api/petra/* (Control Groups, Posts, Bans)
+  💾 Supabase Backup     : ${backupStatusText}
   📊 Designed Capacity   : 10,000+ Daily Active Users (< 1ms Latency)
   ══════════════════════════════════════════════════════════════════════════
   `);

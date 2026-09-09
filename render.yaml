@@ -22,3 +22,24 @@ services:
         value: petra
       - key: PETRA_PASS
         value: petra2026
+      - key: SUPABASE_DATABASE_URL
+        sync: false
+      - key: BACKUP_SECRET_KEY
+        generateValue: true
+
+  - type: cron
+    name: sard-supabase-backup
+    runtime: node
+    plan: free
+    schedule: "0 3,15 * * *"
+    buildCommand: pnpm install --no-frozen-lockfile --prod=false
+    startCommand: npm run backup:sync
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sard-postgres
+          property: connectionString
+      - key: SUPABASE_DATABASE_URL
+        sync: false
