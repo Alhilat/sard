@@ -60,21 +60,46 @@ export default function Messages() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load initial conversations from backend
+  // Load initial conversations from backend & handle direct user query param
   useEffect(() => {
     let isMounted = true;
     const fetchConversations = async () => {
       setIsLoadingConversations(true);
       try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const targetUserId = searchParams.get('user') || searchParams.get('userId');
+
         const convs = await messagesService.getConversations();
         if (!isMounted) return;
-        if (convs && convs.length > 0) {
-          setConversationsList(convs);
-          setActiveConvId(convs[0].id);
-        } else {
-          // If no conversations exist yet, use friendly starter conversations
-          setConversationsList(DEFAULT_FALLBACK_CONVERSATIONS);
-          setActiveConvId(DEFAULT_FALLBACK_CONVERSATIONS[0].id);
+
+        let activeId = '';
+        let finalConvs = convs && convs.length > 0 ? convs : DEFAULT_FALLBACK_CONVERSATIONS;
+
+        // If targetUserId query param is given, find or create conversation with this user
+        if (targetUserId && targetUserId !== currentUser?.id) {
+          const existing = finalConvs.find((c) => c.user.id === targetUserId);
+          if (existing) {
+            activeId = existing.id;
+            setShowMobileChat(true);
+          } else {
+            try {
+              const newConv = await messagesService.startConversation(targetUserId);
+              if (newConv && isMounted) {
+                finalConvs = [newConv, ...finalConvs.filter((c) => c.id !== newConv.id)];
+                activeId = newConv.id;
+                setShowMobileChat(true);
+              }
+            } catch (err) {
+              console.error('Error starting conversation for query user:', err);
+            }
+          }
+        }
+
+        setConversationsList(finalConvs);
+        if (activeId) {
+          setActiveConvId(activeId);
+        } else if (finalConvs.length > 0) {
+          setActiveConvId(finalConvs[0].id);
         }
       } catch (err) {
         console.error('Failed to load conversations:', err);
@@ -90,7 +115,7 @@ export default function Messages() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentUser?.id]);
 
   // Fetch messages when active conversation changes
   useEffect(() => {

@@ -16,6 +16,9 @@ export interface User {
   organizationId?: string;
   status?: string;
   verified?: boolean;
+  followers?: number;
+  following?: number;
+  postsCount?: number;
 }
 
 interface AuthContextType {
@@ -30,6 +33,7 @@ interface AuthContextType {
     password: string;
     phone?: string;
     role?: 'individual' | 'org' | string;
+    country?: string;
   }) => Promise<{ success: boolean; user?: User; error?: string }>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   logout: () => void;
@@ -87,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string;
     phone?: string;
     role?: 'individual' | 'org' | string;
+    country?: string;
   }): Promise<{ success: boolean; user?: User; error?: string }> => {
     setIsLoading(true);
     const normalizedEmail = data.email.trim().toLowerCase();
@@ -112,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: data.role === 'org' ? 'organization' : 'individual',
         full_name: cleanName,
         phone: data.phone?.trim() || '',
+        country: data.country?.trim() || 'الأردن',
+        location: data.country?.trim() || 'الأردن',
       });
 
       if (result && result.token && result.user) {

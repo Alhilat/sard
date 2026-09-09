@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Lock, Bell, Eye, Palette, Camera, Check } from 'lucide-react';
+import { User, Lock, Bell, Eye, Palette, Camera, Check, Smartphone, Volume2, Trash2, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserAvatar } from '@/layouts/AppLayout';
 import { api } from '@/lib/api';
 import { useLocation } from 'wouter';
+import { deviceNotificationService, DeviceTokenItem } from '@/services/deviceNotificationService';
 
 export default function Settings() {
   const { user, updateProfile, logout } = useAuth();
@@ -35,6 +37,11 @@ export default function Settings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
+  // Device notifications state
+  const [devicePermission, setDevicePermission] = useState<NotificationPermission>('default');
+  const [registeredDevices, setRegisteredDevices] = useState<DeviceTokenItem[]>([]);
+  const [isSendingDeviceTest, setIsSendingDeviceTest] = useState(false);
+
   useEffect(() => {
     if (user) {
       setFullName(user.name || '');
@@ -46,12 +53,78 @@ export default function Settings() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (deviceNotificationService.isSupported()) {
+      setDevicePermission(deviceNotificationService.getPermission());
+    }
+    loadDevices();
+  }, []);
+
+  const loadDevices = async () => {
+    try {
+      const devices = await deviceNotificationService.getRegisteredDevices();
+      setRegisteredDevices(devices);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleEnableDeviceInSettings = async () => {
+    const perm = await deviceNotificationService.requestPermission();
+    setDevicePermission(perm);
+    if (perm === 'granted') {
+      toast({
+        title: 'تم تفعيل إشعارات الجهاز بنجاح! 🔔',
+        description: 'ستصلك الآن التنبيهات المباشرة ورسائل الأنشطة على هذا الجهاز.',
+      });
+      loadDevices();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'الإشعارات غير مفعلة',
+        description: 'يرجى السماح بالإشعارات في إعدادات متصفحك.',
+      });
+    }
+  };
+
+  const handleSendTestInSettings = async () => {
+    setIsSendingDeviceTest(true);
+    try {
+      await deviceNotificationService.sendTestNotification();
+      toast({
+        title: 'تم إرسال إشعار تجريبي 🔔⚡',
+        description: 'تم إطلاق التنبيه والصوت بنجاح على جهازك.',
+      });
+      loadDevices();
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'خطأ',
+        description: 'تعذر إرسال الإشعار التجريبي.',
+      });
+    } finally {
+      setIsSendingDeviceTest(false);
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId: string) => {
+    const ok = await deviceNotificationService.unregisterDevice(deviceId);
+    if (ok) {
+      setRegisteredDevices(prev => prev.filter(d => d.id !== deviceId));
+      toast({
+        title: 'تم إلغاء تسجيل الجهاز',
+        description: 'لن يستقبل هذا الجهاز إشعارات المنصة بعد الآن.',
+      });
+    }
+  };
+
   const handleSaveProfile = () => {
     updateProfile({
       name: fullName.trim(),
       username: username.trim(),
       bio: bio.trim(),
       location: location.trim(),
+      country: location.trim(),
       email: email.trim(),
       phone: phone.trim(),
     });
@@ -224,7 +297,7 @@ export default function Settings() {
                   id="set-location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="المملكة العربية السعودية"
+                  placeholder="مثال: الأردن، عمّان"
                 />
               </div>
 
@@ -345,16 +418,135 @@ export default function Settings() {
         </TabsContent>
 
         {/* Notifications */}
-        <TabsContent value="notifications">
+        <TabsContent value="notifications" className="space-y-6">
+          {/* Device Push Notifications Card */}
+          <Card className="border-card-border overflow-hidden">
+            <CardHeader className="bg-muted/20 border-b border-border/70 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary border border-primary/20 flex items-center justify-center">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">إشعارات الأجهزة والمنبه المباشر</CardTitle>
+                    <CardDescription className="text-xs">
+                      استقبال التنبيهات الفورية على المتصفح والهواتف (PWA / Web Push)
+                    </CardDescription>
+                  </div>
+                </div>
+
+                {devicePermission === 'granted' ? (
+                  <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-xs gap-1 font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    مفعلة على جهازك
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-600 bg-amber-500/10">
+                    غير مفعلة
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-card border border-border">
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-foreground">إذن التنبيهات الفورية للمتصفح والجهاز</p>
+                  <p className="text-xs text-muted-foreground">
+                    يتيح للمنصة إرسال أصوات المنبه والتنبيهات المباشرة عند وصول رسائل أو إعلانات للأنشطة.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {devicePermission !== 'granted' ? (
+                    <Button
+                      size="sm"
+                      onClick={handleEnableDeviceInSettings}
+                      className="text-xs font-bold gap-1.5 h-9"
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                      <span>تفعيل الإشعارات الآن</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSendTestInSettings}
+                      disabled={isSendingDeviceTest}
+                      className="text-xs font-bold gap-1.5 h-9 border-primary/30 text-primary hover:bg-primary/10"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>{isSendingDeviceTest ? 'جاري الإرسال...' : 'اختبار نغمة وإشعار الجهاز'}</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Registered Devices List */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-primary" />
+                    <span>الأجهزة المتصلة بحسابك ({registeredDevices.length})</span>
+                  </p>
+                  <span className="text-[11px] text-muted-foreground">الأجهزة المسجلة لاستقبال التنبيهات</span>
+                </div>
+
+                {registeredDevices.length === 0 ? (
+                  <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground">
+                    لا توجد أجهزة مسجلة حالياً. اضغط على زر تفعيل الإشعارات أعلاه لتسجيل هذا الجهاز.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {registeredDevices.map((dev) => (
+                      <div
+                        key={dev.id}
+                        className="flex items-center justify-between p-3 rounded-xl border border-border bg-card/60 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-primary font-bold">
+                            <Smartphone className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-foreground">
+                              {dev.deviceType.toUpperCase()} - متصفح الويب
+                            </p>
+                            <p className="text-[10px] text-muted-foreground truncate max-w-xs sm:max-w-md">
+                              {dev.userAgent || 'جهاز نشط'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                            {dev.formattedTime || 'نشط'}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-7 h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteDevice(dev.id)}
+                            title="إلغاء تسجيل هذا الجهاز"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-card-border">
-            <CardHeader><CardTitle className="text-base">إعدادات الإشعارات</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">تفضيلات الإشعارات</CardTitle></CardHeader>
             <CardContent className="space-y-5">
               <p className="text-sm font-semibold text-muted-foreground">داخل التطبيق</p>
               {[
                 { label: 'الإعجابات والتعليقات', checked: true },
                 { label: 'المتابِعون الجدد', checked: true },
                 { label: 'منشورات المجموعات', checked: false },
-                { label: 'الأنشطة الجديدة', checked: true },
+                { label: 'الأنشطة الجديدة وغرف النقاش', checked: true },
                 { label: 'الدورات والتحديثات', checked: true },
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between">

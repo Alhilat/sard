@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Calendar, Search, Filter, Sparkles, CheckCircle2, Plus, Lock, Trash2 } from 'lucide-react';
+import {
+  MapPin, Clock, Users, Calendar, Search, Filter, Sparkles,
+  CheckCircle2, Plus, Lock, Trash2, MessageSquare, ArrowRight
+} from 'lucide-react';
 import { activitiesService, Activity } from '@/services/activitiesService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateActivityModal from '@/components/activities/CreateActivityModal';
+import ActivityGroupChat from '@/components/activities/ActivityGroupChat';
 
 const categories = ['الكل', 'تطوع', 'تقنية', 'بيئة', 'ريادة أعمال', 'صحة', 'ثقافة'];
 
@@ -21,6 +25,7 @@ export default function Activities() {
   const [registeredMap, setRegisteredMap] = useState<Record<string, boolean>>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeChatActivity, setActiveChatActivity] = useState<Activity | null>(null);
 
   const isVerified = Boolean(user?.verified || user?.role === 'admin');
 
@@ -36,6 +41,14 @@ export default function Activities() {
         });
         setRegisteredMap(map);
         setLoading(false);
+
+        // Check if query param specifies opening chat for an activity
+        const params = new URLSearchParams(window.location.search);
+        const chatId = params.get('chat');
+        if (chatId) {
+          const match = data.find((a) => a.id === chatId);
+          if (match) setActiveChatActivity(match);
+        }
       }
     });
     return () => {
@@ -76,6 +89,9 @@ export default function Activities() {
     setDeletingId(null);
     if (res.success) {
       setActivitiesList((prev) => prev.filter((a) => a.id !== activityId));
+      if (activeChatActivity?.id === activityId) {
+        setActiveChatActivity(null);
+      }
       toast({
         title: 'تم حذف الفعالية بنجاح',
         description: `تم إزالة فعالية "${activityTitle}" من جدول الأنشطة.`,
@@ -98,7 +114,7 @@ export default function Activities() {
         title: isCurrentlyRegistered ? 'تم إلغاء التسجيل' : 'تم التسجيل بنجاح',
         description: isCurrentlyRegistered
           ? 'تم إلغاء مشاركتك في النشاط'
-          : 'تم تأكيد مقعدك في النشاط بنجاح!',
+          : 'تم تأكيد مقعدك في النشاط بنجاح! يمكنك الآن الانضمام لغرفة النقاش المباشرة.',
       });
     } else {
       toast({
@@ -108,6 +124,23 @@ export default function Activities() {
       });
     }
   };
+
+  // If chat view is active, render ActivityGroupChat
+  if (activeChatActivity) {
+    return (
+      <div className="p-4 sm:p-6" dir="rtl">
+        <ActivityGroupChat
+          activity={activeChatActivity}
+          onBack={() => {
+            setActiveChatActivity(null);
+            if (window.location.search) {
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6" dir="rtl">
@@ -119,7 +152,9 @@ export default function Activities() {
             <span>الفعاليات والمبادرات</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black mb-1 font-display">الأنشطة المجتمعية والفعاليات</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">اكتشف الأنشطة والفعاليات وسجّل حضورك ومشاركتك</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            اكتشف الأنشطة والفعاليات وسجّل حضورك وشارك في غرف النقاش المباشرة
+          </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
@@ -208,7 +243,7 @@ export default function Activities() {
             return (
               <Card
                 key={activity.id}
-                className="border-card-border hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between"
+                className="border-card-border hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between bg-card"
               >
                 <div>
                   <div className="h-3 bg-gradient-to-r from-primary to-amber-700" />
@@ -280,28 +315,42 @@ export default function Activities() {
                   </CardContent>
                 </div>
 
-                <div className="p-5 pt-0">
-                  {full ? (
-                    <Button variant="outline" className="w-full text-xs font-bold" disabled>
-                      اكتمل العدد
-                    </Button>
-                  ) : (
+                <div className="p-5 pt-0 space-y-2">
+                  {/* Action buttons: Register & Group Chat */}
+                  <div className="flex items-center gap-2">
+                    {full ? (
+                      <Button variant="outline" className="flex-1 text-xs font-bold" disabled>
+                        اكتمل العدد
+                      </Button>
+                    ) : (
+                      <Button
+                        className={`flex-1 text-xs font-bold gap-1.5 shadow-2xs ${
+                          registered ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
+                        }`}
+                        onClick={() => handleRegister(activity.id)}
+                      >
+                        {registered ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>أنت مسجل</span>
+                          </>
+                        ) : (
+                          'سجّل حضورك'
+                        )}
+                      </Button>
+                    )}
+
                     <Button
-                      className={`w-full text-xs font-bold gap-1.5 shadow-2xs ${
-                        registered ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
-                      }`}
-                      onClick={() => handleRegister(activity.id)}
+                      variant="outline"
+                      size="default"
+                      onClick={() => setActiveChatActivity(activity)}
+                      className="gap-1.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/10"
+                      title="فتح غرفة محادثة الفعالية"
                     >
-                      {registered ? (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>أنت مسجل في هذا النشاط</span>
-                        </>
-                      ) : (
-                        'سجّل حضورك الآن'
-                      )}
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>غرفة المحادثة</span>
                     </Button>
-                  )}
+                  </div>
                 </div>
               </Card>
             );

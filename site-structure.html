@@ -753,9 +753,121 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* Top Navigation Bar between pages */
+    .top-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      background: rgba(11, 10, 14, 0.82);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #FFF;
+    }
+
+    .nav-logo-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #9E2A2B, #D48B38);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: #FFF;
+      box-shadow: 0 4px 15px rgba(158, 42, 43, 0.4);
+    }
+
+    .nav-title-group h2 {
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .nav-title-group span {
+      font-size: 0.72rem;
+      color: var(--amber);
+      font-family: var(--font-en);
+      letter-spacing: 0.5px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 4px;
+      border-radius: 9999px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .nav-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 18px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: var(--text-muted);
+      transition: all 0.25s ease;
+    }
+
+    .nav-tab-btn:hover {
+      color: #FFF;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .nav-tab-btn.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #FFF;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
   </style>
 </head>
 <body>
+
+  <!-- Top Sticky Navigation Bar -->
+  <nav class="top-navbar">
+    <a href="site-structure.html" class="nav-brand">
+      <div class="nav-logo-badge">س</div>
+      <div class="nav-title-group">
+        <h2>منصة سرد رقمي</h2>
+        <span>Sard Raqami Tech Docs</span>
+      </div>
+    </a>
+
+    <div class="nav-tabs">
+      <a href="site-structure.html" class="nav-tab-btn active">
+        <span>🧭</span>
+        <span>خريطة الواجهات والمسارات</span>
+      </a>
+      <a href="codebase-architecture.html" class="nav-tab-btn">
+        <span>⚡</span>
+        <span>معمارية الأكواد وتدفق البيانات</span>
+      </a>
+    </div>
+
+    <div>
+      <a href="codebase-architecture.html" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: #CBD5E1; padding: 7px 14px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <span>⚡</span>
+        <span>شرح الملفات وتدفق البيانات 🠔</span>
+      </a>
+    </div>
+  </nav>
 
   <div class="container">
     <!-- Header -->

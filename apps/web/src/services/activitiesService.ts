@@ -1,5 +1,27 @@
 import { api } from '@/lib/api';
 
+export type ActivityChatPermissionMode = 'all' | 'organizer_only' | 'muted';
+
+export interface ActivityChatMessage {
+  id: string;
+  activityId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'organizer' | 'attendee' | 'admin';
+  senderAvatar?: string;
+  content: string;
+  timestamp: string;
+  isAnnouncement?: boolean;
+  created_at?: number;
+}
+
+export interface ActivityChatSettings {
+  activityId: string;
+  permissionMode: ActivityChatPermissionMode;
+  pinnedAnnouncement?: string;
+  slowModeSeconds?: number;
+}
+
 export interface Activity {
   id: string;
   org_id?: string;
@@ -31,6 +53,9 @@ export interface Activity {
   isRegistered?: boolean;
   tags?: string[];
 }
+
+const chatSettingsStore: Record<string, ActivityChatSettings> = {};
+const chatMessagesStore: Record<string, ActivityChatMessage[]> = {};
 
 export const activitiesService = {
   getActivities: async (params?: { category?: string; status?: string; page?: number; limit?: number }): Promise<Activity[]> => {
@@ -87,5 +112,102 @@ export const activitiesService = {
     } catch {
       return false;
     }
+  },
+
+  getChatSettings: async (activityId: string): Promise<ActivityChatSettings> => {
+    try {
+      const res = await api.get<ActivityChatSettings>(`/activities/${activityId}/chat/settings`);
+      if (res && res.activityId) {
+        chatSettingsStore[activityId] = res;
+        return res;
+      }
+    } catch {
+      // fallback to cached/default
+    }
+    if (!chatSettingsStore[activityId]) {
+      chatSettingsStore[activityId] = {
+        activityId,
+        permissionMode: 'all',
+      };
+    }
+    return { ...chatSettingsStore[activityId] };
+  },
+
+  updateChatSettings: async (
+    activityId: string,
+    updates: Partial<ActivityChatSettings>
+  ): Promise<ActivityChatSettings> => {
+    try {
+      const res = await api.patch<ActivityChatSettings>(`/activities/${activityId}/chat/settings`, updates);
+      if (res && res.activityId) {
+        chatSettingsStore[activityId] = res;
+        return res;
+      }
+    } catch {
+      // fallback
+    }
+    const current = chatSettingsStore[activityId] || {
+      activityId,
+      permissionMode: 'all',
+    };
+
+    chatSettingsStore[activityId] = {
+      ...current,
+      ...updates,
+    };
+
+    return { ...chatSettingsStore[activityId] };
+  },
+
+  getChatMessages: async (activityId: string): Promise<ActivityChatMessage[]> => {
+    try {
+      const res = await api.get<any>(`/activities/${activityId}/chat/messages`);
+      const list = Array.isArray(res) ? res : (res?.messages || res?.data);
+      if (Array.isArray(list)) {
+        chatMessagesStore[activityId] = list;
+        return list;
+      }
+    } catch {
+      // fallback to cached
+    }
+    return chatMessagesStore[activityId] || [];
+  },
+
+  sendChatMessage: async (
+    activityId: string,
+    payload: {
+      content: string;
+      senderName: string;
+      senderRole?: 'organizer' | 'attendee' | 'admin';
+      isAnnouncement?: boolean;
+    }
+  ): Promise<ActivityChatMessage> => {
+    try {
+      const res = await api.post<any>(`/activities/${activityId}/chat/messages`, payload);
+      const created = res?.message || res?.data || res;
+      if (created && created.id) {
+        if (!chatMessagesStore[activityId]) chatMessagesStore[activityId] = [];
+        chatMessagesStore[activityId].push(created);
+        return created;
+      }
+    } catch (err: any) {
+      // If error occurs, rethrow or fallback
+      throw err;
+    }
+
+    const fallback: ActivityChatMessage = {
+      id: `amsg_${Date.now()}_local`,
+      activityId,
+      senderId: 'usr_me',
+      senderName: payload.senderName,
+      senderRole: payload.senderRole || 'attendee',
+      content: payload.content,
+      timestamp: 'الآن',
+      isAnnouncement: Boolean(payload.isAnnouncement),
+      created_at: Date.now(),
+    };
+    if (!chatMessagesStore[activityId]) chatMessagesStore[activityId] = [];
+    chatMessagesStore[activityId].push(fallback);
+    return fallback;
   },
 };

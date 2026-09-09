@@ -154,8 +154,8 @@ db.exec(`
     phone TEXT DEFAULT '',
     avatar TEXT DEFAULT '',
     bio TEXT DEFAULT '',
-    location TEXT DEFAULT 'المملكة العربية السعودية',
-    country TEXT DEFAULT 'المملكة العربية السعودية',
+    location TEXT DEFAULT 'الأردن',
+    country TEXT DEFAULT 'الأردن',
     join_date TEXT NOT NULL,
     verified INTEGER DEFAULT 0,
     is_banned INTEGER DEFAULT 0,
@@ -352,6 +352,39 @@ db.exec(`
     is_announcement INTEGER DEFAULT 0,
     created_at INTEGER NOT NULL,
     FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS activity_chat_settings (
+    activity_id TEXT PRIMARY KEY,
+    permission_mode TEXT DEFAULT 'all',
+    pinned_announcement TEXT DEFAULT '',
+    slow_mode_seconds INTEGER DEFAULT 0,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS activity_chat_messages (
+    id TEXT PRIMARY KEY,
+    activity_id TEXT NOT NULL,
+    sender_id TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    sender_role TEXT NOT NULL DEFAULT 'participant',
+    content TEXT NOT NULL,
+    is_announcement INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(activity_id) REFERENCES activities(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS device_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    device_type TEXT DEFAULT 'web',
+    token TEXT NOT NULL,
+    endpoint TEXT,
+    auth_key TEXT,
+    p256dh_key TEXT,
+    user_agent TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
   );
 
   CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
@@ -567,6 +600,43 @@ const stmtInsertCourseChatMessage = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
+// ── Activity Chat Prepared Statements ────────────────────────────────────────
+const stmtGetActivityChatSettings = db.prepare('SELECT * FROM activity_chat_settings WHERE activity_id = ?');
+const stmtUpsertActivityChatSettings = db.prepare(`
+  INSERT INTO activity_chat_settings (activity_id, permission_mode, pinned_announcement, slow_mode_seconds, updated_at)
+  VALUES (?, ?, ?, ?, ?)
+  ON CONFLICT(activity_id) DO UPDATE SET
+    permission_mode = excluded.permission_mode,
+    pinned_announcement = excluded.pinned_announcement,
+    slow_mode_seconds = excluded.slow_mode_seconds,
+    updated_at = excluded.updated_at
+`);
+const stmtGetActivityChatMessages = db.prepare(`
+  SELECT id, activity_id, sender_id, sender_name, sender_role, content, is_announcement, created_at
+  FROM activity_chat_messages
+  WHERE activity_id = ?
+  ORDER BY created_at ASC
+  LIMIT 300
+`);
+const stmtInsertActivityChatMessage = db.prepare(`
+  INSERT INTO activity_chat_messages (id, activity_id, sender_id, sender_name, sender_role, content, is_announcement, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+// ── Device Tokens Prepared Statements ────────────────────────────────────────
+const stmtGetDeviceTokensByUser = db.prepare('SELECT * FROM device_tokens WHERE user_id = ? ORDER BY updated_at DESC');
+const stmtUpsertDeviceToken = db.prepare(`
+  INSERT INTO device_tokens (id, user_id, device_type, token, endpoint, auth_key, p256dh_key, user_agent, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(id) DO UPDATE SET
+    endpoint = excluded.endpoint,
+    auth_key = excluded.auth_key,
+    p256dh_key = excluded.p256dh_key,
+    user_agent = excluded.user_agent,
+    updated_at = excluded.updated_at
+`);
+const stmtDeleteDeviceToken = db.prepare('DELETE FROM device_tokens WHERE id = ? AND user_id = ?');
+
 // ── Notifications Prepared Statements ───────────────────────────────────────
 const stmtGetNotifications = db.prepare(`
   SELECT n.*, u.name as actor_name, u.avatar as actor_avatar, u.username as actor_username
@@ -757,9 +827,10 @@ app.get(['/api/health', '/api/ping'], (_req, res) => {
 // ── Authentication Endpoints ────────────────────────────────────────────────
 app.post('/api/auth/register', (req, res) => {
   try {
-    const { email, password, full_name, legal_name, name, role, phone } = req.body;
+    const { email, password, full_name, legal_name, name, role, phone, country, location } = req.body;
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanName = (full_name || legal_name || name || '').trim();
+    const cleanCountry = (country || location || '').trim() || 'الأردن';
 
     if (!cleanEmail || !cleanEmail.includes('@')) {
       return res.status(400).json({ success: false, message: 'يرجى إدخال بريد إلكتروني صالح' });
@@ -801,8 +872,8 @@ app.post('/api/auth/register', (req, res) => {
       phone: (phone || '').trim(),
       avatar: '',
       bio: userRole === 'org' ? 'منظمة معتمدة في منصة سرد رقمي' : 'عضو في مجتمع سرد رقمي',
-      location: 'المملكة العربية السعودية',
-      country: 'المملكة العربية السعودية',
+      location: cleanCountry,
+      country: cleanCountry,
       join_date: joinDate,
       verified: userRole === 'org' ? 1 : 0,
       is_banned: 0,
@@ -877,7 +948,7 @@ app.patch('/api/users/me', authenticateToken, (req, res) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
   }
-  const { name, username, bio, phone, location, avatar } = req.body;
+  const { name, username, bio, phone, location, country, avatar } = req.body;
   const updatedName = name !== undefined ? name.trim() : req.user.name;
 
   let updatedUsername = req.user.username;
@@ -892,14 +963,15 @@ app.patch('/api/users/me', authenticateToken, (req, res) => {
 
   const updatedBio = bio !== undefined ? bio.trim() : req.user.bio;
   const updatedPhone = phone !== undefined ? phone.trim() : req.user.phone;
-  const updatedLocation = location !== undefined ? location.trim() : req.user.location;
+  const updatedCountry = country !== undefined ? country.trim() : req.user.country;
+  const updatedLocation = location !== undefined ? location.trim() : (country !== undefined ? country.trim() : req.user.location);
   const updatedAvatar = avatar !== undefined ? avatar.trim() : req.user.avatar;
 
   db.prepare(`
     UPDATE users
-    SET name = ?, username = ?, bio = ?, phone = ?, location = ?, avatar = ?
+    SET name = ?, username = ?, bio = ?, phone = ?, location = ?, country = ?, avatar = ?
     WHERE id = ?
-  `).run(updatedName, updatedUsername, updatedBio, updatedPhone, updatedLocation, updatedAvatar, req.user.id);
+  `).run(updatedName, updatedUsername, updatedBio, updatedPhone, updatedLocation, updatedCountry, updatedAvatar, req.user.id);
 
   const updatedUser = stmtFindUserById.get(req.user.id);
   res.json(formatUserResponse(updatedUser));
@@ -924,6 +996,105 @@ app.get('/api/users', (req, res) => {
   } catch (err) {
     console.error('Error getting users:', err);
     res.status(500).json({ success: false, message: 'تعذر جلب المستخدمين' });
+  }
+});
+
+// Single user profile endpoint (by ID or username)
+app.get('/api/users/:id', authenticateToken, (req, res) => {
+  try {
+    const identifier = req.params.id;
+    let targetUser = stmtFindUserById.get(identifier);
+    if (!targetUser) {
+      targetUser = stmtFindUserByUsername.get(identifier);
+    }
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+    }
+
+    const formatted = formatUserResponse(targetUser);
+    let isFollowing = false;
+    if (req.user && req.user.id !== targetUser.id) {
+      const followCheck = stmtIsFollowing.get(req.user.id, targetUser.id);
+      isFollowing = Boolean(followCheck);
+    }
+
+    const result = {
+      ...formatted,
+      isFollowing,
+      isSelf: req.user ? req.user.id === targetUser.id : false,
+    };
+
+    res.json({
+      success: true,
+      user: result,
+      data: result,
+    });
+  } catch (err) {
+    console.error('Error getting user profile:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب الملف الشخصي' });
+  }
+});
+
+// User posts endpoint
+app.get('/api/users/:id/posts', authenticateToken, (req, res) => {
+  try {
+    const identifier = req.params.id;
+    let targetUser = stmtFindUserById.get(identifier);
+    if (!targetUser) {
+      targetUser = stmtFindUserByUsername.get(identifier);
+    }
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+    }
+
+    const rows = db.prepare(`
+      SELECT p.*, u.name as author_name, u.username as author_username, u.avatar as author_avatar, u.role as author_role, u.verified as author_verified
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      WHERE p.author_id = ?
+      ORDER BY p.created_at DESC
+      LIMIT 50
+    `).all(targetUser.id);
+
+    const currentUserId = req.user ? req.user.id : null;
+    const posts = rows.map((r) => {
+      let isLiked = false;
+      if (currentUserId) {
+        const likeRow = stmtGetLike.get(r.id, currentUserId);
+        isLiked = Boolean(likeRow);
+      }
+      let tags = [];
+      try {
+        tags = JSON.parse(r.tags || '[]');
+      } catch {
+        tags = [];
+      }
+      return {
+        id: r.id,
+        author: {
+          id: r.author_id,
+          name: r.author_name,
+          username: r.author_username,
+          avatar: r.author_avatar || '',
+          verified: Boolean(r.author_verified),
+          role: r.author_role === 'org' ? 'منظمة معتمدة' : 'عضو',
+        },
+        content: r.content,
+        likes: r.likes_count,
+        comments: r.comments_count,
+        shares: r.shares_count,
+        timestamp: r.timestamp_text,
+        isLiked,
+        tags,
+        groupId: r.group_id || undefined,
+        createdAt: r.created_at,
+      };
+    });
+
+    res.json(posts);
+  } catch (err) {
+    console.error('Error getting user posts:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب منشورات المستخدم' });
   }
 });
 
@@ -2312,6 +2483,149 @@ app.post('/api/courses/:id/chat/messages', authenticateToken, (req, res) => {
   }
 });
 
+// ── Activity Chat Endpoints ─────────────────────────────────────────────────
+app.get('/api/activities/:id/chat/settings', authenticateToken, (req, res) => {
+  try {
+    const activityId = req.params.id;
+    const row = stmtGetActivityChatSettings.get(activityId);
+    if (!row) {
+      return res.json({
+        activityId,
+        permissionMode: 'all',
+        pinnedAnnouncement: '',
+        slowModeSeconds: 0,
+      });
+    }
+    res.json({
+      activityId: row.activity_id,
+      permissionMode: row.permission_mode || 'all',
+      pinnedAnnouncement: row.pinned_announcement || '',
+      slowModeSeconds: row.slow_mode_seconds || 0,
+    });
+  } catch (err) {
+    console.error('Error getting activity chat settings:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب إعدادات محادثة الفعالية' });
+  }
+});
+
+const updateActivityChatSettingsHandler = (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const activityId = req.params.id;
+    const { permissionMode, pinnedAnnouncement, slowModeSeconds } = req.body;
+    
+    // Check permission: only verified users, admins, orgs, or activity organizer
+    const activity = stmtGetActivityById.get(activityId);
+    const isOwner = activity && activity.org_id === req.user.id;
+    const isPrivileged = Boolean(req.user.verified || req.user.role === 'admin' || req.user.role === 'org' || isOwner);
+    if (!isPrivileged) {
+      return res.status(403).json({ success: false, message: 'فقط منظم الفعالية والمشرفون يمكنهم تعديل إعدادات المحادثة' });
+    }
+
+    const current = stmtGetActivityChatSettings.get(activityId) || {};
+    const newMode = permissionMode || current.permission_mode || 'all';
+    const newPin = pinnedAnnouncement !== undefined ? pinnedAnnouncement : (current.pinned_announcement || '');
+    const newSlow = slowModeSeconds !== undefined ? slowModeSeconds : (current.slow_mode_seconds || 0);
+
+    stmtUpsertActivityChatSettings.run(activityId, newMode, newPin, newSlow, Date.now());
+    scheduleCloudSync();
+
+    res.json({
+      activityId,
+      permissionMode: newMode,
+      pinnedAnnouncement: newPin,
+      slowModeSeconds: newSlow,
+    });
+  } catch (err) {
+    console.error('Error updating activity chat settings:', err);
+    res.status(500).json({ success: false, message: 'تعذر تحديث إعدادات المحادثة' });
+  }
+};
+
+app.patch('/api/activities/:id/chat/settings', authenticateToken, updateActivityChatSettingsHandler);
+app.post('/api/activities/:id/chat/settings', authenticateToken, updateActivityChatSettingsHandler);
+
+app.get('/api/activities/:id/chat/messages', authenticateToken, (req, res) => {
+  try {
+    const activityId = req.params.id;
+    const rows = stmtGetActivityChatMessages.all(activityId);
+    const messages = rows.map((r) => ({
+      id: r.id,
+      activityId: r.activity_id,
+      senderId: r.sender_id,
+      senderName: r.sender_name,
+      senderRole: r.sender_role,
+      content: r.content,
+      isAnnouncement: Boolean(r.is_announcement),
+      timestamp: formatRelativeTime(r.created_at),
+      created_at: r.created_at,
+    }));
+    res.json({ success: true, messages, data: messages });
+  } catch (err) {
+    console.error('Error getting activity chat messages:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب رسائل غرفة الفعالية' });
+  }
+});
+
+app.post('/api/activities/:id/chat/messages', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const activityId = req.params.id;
+    const { content, senderName, senderRole, isAnnouncement } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'محتوى الرسالة فارغ' });
+    }
+
+    const settings = stmtGetActivityChatSettings.get(activityId);
+    const mode = settings ? settings.permission_mode : 'all';
+    const activity = stmtGetActivityById.get(activityId);
+    const isActivityStaff = Boolean(req.user.verified || req.user.role === 'admin' || req.user.role === 'org' || (activity && activity.org_id === req.user.id));
+
+    if (mode === 'muted' && !isActivityStaff) {
+      return res.status(403).json({ success: false, message: 'المحادثة متوقفة مؤقتاً بواسطة منظم الفعالية' });
+    }
+
+    if (mode === 'organizer_only' && !isActivityStaff) {
+      return res.status(403).json({ success: false, message: 'إرسال الرسائل مقتصر على منظم الفعالية حالياً' });
+    }
+
+    const msgId = `amsg_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const effectiveSenderName = req.user.name || senderName || 'مشارك';
+    const effectiveRole = (isActivityStaff && (senderRole === 'organizer' || senderRole === 'instructor')) ? 'organizer' : 'attendee';
+    const effectiveAnnouncement = (isAnnouncement && effectiveRole === 'organizer') ? 1 : 0;
+    const now = Date.now();
+
+    stmtInsertActivityChatMessage.run(
+      msgId,
+      activityId,
+      req.user.id,
+      effectiveSenderName,
+      effectiveRole,
+      content.trim(),
+      effectiveAnnouncement,
+      now
+    );
+    scheduleCloudSync();
+
+    const createdMsg = {
+      id: msgId,
+      activityId,
+      senderId: req.user.id,
+      senderName: effectiveSenderName,
+      senderRole: effectiveRole,
+      content: content.trim(),
+      isAnnouncement: Boolean(effectiveAnnouncement),
+      timestamp: 'الآن',
+      created_at: now,
+    };
+
+    res.json({ success: true, message: createdMsg, data: createdMsg });
+  } catch (err) {
+    console.error('Error sending activity chat message:', err);
+    res.status(500).json({ success: false, message: 'تعذر إرسال الرسالة' });
+  }
+});
+
 // ── Notifications SQLite Endpoints ──────────────────────────────────────────
 app.get('/api/notifications', authenticateToken, (req, res) => {
   if (!req.user) return res.json({ success: true, notifications: [], data: [] });
@@ -2372,6 +2686,106 @@ app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ success: false });
+  }
+});
+
+// ── Device Notifications Endpoints ──────────────────────────────────────────
+app.get('/api/notifications/devices', authenticateToken, (req, res) => {
+  if (!req.user) return res.json({ success: true, devices: [], data: [] });
+  try {
+    const rows = stmtGetDeviceTokensByUser.all(req.user.id);
+    const devices = rows.map((d) => ({
+      id: d.id,
+      userId: d.user_id,
+      deviceType: d.device_type,
+      userAgent: d.user_agent,
+      endpoint: d.endpoint,
+      createdAt: d.created_at,
+      updatedAt: d.updated_at,
+      formattedTime: formatRelativeTime(d.updated_at),
+    }));
+    res.json({ success: true, devices, data: devices });
+  } catch (err) {
+    console.error('Error fetching device tokens:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب الأجهزة المسجلة' });
+  }
+});
+
+app.post('/api/notifications/devices/register', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const { deviceType, token, endpoint, authKey, p256dhKey, userAgent } = req.body;
+    const existing = stmtGetDeviceTokensByUser.all(req.user.id);
+    const existingDevice = existing.find(d => (endpoint && d.endpoint === endpoint) || (token && d.token === token));
+    const deviceId = existingDevice ? existingDevice.id : `dev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const now = Date.now();
+
+    stmtUpsertDeviceToken.run(
+      deviceId,
+      req.user.id,
+      deviceType || 'web',
+      token || '',
+      endpoint || '',
+      authKey || '',
+      p256dhKey || '',
+      userAgent || req.headers['user-agent'] || '',
+      existingDevice ? existingDevice.created_at : now,
+      now
+    );
+    scheduleCloudSync();
+
+    res.json({
+      success: true,
+      deviceId,
+      message: 'تم تسجيل جهازك لاستقبال الإشعارات الفورية بنجاح',
+    });
+  } catch (err) {
+    console.error('Error registering device token:', err);
+    res.status(500).json({ success: false, message: 'تعذر تسجيل الجهاز' });
+  }
+});
+
+app.delete('/api/notifications/devices/:id', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    stmtDeleteDeviceToken.run(req.params.id, req.user.id);
+    scheduleCloudSync();
+    res.json({ success: true, message: 'تم إلغاء تفعيل الإشعارات على هذا الجهاز بنجاح' });
+  } catch (err) {
+    console.error('Error deleting device token:', err);
+    res.status(500).json({ success: false, message: 'تعذر إلغاء تسجيل الجهاز' });
+  }
+});
+
+app.post('/api/notifications/test', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  try {
+    const notifId = `notif_${Date.now()}_test`;
+    const title = 'اختبار إشعارات المنصة 🔔';
+    const content = 'نظام الإشعارات الفورية للأجهزة يعمل بنجاح على جهازك الآن! ستصلك التنبيهات المباشرة أولاً بأول.';
+    const link = '/app/notifications';
+    const now = Date.now();
+
+    stmtInsertNotification.run(notifId, req.user.id, null, 'system', title, content, link, now);
+    scheduleCloudSync();
+
+    res.json({
+      success: true,
+      message: 'تم إرسال إشعار تجريبي إلى جهازك وحسابك بنجاح!',
+      notification: {
+        id: notifId,
+        type: 'system',
+        title,
+        content,
+        link,
+        isRead: false,
+        time: 'الآن',
+        createdAt: now,
+      },
+    });
+  } catch (err) {
+    console.error('Error sending test notification:', err);
+    res.status(500).json({ success: false, message: 'تعذر إرسال الإشعار التجريبي' });
   }
 });
 

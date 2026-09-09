@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { User, Building2, Eye, EyeOff, Mail, Lock, Phone, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Building2, Eye, EyeOff, Mail, Lock, Phone, ArrowLeft, CheckCircle2, AlertCircle, Loader2, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+
+export const COUNTRIES = [
+  { code: 'JO', name: 'الأردن', flag: '🇯🇴', dialCode: '+962', placeholder: '+962 7x xxx xxxx' },
+  { code: 'PS', name: 'فلسطين', flag: '🇵🇸', dialCode: '+970', placeholder: '+970 5x xxx xxxx' },
+  { code: 'SA', name: 'المملكة العربية السعودية', flag: '🇸🇦', dialCode: '+966', placeholder: '+966 5x xxx xxxx' },
+  { code: 'AE', name: 'الإمارات العربية المتحدة', flag: '🇦🇪', dialCode: '+971', placeholder: '+971 5x xxx xxxx' },
+  { code: 'EG', name: 'مصر', flag: '🇪🇬', dialCode: '+20', placeholder: '+20 1x xxx xxxx' },
+  { code: 'KW', name: 'الكويت', flag: '🇰🇼', dialCode: '+965', placeholder: '+965 xx xxx xxx' },
+  { code: 'QA', name: 'قطر', flag: '🇶🇦', dialCode: '+974', placeholder: '+974 xx xxx xxx' },
+  { code: 'BH', name: 'البحرين', flag: '🇧🇭', dialCode: '+973', placeholder: '+973 xx xxx xxx' },
+  { code: 'OM', name: 'سلطنة عمان', flag: '🇴🇲', dialCode: '+968', placeholder: '+968 xx xxx xxx' },
+  { code: 'IQ', name: 'العراق', flag: '🇮🇶', dialCode: '+964', placeholder: '+964 7x xxx xxxx' },
+  { code: 'LB', name: 'لبنان', flag: '🇱🇧', dialCode: '+961', placeholder: '+961 7x xxx xxxx' },
+  { code: 'SY', name: 'سوريا', flag: '🇸🇾', dialCode: '+963', placeholder: '+963 9x xxx xxxx' },
+  { code: 'MA', name: 'المغرب', flag: '🇲🇦', dialCode: '+212', placeholder: '+212 6x xxx xxxx' },
+  { code: 'DZ', name: 'الجزائر', flag: '🇩🇿', dialCode: '+213', placeholder: '+213 5x xxx xxxx' },
+  { code: 'TN', name: 'تونس', flag: '🇹🇳', dialCode: '+216', placeholder: '+216 xx xxx xxx' },
+  { code: 'OTHER', name: 'دولة أخرى', flag: '🌍', dialCode: '+', placeholder: '+xxx xxxxxxxx' },
+];
 
 export default function Register() {
   const [, navigate] = useLocation();
@@ -22,12 +41,15 @@ export default function Register() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [country, setCountry] = useState('الأردن');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const activeCountryObj = COUNTRIES.find((c) => c.name === country) || COUNTRIES[0];
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +93,7 @@ export default function Register() {
         password,
         phone: phone.trim(),
         role,
+        country: country.trim() || 'الأردن',
       });
 
       if (res.success) {
@@ -277,6 +300,31 @@ export default function Register() {
                 </div>
               </div>
 
+              {/* Country Selection */}
+              <div className="space-y-1.5">
+                <Label htmlFor="reg-country" className="flex items-center gap-1.5 font-bold">
+                  <Globe className="w-3.5 h-3.5 text-primary" />
+                  <span>الدولة / الإقامة</span>
+                </Label>
+                <div className="relative">
+                  <select
+                    id="reg-country"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-xl border border-input bg-card px-3.5 py-2 text-xs sm:text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer text-foreground font-medium shadow-2xs"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.name} className="bg-background text-foreground py-1">
+                        {c.flag} {c.name} ({c.dialCode})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute top-1/2 -translate-y-1/2 end-3 pointer-events-none text-xs text-muted-foreground">
+                    ▼
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="reg-phone">رقم الجوال (اختياري)</Label>
                 <div className="relative">
@@ -284,8 +332,8 @@ export default function Register() {
                   <Input
                     id="reg-phone"
                     type="tel"
-                    placeholder="+966 5x xxx xxxx"
-                    className="pe-9"
+                    placeholder={activeCountryObj.placeholder}
+                    className="pe-9 font-mono"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                   />

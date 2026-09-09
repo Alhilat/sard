@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserAvatar } from '@/layouts/AppLayout';
+import UserProfileModal, { UserProfileData } from '@/components/profile/UserProfileModal';
 
 const tabs = [
   { key: 'all', label: 'الكل', icon: Globe },
@@ -22,6 +23,7 @@ export default function SearchPage() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [activitiesList, setActivitiesList] = useState<Activity[]>([]);
   const [coursesList, setCoursesList] = useState<Course[]>([]);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<any | null>(null);
 
   useEffect(() => {
     activitiesService.getActivities().then(setActivitiesList);
@@ -112,12 +114,19 @@ export default function SearchPage() {
               <h2 className="font-bold text-sm text-muted-foreground">أعضاء سرد ({filteredUsers.length})</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {filteredUsers.map((user) => (
-                  <Card key={user.id} className="border-card-border">
+                  <Card
+                    key={user.id}
+                    onClick={() => setSelectedProfileUser(user)}
+                    className="border-card-border hover:border-primary/50 hover:bg-muted/30 transition-all cursor-pointer group"
+                    title={`عرض الملف الشخصي لـ ${user.name}`}
+                  >
                     <CardContent className="p-4 flex items-center gap-3">
-                      <UserAvatar name={user.name} />
+                      <div className="group-hover:scale-105 transition-transform">
+                        <UserAvatar name={user.name} />
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate text-foreground">{user.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                        <p className="font-semibold text-sm truncate text-foreground group-hover:text-primary transition-colors">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate font-mono">@{user.username}</p>
                       </div>
                       <Badge variant="outline" className="text-xs text-primary">عضو</Badge>
                     </CardContent>
@@ -180,6 +189,15 @@ export default function SearchPage() {
           )}
         </div>
       )}
+
+      {/* User Profile Modal on user card click */}
+      <UserProfileModal
+        isOpen={!!selectedProfileUser}
+        onClose={() => setSelectedProfileUser(null)}
+        userId={selectedProfileUser?.id}
+        username={selectedProfileUser?.username}
+        initialUser={selectedProfileUser}
+      />
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Flag, Trash2, Copy } from 'lucide-react';
+import UserProfileModal, { UserProfileData } from '@/components/profile/UserProfileModal';
 
 const MAX_CHARS = 280;
 
@@ -56,6 +57,35 @@ export default function Feed() {
 
   // Repost modal
   const [activeSharePost, setActiveSharePost] = useState<Post | null>(null);
+
+  // User profile modal
+  const [profileModalUser, setProfileModalUser] = useState<{
+    id?: string;
+    username?: string;
+    initialUser?: Partial<UserProfileData>;
+  } | null>(null);
+
+  const handleOpenUserProfile = (target: {
+    id?: string;
+    name: string;
+    username?: string;
+    avatar?: string;
+    role?: string;
+    verified?: boolean;
+  }) => {
+    setProfileModalUser({
+      id: target.id,
+      username: target.username,
+      initialUser: {
+        id: target.id,
+        name: target.name,
+        username: target.username,
+        avatar: target.avatar,
+        role: target.role,
+        verified: target.verified,
+      },
+    });
+  };
 
   // Active replies drawer
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
@@ -560,14 +590,23 @@ export default function Feed() {
                       {/* Post Header */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenUserProfile(post.author)}
+                            className="w-10 h-10 rounded-xl bg-primary/15 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shrink-0 hover:scale-105 hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer shadow-2xs"
+                            title={`عرض الملف الشخصي لـ ${post.author.name}`}
+                          >
                             {post.author.name.slice(0, 1)}
-                          </div>
+                          </button>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-sm text-foreground hover:text-primary transition-colors cursor-pointer">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenUserProfile(post.author)}
+                                className="font-bold text-sm text-foreground hover:text-primary transition-colors cursor-pointer text-start"
+                              >
                                 {post.author.name}
-                              </span>
+                              </button>
                               {post.author.verified && (
                                 <Badge className="h-4 px-1 text-[10px] bg-sky-500 hover:bg-sky-600 text-white border-0 gap-0.5">
                                   <CheckCircle2 className="w-2.5 h-2.5" />
@@ -776,15 +815,19 @@ export default function Feed() {
 
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-bold text-foreground">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenUserProfile(comment.author)}
+                                        className="font-bold text-foreground hover:text-primary transition-colors cursor-pointer text-start"
+                                      >
                                         {comment.author.name}
-                                      </span>
+                                      </button>
                                       {comment.author.verified && (
                                         <Badge className="h-3.5 px-1 text-[9px] bg-sky-500 text-white border-0">
                                           موثق
                                         </Badge>
                                       )}
-                                      <span className="text-[10px] text-muted-foreground">
+                                      <span className="text-[10px] text-muted-foreground font-mono">
                                         @{comment.author.username}
                                       </span>
                                     </div>
@@ -859,18 +902,22 @@ export default function Feed() {
                   const isFollowing = !!followingMap[u.id];
                   return (
                     <div key={u.id} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                      <div
+                        onClick={() => handleOpenUserProfile(u)}
+                        className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
+                        title={`عرض الملف الشخصي لـ ${u.name}`}
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
                           {u.name.slice(0, 1)}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
-                            <p className="font-bold text-xs text-foreground truncate">{u.name}</p>
+                            <p className="font-bold text-xs text-foreground truncate group-hover:text-primary transition-colors">{u.name}</p>
                             {u.verified && (
                               <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
                             )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground truncate">@{u.username}</p>
+                          <p className="text-[10px] text-muted-foreground truncate font-mono">@{u.username}</p>
                         </div>
                       </div>
 
@@ -924,6 +971,15 @@ export default function Feed() {
           }}
         />
       )}
+
+      {/* User Profile Modal on Avatar / Author click */}
+      <UserProfileModal
+        isOpen={!!profileModalUser}
+        onClose={() => setProfileModalUser(null)}
+        userId={profileModalUser?.id}
+        username={profileModalUser?.username}
+        initialUser={profileModalUser?.initialUser}
+      />
     </div>
   );
 }

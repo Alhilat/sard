@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
+import { deviceNotificationService } from '@/services/deviceNotificationService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -47,10 +48,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+    deviceNotificationService.init();
+
+    let prevCount = -1;
     const fetchUnread = () => {
       api.get<any>('/notifications/unread-count')
         .then((data) => {
           const count = typeof data?.count === 'number' ? data.count : (data?.unreadCount || 0);
+          if (prevCount !== -1 && count > prevCount) {
+            deviceNotificationService.playNotificationSound();
+          }
+          prevCount = count;
           setUnreadCount(count);
         })
         .catch(() => {});

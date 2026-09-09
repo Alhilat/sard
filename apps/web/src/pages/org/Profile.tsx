@@ -20,7 +20,7 @@ export default function OrgProfile() {
   const [username, setUsername] = useState(user?.username || 'rwad');
   const [bio, setBio] = useState(user?.bio || 'منظمة غير ربحية تهدف إلى تعزيز العمل التطوعي وتنمية المجتمع.');
   const [category, setCategory] = useState('تطوع ومجتمع');
-  const [location, setLocation] = useState(user?.location || 'الرياض، المملكة العربية السعودية');
+  const [location, setLocation] = useState(user?.location || user?.country || 'عمان، الأردن');
   const [email, setEmail] = useState(user?.email || 'info@rwad.org');
   const [phone, setPhone] = useState(user?.phone || '+966 11 234 5678');
   const [website, setWebsite] = useState('https://rwad.org');

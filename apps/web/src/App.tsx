@@ -115,6 +115,7 @@ function Router() {
       <Route path="/app" component={() => <ProtectedRoute><AppLayout><AppDashboard /></AppLayout></ProtectedRoute>} />
       <Route path="/app/feed" component={() => <ProtectedRoute><AppLayout><AppFeed /></AppLayout></ProtectedRoute>} />
       <Route path="/app/profile" component={() => <ProtectedRoute><AppLayout><AppProfile /></AppLayout></ProtectedRoute>} />
+      <Route path="/app/profile/:id" component={(props: any) => <ProtectedRoute><AppLayout><AppProfile targetUserId={props?.params?.id} /></AppLayout></ProtectedRoute>} />
       <Route path="/app/activities" component={() => <ProtectedRoute><AppLayout><AppActivities /></AppLayout></ProtectedRoute>} />
       <Route path="/app/courses" component={() => <ProtectedRoute><AppLayout><AppCourses /></AppLayout></ProtectedRoute>} />
       <Route path="/app/groups" component={() => <ProtectedRoute><AppLayout><AppGroups /></AppLayout></ProtectedRoute>} />
