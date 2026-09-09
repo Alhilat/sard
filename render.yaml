@@ -33,7 +33,7 @@ services:
     plan: free
     schedule: "0 3,15 * * *"
     buildCommand: pnpm install --no-frozen-lockfile --prod=false
-    startCommand: npm run backup:sync
+    startCommand: pnpm run backup:sync
     envVars:
       - key: NODE_ENV
         value: production
