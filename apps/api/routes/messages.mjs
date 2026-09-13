@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.mjs';
 import { formatRelativeTime, createNotification } from '../services/notification.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
 import { isUserOnline, getUserLastSeen, formatPresenceStatus } from '../services/presence.mjs';
+import { broadcastMessage } from '../services/websocket.mjs';
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.get('/', authenticateToken, (req, res) => {
 router.post('/', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
   try {
-    const { recipientId } = req.body;
+    const recipientId = req.body.recipientId || req.body.userId;
     if (!recipientId) return res.status(400).json({ success: false, message: 'معرف المستخدم غير محدد' });
     if (recipientId === req.user.id) return res.status(400).json({ success: false, message: 'لا يمكنك مراسلة نفسك' });
 
@@ -179,6 +180,20 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
     });
 
     scheduleCloudSync();
+
+    const deliveredMessage = {
+      id: msgId,
+      conversation_id: convId,
+      sender_id: req.user.id,
+      senderName: req.user.name,
+      content: content.trim(),
+      created_at: now,
+      time: 'الآن',
+      status: 'read',
+    };
+
+    // Instant WebSocket push (0ms latency, eliminates client polling)
+    broadcastMessage(otherUserId, convId, deliveredMessage);
     res.status(201).json({
       success: true,
       message: {

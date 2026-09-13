@@ -8,6 +8,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { deviceNotificationService } from '@/services/deviceNotificationService';
+import { websocketService } from '@/services/websocketService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -47,64 +48,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      websocketService.disconnect();
+      return;
+    }
+
     deviceNotificationService.init();
+    websocketService.connect();
 
-    let prevCount = -1;
-    const fetchUnread = () => {
-      api.get<any>('/notifications/unread-count')
-        .then((data) => {
-          const count = typeof data?.count === 'number' ? data.count : (data?.unreadCount || 0);
-          if (prevCount !== -1 && count > prevCount) {
-            deviceNotificationService.playNotificationSound();
-          }
-          prevCount = count;
-          setUnreadCount(count);
-        })
-        .catch(() => {});
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 8000);
-    return () => clearInterval(interval);
-  }, [user, location]);
+    // Fetch unread count on mount or route transition
+    api.get<any>('/notifications/unread-count')
+      .then((data) => {
+        const count = typeof data?.count === 'number' ? data.count : (data?.unreadCount || 0);
+        setUnreadCount(count);
+      })
+      .catch(() => {});
 
-  // Real-Time User Presence Heartbeat (نشط الآن)
-  useEffect(() => {
-    if (!user) return;
-
-    const sendHeartbeat = () => {
-      if (document.visibilityState === 'visible') {
-        api.post('/users/heartbeat', {}).catch(() => {});
-      }
-    };
-
-    // Initial heartbeat
-    sendHeartbeat();
-    const heartbeatInterval = setInterval(sendHeartbeat, 25000);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        sendHeartbeat();
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      const token = localStorage.getItem('sard_auth_token') || localStorage.getItem('sard_token');
-      if (token && navigator.sendBeacon) {
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/users/offline', blob);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    // Instant real-time push for new notifications (zero polling overhead)
+    const unsubNotif = websocketService.on('notification:new', () => {
+      deviceNotificationService.playNotificationSound();
+      setUnreadCount((prev) => prev + 1);
+    });
 
     return () => {
-      clearInterval(heartbeatInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      unsubNotif();
     };
-  }, [user]);
+  }, [user, location]);
 
   const displayName = user?.name || 'مستخدم سرد';
   const displayUsername = user?.username || (user?.email ? user.email.split('@')[0] : 'user');
@@ -115,6 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = () => {
+    websocketService.disconnect();
     logout();
     navigate('/auth/login');
   };

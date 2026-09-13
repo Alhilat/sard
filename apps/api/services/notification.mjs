@@ -1,5 +1,6 @@
 import { getStatements } from '../db/statements/index.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
+import { broadcastNotification } from './websocket.mjs';
 
 export function formatRelativeTime(timestamp) {
   if (!timestamp) return 'منذ قليل';
@@ -40,8 +41,23 @@ export function createNotification({ userId, actorId, type, title, content, link
   try {
     const stmts = getStatements();
     const notifId = `notif_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    stmts.stmtInsertNotification.run(notifId, userId, actorId || null, type, title, content, link, Date.now());
+    const now = Date.now();
+    stmts.stmtInsertNotification.run(notifId, userId, actorId || null, type, title, content, link, now);
     scheduleCloudSync();
+
+    // Instant WebSocket push to recipient's notification bell
+    broadcastNotification(userId, {
+      id: notifId,
+      userId,
+      actorId,
+      type,
+      title,
+      content,
+      link,
+      read: false,
+      created_at: now,
+      time: 'الآن',
+    });
   } catch (err) {
     console.error('[Notification] Error creating notification:', err.message);
   }

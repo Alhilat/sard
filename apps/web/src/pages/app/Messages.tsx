@@ -16,6 +16,7 @@ import {
 import {
   messagesService, ConversationItem, MessageItem, UserSearchResult
 } from '@/services/messagesService';
+import { websocketService } from '@/services/websocketService';
 
 const DEFAULT_FALLBACK_CONVERSATIONS: ConversationItem[] = [
   {
@@ -51,13 +52,16 @@ export default function Messages() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
 
-  // Search by name state
   const [searchedUsers, setSearchedUsers] = useState<UserSearchResult[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [modalUserResults, setModalUserResults] = useState<UserSearchResult[]>([]);
   const [isModalSearching, setIsModalSearching] = useState(false);
+
+  // Live WebSocket typing status per conversation
+  const [isPartnerTyping, setIsPartnerTyping] = useState<Record<string, boolean>>({});
+  const typingTimerRef = useRef<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -143,47 +147,115 @@ export default function Messages() {
     };
   }, [activeConvId]);
 
-  // Real-time polling every 2.5 seconds for incoming messages & conversation updates
+  // Real-Time WebSocket Engine (0ms Latency, Zero Polling Overhead)
   useEffect(() => {
-    if (!activeConvId) return;
-    let isMounted = true;
+    // 1. Listen for instant incoming direct messages
+    const unsubNewMsg = websocketService.on('message:new', (payload: any) => {
+      const { conversationId, message } = payload;
+      if (!conversationId || !message) return;
 
-    const pollTimer = setInterval(async () => {
-      try {
-        const [convs, msgs] = await Promise.all([
-          messagesService.getConversations(),
-          messagesService.getMessages(activeConvId),
-        ]);
-        if (!isMounted) return;
+      // Append message to store
+      setMessagesStore((prev) => {
+        const existing = prev[conversationId] || [];
+        if (existing.some((m) => m.id === message.id)) return prev;
+        return {
+          ...prev,
+          [conversationId]: [...existing, { ...message, sender: 'other' }],
+        };
+      });
 
-        if (convs && convs.length > 0) {
-          setConversationsList((prev) => {
-            // merge to preserve current selection
-            return convs;
-          });
+      // Update conversation list preview & bring to top
+      setConversationsList((prev) => {
+        const found = prev.find((c) => c.id === conversationId);
+        if (found) {
+          const updated = {
+            ...found,
+            lastMessage: message.content,
+            time: 'الآن',
+          };
+          return [updated, ...prev.filter((c) => c.id !== conversationId)];
         }
+        // If not in list, fetch fresh list
+        messagesService.getConversations().then((convs) => {
+          if (convs && convs.length > 0) setConversationsList(convs);
+        });
+        return prev;
+      });
+    });
 
-        setMessagesStore((prev) => {
-          const current = prev[activeConvId] || [];
-          if (
-            msgs.length !== current.length ||
-            (msgs.length > 0 && msgs[msgs.length - 1].id !== current[current.length - 1]?.id)
-          ) {
+    // 2. Listen for messages sent from this user on other tabs/devices
+    const unsubSentMsg = websocketService.on('message:sent', (payload: any) => {
+      const { conversationId, message } = payload;
+      if (!conversationId || !message) return;
+
+      setMessagesStore((prev) => {
+        const existing = prev[conversationId] || [];
+        if (existing.some((m) => m.id === message.id)) return prev;
+        return {
+          ...prev,
+          [conversationId]: [...existing, { ...message, sender: 'me' }],
+        };
+      });
+    });
+
+    // 3. Listen for live presence updates (نشط الآن / offline)
+    const unsubPresence = websocketService.on('presence:update', (payload: any) => {
+      const { userId, online, statusText } = payload;
+      if (!userId) return;
+
+      setConversationsList((prev) =>
+        prev.map((c) => {
+          if (c.user.id === userId) {
             return {
-              ...prev,
-              [activeConvId]: msgs,
+              ...c,
+              user: {
+                ...c.user,
+                online,
+                statusText: statusText || (online ? 'نشط الآن' : 'غير متصل'),
+              },
             };
           }
-          return prev;
-        });
-      } catch {
-        // silent polling error
+          return c;
+        })
+      );
+    });
+
+    // 4. Listen for real-time typing indicators
+    const unsubTyping = websocketService.on('typing', (payload: any) => {
+      const { conversationId, isTyping } = payload;
+      if (conversationId) {
+        setIsPartnerTyping((prev) => ({
+          ...prev,
+          [conversationId]: Boolean(isTyping),
+        }));
       }
-    }, 2500);
+    });
+
+    // 5. Graceful fallback polling (ONLY fires every 30s IF WebSocket is disconnected)
+    const fallbackTimer = setInterval(async () => {
+      if (!websocketService.isConnected() && activeConvId) {
+        try {
+          const [convs, msgs] = await Promise.all([
+            messagesService.getConversations(),
+            messagesService.getMessages(activeConvId),
+          ]);
+          if (convs && convs.length > 0) setConversationsList(convs);
+          if (msgs) {
+            setMessagesStore((prev) => ({
+              ...prev,
+              [activeConvId]: msgs,
+            }));
+          }
+        } catch {}
+      }
+    }, 30000);
 
     return () => {
-      isMounted = false;
-      clearInterval(pollTimer);
+      unsubNewMsg();
+      unsubSentMsg();
+      unsubPresence();
+      unsubTyping();
+      clearInterval(fallbackTimer);
     };
   }, [activeConvId]);
 
@@ -271,6 +343,12 @@ export default function Messages() {
       )
     );
 
+    // Clear typing state upon sending message
+    if (activeConv && activeConv.user.id) {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      websocketService.sendTyping(activeConv.id, activeConv.user.id, false);
+    }
+
     // Save message via backend API
     const realMsg = await messagesService.sendMessage(activeConv.id, content);
     if (realMsg) {
@@ -280,6 +358,20 @@ export default function Messages() {
           m.id === tempId ? { ...realMsg, sender: 'me' } : m
         ),
       }));
+    }
+  };
+
+  // Handle typing in chat input
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setInputText(text);
+
+    if (activeConv && activeConv.user.id) {
+      websocketService.sendTyping(activeConv.id, activeConv.user.id, true);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = setTimeout(() => {
+        websocketService.sendTyping(activeConv.id, activeConv.user.id, false);
+      }, 2000);
     }
   };
 
@@ -562,16 +654,25 @@ export default function Messages() {
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                    <Circle
-                      className={`w-2 h-2 fill-current ${
-                        activeConv.user.online
-                          ? 'text-emerald-500 animate-pulse'
-                          : 'text-muted-foreground/40'
-                      }`}
-                    />
-                    <span className={activeConv.user.online ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>
-                      {activeConv.user.statusText || (activeConv.user.online ? 'نشط الآن' : 'غير متصل')}
-                    </span>
+                    {isPartnerTyping[activeConv.id] ? (
+                      <span className="text-primary font-bold flex items-center gap-1.5 animate-pulse">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+                        يكتب الآن...
+                      </span>
+                    ) : (
+                      <>
+                        <Circle
+                          className={`w-2 h-2 fill-current ${
+                            activeConv.user.online
+                              ? 'text-emerald-500 animate-pulse'
+                              : 'text-muted-foreground/40'
+                          }`}
+                        />
+                        <span className={activeConv.user.online ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>
+                          {activeConv.user.statusText || (activeConv.user.online ? 'نشط الآن' : 'غير متصل')}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -668,7 +769,7 @@ export default function Messages() {
                 <Input
                   placeholder="اكتب رسالتك هنا..."
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={handleInputChange}
                   className="text-xs sm:text-sm h-11 bg-background border-border/80 focus-visible:ring-primary rounded-xl flex-1"
                 />
 

@@ -3,6 +3,7 @@ import { initDatabase, closeDatabase } from './db/index.mjs';
 import { initStatements } from './db/statements/index.mjs';
 import { loadBannedUsers } from './services/cache.mjs';
 import { createApp } from './app.mjs';
+import { initWebSocketServer, closeWebSocketServer } from './services/websocket.mjs';
 import { startBackupScheduler } from '../../scripts/backup-scheduler.mjs';
 
 async function bootstrap() {
@@ -37,7 +38,8 @@ async function bootstrap() {
   🚀 SARD RAQAMI HIGH-SPEED PRODUCTION ENGINE (محرك سرد رقمي فائق السرعة)
   ══════════════════════════════════════════════════════════════════════════
   📡 Server Listening on : http://${HOST}:${PORT}
-  ⚡ Mode                : Production-Ready SQLite WAL + O(1) Cache
+  ⚡ Real-Time WS Path   : ws://${HOST}:${PORT}/ws
+  ⚡ Mode                : Production-Ready SQLite WAL + O(1) Cache + WebSocket
   🛡️ Petra Gate Path     : /api/petra/* (Control Groups, Posts, Bans)
   💾 Supabase Backup     : ${backupStatusText}
   📊 Designed Capacity   : 10,000+ Daily Active Users (< 1ms Latency)
@@ -45,10 +47,24 @@ async function bootstrap() {
       `);
     });
 
-    // 7. Graceful shutdown handler
+    // 7. Initialize Real-Time WebSocket Engine on the same server
+    initWebSocketServer(server);
+
+    // 8. Graceful shutdown handler
     const handleShutdown = async (signal) => {
       console.log(`\n[Server] Received ${signal}. Gracefully flushing data & shutting down...`);
+      try {
+        closeWebSocketServer();
+      } catch (e) {}
+
+      const forceExit = setTimeout(async () => {
+        try { await closeDatabase(); } catch (e) {}
+        process.exit(0);
+      }, 1000);
+      if (forceExit.unref) forceExit.unref();
+
       server.close(async () => {
+        clearTimeout(forceExit);
         await closeDatabase();
         console.log('[Server] Shutdown complete. Data safely preserved.');
         process.exit(0);

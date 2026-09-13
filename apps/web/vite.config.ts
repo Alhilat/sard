@@ -65,6 +65,11 @@ export default defineConfig({
         target: process.env.API_TARGET || 'http://localhost:5000',
         changeOrigin: true,
       },
+      '/ws': {
+        target: process.env.API_TARGET || 'http://localhost:5000',
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   preview: {
