@@ -35,14 +35,13 @@ async function bootstrap() {
     const server = app.listen(PORT, HOST, () => {
       console.log(`
   ══════════════════════════════════════════════════════════════════════════
-  🚀 SARD RAQAMI HIGH-SPEED PRODUCTION ENGINE (محرك سرد رقمي فائق السرعة)
+  🚀 SARD RAQAMI BACKEND SERVER (منصة سرد رقمي)
   ══════════════════════════════════════════════════════════════════════════
-  📡 Server Listening on : http://${HOST}:${PORT}
-  ⚡ Real-Time WS Path   : ws://${HOST}:${PORT}/ws
-  ⚡ Mode                : Production-Ready SQLite WAL + O(1) Cache + WebSocket
-  🛡️ Petra Gate Path     : /api/petra/* (Control Groups, Posts, Bans)
-  💾 Supabase Backup     : ${backupStatusText}
-  📊 Designed Capacity   : 10,000+ Daily Active Users (< 1ms Latency)
+  📡 HTTP Server Listening : http://${HOST}:${PORT}
+  ⚡ Real-Time WebSocket   : ws://${HOST}:${PORT}/ws
+  💾 Database Storage     : SQLite 3 (WAL Mode)
+  🛡️ Petra Admin Gate      : /api/petra/*
+  ☁️ Supabase Cloud Sync   : ${backupStatusText}
   ══════════════════════════════════════════════════════════════════════════
       `);
     });

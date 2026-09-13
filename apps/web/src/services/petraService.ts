@@ -5,11 +5,14 @@ export interface PetraStats {
   totalPosts: number;
   totalComments: number;
   totalGroups: number;
-  avgLatencyMs: number;
   totalRequests: number;
   uptimeSeconds: number;
-  databaseEngine: string;
-  dailyCapacity: string;
+  nodeVersion?: string;
+  platform?: string;
+  memoryHeapUsedMb?: number;
+  memoryHeapTotalMb?: number;
+  memoryRssMb?: number;
+  dbEngine?: string;
 }
 
 export interface PetraUser {
@@ -81,18 +84,68 @@ export interface PetraAuditLog {
 
 const PETRA_TOKEN_KEY = 'petra_auth_session_token';
 
+function getPetraToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const petraToken = sessionStorage.getItem(PETRA_TOKEN_KEY) || localStorage.getItem(PETRA_TOKEN_KEY);
+  if (petraToken) return petraToken;
+
+  // Fallback: If platform user is logged in, check if token exists
+  const sardToken = localStorage.getItem('sard_auth_token');
+  return sardToken || null;
+}
+
 function getPetraAuthHeaders(): Record<string, string> {
-  const token = sessionStorage.getItem(PETRA_TOKEN_KEY) || localStorage.getItem(PETRA_TOKEN_KEY);
+  const token = getPetraToken();
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
+function handleUnauthorized() {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem(PETRA_TOKEN_KEY);
+    localStorage.removeItem(PETRA_TOKEN_KEY);
+    window.dispatchEvent(new CustomEvent('petra:unauthorized'));
+  }
+}
+
 export const petraService = {
+  getToken: getPetraToken,
+
   isLoggedIn: (): boolean => {
-    const token = sessionStorage.getItem(PETRA_TOKEN_KEY) || localStorage.getItem(PETRA_TOKEN_KEY);
-    return Boolean(token && token.startsWith('petra_session_'));
+    const token = getPetraToken();
+    return Boolean(token && token.length > 10);
+  },
+
+  verifySession: async (): Promise<boolean> => {
+    const token = getPetraToken();
+    if (!token) return false;
+    try {
+      const res = await fetch('/api/petra/stats', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return false;
+      }
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  getConfigStatus: async (): Promise<{
+    envConfigured: boolean;
+    envUser: string;
+    hasEnvPass: boolean;
+    renderDetected: boolean;
+  } | null> => {
+    try {
+      const res = await fetch('/api/petra/config-status');
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
   },
 
   login: async (username: string, password: string): Promise<{ success: boolean; message?: string }> => {
@@ -114,7 +167,17 @@ export const petraService = {
     }
   },
 
+  usePlatformToken: (token: string) => {
+    if (token) {
+      sessionStorage.setItem(PETRA_TOKEN_KEY, token);
+      localStorage.setItem(PETRA_TOKEN_KEY, token);
+    }
+  },
+
   logout: () => {
+    try {
+      fetch('/api/petra/logout', { method: 'POST', headers: getPetraAuthHeaders() }).catch(() => {});
+    } catch {}
     sessionStorage.removeItem(PETRA_TOKEN_KEY);
     localStorage.removeItem(PETRA_TOKEN_KEY);
   },
@@ -122,6 +185,10 @@ export const petraService = {
   getStats: async (): Promise<PetraStats | null> => {
     try {
       const res = await fetch('/api/petra/stats', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return null;
+      }
       if (!res.ok) return null;
       const data = await res.json();
       return data.stats || null;
@@ -133,6 +200,10 @@ export const petraService = {
   getUsers: async (): Promise<PetraUser[]> => {
     try {
       const res = await fetch('/api/petra/users', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return [];
+      }
       if (!res.ok) return [];
       const data = await res.json();
       return data.users || [];
@@ -148,6 +219,10 @@ export const petraService = {
         headers: getPetraAuthHeaders(),
         body: JSON.stringify({ reason }),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -161,6 +236,10 @@ export const petraService = {
         method: 'POST',
         headers: getPetraAuthHeaders(),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -174,6 +253,10 @@ export const petraService = {
         method: 'POST',
         headers: getPetraAuthHeaders(),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -187,6 +270,10 @@ export const petraService = {
         method: 'POST',
         headers: getPetraAuthHeaders(),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -197,6 +284,10 @@ export const petraService = {
   getPosts: async (): Promise<PetraPost[]> => {
     try {
       const res = await fetch('/api/petra/posts', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return [];
+      }
       if (!res.ok) return [];
       const data = await res.json();
       return data.posts || [];
@@ -211,6 +302,10 @@ export const petraService = {
         method: 'DELETE',
         headers: getPetraAuthHeaders(),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -221,6 +316,10 @@ export const petraService = {
   getComments: async (): Promise<PetraComment[]> => {
     try {
       const res = await fetch('/api/petra/comments', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return [];
+      }
       if (!res.ok) return [];
       const data = await res.json();
       return data.comments || [];
@@ -235,6 +334,10 @@ export const petraService = {
         method: 'DELETE',
         headers: getPetraAuthHeaders(),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -245,6 +348,10 @@ export const petraService = {
   getGroups: async (): Promise<PetraGroup[]> => {
     try {
       const res = await fetch('/api/petra/groups', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return [];
+      }
       if (!res.ok) return [];
       const data = await res.json();
       return data.groups || [];
@@ -259,6 +366,10 @@ export const petraService = {
         method: 'DELETE',
         headers: getPetraAuthHeaders(),
       });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
       const data = await res.json();
       return { success: res.ok && data.success, message: data.message };
     } catch {
@@ -269,6 +380,10 @@ export const petraService = {
   getLogs: async (): Promise<PetraAuditLog[]> => {
     try {
       const res = await fetch('/api/petra/logs', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return [];
+      }
       if (!res.ok) return [];
       const data = await res.json();
       return data.logs || [];

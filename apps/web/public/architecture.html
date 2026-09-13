@@ -1882,7 +1882,7 @@ export async function checkAndAutoRecover(dbPath, persistenceState) {
         method: 'GET',
         path: '/api/notifications/unread-count',
         auth: 'مستخدم مسجل (Bearer)',
-        desc: 'الاستعلام فائق السرعة (< 0.2ms) لعدد الإشعارات والتنبيهات غير المقروءة.',
+        desc: 'الاستعلام عن عدد الإشعارات والتنبيهات غير المقروءة للمستخدم.',
         curl: 'curl -i http://localhost:5000/api/notifications/unread-count \\\n  -H "Authorization: Bearer YOUR_JWT"',
         response: '{\n  "unread_count": 3\n}'
       },

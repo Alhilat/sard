@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { PETRA_USER, PETRA_PASS } from '../config/env.mjs';
+import bcrypt from 'bcryptjs';
+import { PETRA_USER, PETRA_PASS, getPetraEnvCredentials } from '../config/env.mjs';
 import { getStatements } from '../db/statements/index.mjs';
 import { authenticatePetra } from '../middleware/petra-auth.mjs';
 import { authRateLimiter } from '../middleware/rate-limiter.mjs';
@@ -10,28 +11,77 @@ import { scheduleCloudSync } from '../db/persistence.mjs';
 
 const router = Router();
 
+// GET /api/petra/config-status (Public info for UI status badge)
+router.get('/config-status', (req, res) => {
+  const creds = getPetraEnvCredentials();
+  res.json({
+    success: true,
+    envConfigured: creds.isFromEnv,
+    envUser: creds.username,
+    hasEnvPass: Boolean(creds.password),
+    renderDetected: Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.NODE_ENV === 'production'),
+  });
+});
+
 // POST /api/petra/login (with brute-force protection)
-router.post('/login', authRateLimiter, (req, res) => {
+router.post('/login', authRateLimiter, async (req, res) => {
   const { username, password } = req.body;
-  if (username === PETRA_USER && password === PETRA_PASS) {
-    const sessionToken = createPetraSession(PETRA_USER);
+  const cleanUsername = (username || '').trim();
+  const cleanPassword = (password || '').trim();
+
+  // Dynamically retrieve user and pass from environment variables (e.g. Render env vars)
+  const envCreds = getPetraEnvCredentials();
+
+  // 1. Direct Master Petra Administrative Credentials from Env Var
+  if (cleanUsername === envCreds.username && cleanPassword === envCreds.password) {
+    const sessionToken = createPetraSession(envCreds.username);
     const { stmtInsertAuditLog } = getStatements();
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
-      PETRA_USER,
+      envCreds.username,
       'تسجيل الدخول',
       'auth',
       'gate',
-      'تسجيل دخول ناجح إلى بوابة بترا للتحكم المركزي',
+      'تسجيل دخول إداري ناجح إلى لوحة التحكم',
       Date.now()
     );
     return res.json({
       success: true,
       token: sessionToken,
-      admin: 'بترا - الإدارة المركزية والرقابة',
+      admin: 'إدارة النظام',
+      authSource: 'env_var',
       timestamp: Date.now(),
     });
   }
+
+  // 2. Also allow Platform Admin Accounts (e.g. email or username with admin role or owner aaa@g.com)
+  try {
+    const stmts = getStatements();
+    const user = stmts.stmtFindUserByEmail.get(cleanUsername.toLowerCase()) || stmts.stmtFindUserByUsername.get(cleanUsername);
+    if (user && (user.role === 'admin' || user.email === 'aaa@g.com')) {
+      const isValid = await bcrypt.compare(password, user.password_hash);
+      if (isValid) {
+        const sessionToken = createPetraSession(user.name);
+        const { stmtInsertAuditLog } = getStatements();
+        stmtInsertAuditLog.run(
+          `log_${Date.now()}`,
+          user.name,
+          'تسجيل دخول مشرف',
+          'auth',
+          'gate',
+          `تسجيل دخول المشرف (${user.name}) لبوابة بترا للتحكم المركزي`,
+          Date.now()
+        );
+        return res.json({
+          success: true,
+          token: sessionToken,
+          admin: user.name,
+          timestamp: Date.now(),
+        });
+      }
+    }
+  } catch (err) {}
+
   res.status(401).json({
     success: false,
     message: 'اسم المستخدم أو كلمة المرور غير صحيحة لبوابة بترا',
@@ -67,7 +117,7 @@ router.get('/stats', authenticatePetra, (req, res) => {
     const totalComments = stmtCountAllComments.get().c;
     const totalGroups = stmtCountAllGroups.get().c;
 
-    const avgLatency = metrics.totalRequests > 0 ? (metrics.totalQueryTimeMs / metrics.totalRequests).toFixed(2) : '0.19';
+    const mem = process.memoryUsage();
 
     res.json({
       success: true,
@@ -78,11 +128,14 @@ router.get('/stats', authenticatePetra, (req, res) => {
         totalPosts,
         totalComments,
         totalGroups,
-        avgLatencyMs: Number(avgLatency),
         totalRequests: metrics.totalRequests,
         uptimeSeconds: Math.floor((Date.now() - metrics.startedAt) / 1000),
-        databaseEngine: 'SQLite WAL Mode + O(1) In-Memory Caches',
-        dailyCapacity: '100,000+ Real Concurrent Operations / Day',
+        nodeVersion: process.version,
+        platform: process.platform,
+        memoryHeapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+        memoryHeapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+        memoryRssMb: Math.round(mem.rss / 1024 / 1024),
+        dbEngine: 'SQLite 3 (WAL)',
       },
     });
   } catch (err) {
@@ -163,9 +216,10 @@ router.post('/users/:id/ban', authenticatePetra, (req, res) => {
     bannedUserIds.add(userId);
 
     const user = stmtFindUserById.get(userId);
+    const adminActor = req.petraAdmin || PETRA_USER || 'admin';
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
-      PETRA_USER,
+      adminActor,
       'حظر مستخدم',
       'user',
       userId,
@@ -192,9 +246,10 @@ router.post('/users/:id/unban', authenticatePetra, (req, res) => {
     bannedUserIds.delete(userId);
 
     const user = stmtFindUserById.get(userId);
+    const adminActor = req.petraAdmin || PETRA_USER || 'admin';
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
-      PETRA_USER,
+      adminActor,
       'إلغاء حظر مستخدم',
       'user',
       userId,
@@ -217,9 +272,12 @@ router.get('/posts', authenticatePetra, (req, res) => {
   try {
     const db = req.app.locals.db;
     const posts = db.prepare(`
-      SELECT p.*, u.name as author_name, u.username as author_username, u.email as author_email
+      SELECT p.*,
+             COALESCE(u.name, 'مستخدم غير معروف') as author_name,
+             COALESCE(u.username, 'unknown') as author_username,
+             COALESCE(u.email, '') as author_email
       FROM posts p
-      JOIN users u ON p.author_id = u.id
+      LEFT JOIN users u ON p.author_id = u.id
       ORDER BY p.created_at DESC
       LIMIT 200
     `).all();
@@ -253,9 +311,10 @@ router.delete('/posts/:id', authenticatePetra, (req, res) => {
       db.prepare('UPDATE groups SET posts_count = MAX(0, posts_count - 1) WHERE id = ?').run(post.group_id);
     }
 
+    const adminActor = req.petraAdmin || PETRA_USER || 'admin';
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
-      PETRA_USER,
+      adminActor,
       'حذف منشور',
       'post',
       postId,
@@ -279,9 +338,12 @@ router.get('/comments', authenticatePetra, (req, res) => {
   try {
     const db = req.app.locals.db;
     const comments = db.prepare(`
-      SELECT c.*, u.name as author_name, u.username as author_username, p.content as post_content
+      SELECT c.*,
+             COALESCE(u.name, 'مستخدم غير معروف') as author_name,
+             COALESCE(u.username, 'unknown') as author_username,
+             COALESCE(p.content, '') as post_content
       FROM comments c
-      JOIN users u ON c.author_id = u.id
+      LEFT JOIN users u ON c.author_id = u.id
       LEFT JOIN posts p ON c.post_id = p.id
       ORDER BY c.created_at DESC
       LIMIT 200
@@ -309,9 +371,10 @@ router.delete('/comments/:id', authenticatePetra, (req, res) => {
     stmtDeleteComment.run(commentId);
     stmtDecrementPostComments.run(comment.post_id);
 
+    const adminActor = req.petraAdmin || PETRA_USER || 'admin';
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
-      PETRA_USER,
+      adminActor,
       'حذف رد',
       'comment',
       commentId,
@@ -363,9 +426,10 @@ router.delete('/groups/:id', authenticatePetra, (req, res) => {
     stmtDeleteGroupPosts.run(groupId);
     stmtDeleteGroupMembers.run(groupId);
 
+    const adminActor = req.petraAdmin || PETRA_USER || 'admin';
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
-      PETRA_USER,
+      adminActor,
       'حذف مجموعة',
       'group',
       groupId,
