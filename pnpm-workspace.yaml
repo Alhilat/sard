@@ -3,10 +3,7 @@ packages:
   - scripts
 
 allowBuilds:
-  '@prisma/engines': true
-  '@scarf/scarf': true
   esbuild: true
-  prisma: true
 
 autoInstallPeers: false
 
