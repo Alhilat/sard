@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,40 +16,40 @@
       --surface: #151221;
       --surface-hover: #1E192E;
       --surface-active: #27213C;
-      
+
       --border: rgba(255, 255, 255, 0.08);
       --border-strong: rgba(255, 255, 255, 0.16);
       --border-accent: rgba(158, 42, 43, 0.4);
-      
+
       /* Sard Raqami Palette */
       --maroon-600: #7A1C1D;
       --maroon-500: #9E2A2B;
       --maroon-400: #C0392B;
       --maroon-glow: rgba(158, 42, 43, 0.28);
-      
+
       --amber-500: #D97706;
       --amber-400: #F59E0B;
       --amber-glow: rgba(217, 119, 6, 0.2);
-      
+
       --emerald-500: #10B981;
       --emerald-400: #34D399;
       --emerald-glow: rgba(16, 185, 129, 0.2);
-      
+
       --sky-500: #0284C7;
       --sky-400: #38BDF8;
-      
+
       --purple-500: #7C3AED;
       --purple-400: #A78BFA;
-      
+
       --text-1: #F8FAFC;
       --text-2: #94A3B8;
       --text-3: #64748B;
-      
+
       --radius-sm: 6px;
       --radius-md: 10px;
       --radius-lg: 16px;
       --radius-xl: 22px;
-      
+
       /* System Font Fallback: works 100% offline without any web font download */
       --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", "Cairo", sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "JetBrains Mono", "Liberation Mono", "Courier New", monospace;
@@ -70,7 +71,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      background-image: 
+      background-image:
         radial-gradient(circle at 10% 8%, rgba(158, 42, 43, 0.14) 0%, transparent 35%),
         radial-gradient(circle at 90% 60%, rgba(217, 119, 6, 0.1) 0%, transparent 40%),
         radial-gradient(circle at 50% 95%, rgba(124, 58, 237, 0.08) 0%, transparent 45%);
@@ -78,10 +79,23 @@
     }
 
     /* Scrollbars */
-    ::-webkit-scrollbar { width: 7px; height: 7px; }
-    ::-webkit-scrollbar-track { background: var(--bg-base); }
-    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
 
     /* Top Navigation Bar */
     .topbar {
@@ -106,6 +120,7 @@
       text-decoration: none;
       color: var(--text-1);
     }
+
     .brand-logo {
       width: 36px;
       height: 36px;
@@ -120,11 +135,13 @@
       box-shadow: 0 0 16px var(--maroon-glow);
       border: 1px solid rgba(255, 255, 255, 0.15);
     }
+
     .brand-title {
       font-size: 1.05rem;
       font-weight: 800;
       letter-spacing: -0.2px;
     }
+
     .brand-tag {
       font-size: 11px;
       background: rgba(255, 255, 255, 0.08);
@@ -146,6 +163,7 @@
       border-radius: var(--radius-md);
       border: 1px solid var(--border);
     }
+
     .top-tab-btn {
       background: transparent;
       border: none;
@@ -161,10 +179,12 @@
       transition: all 0.18s ease;
       font-family: inherit;
     }
+
     .top-tab-btn:hover {
       color: var(--text-1);
       background: rgba(255, 255, 255, 0.05);
     }
+
     .top-tab-btn.active {
       color: #FFF;
       background: var(--maroon-500);
@@ -183,6 +203,7 @@
       display: flex;
       align-items: center;
     }
+
     .quick-search input {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -194,12 +215,14 @@
       width: 260px;
       transition: all 0.2s;
     }
+
     .quick-search input:focus {
       width: 320px;
       border-color: var(--amber-500);
       outline: none;
       box-shadow: 0 0 14px var(--amber-glow);
     }
+
     .quick-search .search-icon {
       position: absolute;
       right: 11px;
@@ -209,6 +232,7 @@
       display: flex;
       align-items: center;
     }
+
     .kbd-hint {
       position: absolute;
       left: 8px;
@@ -234,6 +258,7 @@
       color: var(--emerald-400);
       font-family: var(--font-mono);
     }
+
     .status-dot {
       width: 6px;
       height: 6px;
@@ -242,9 +267,19 @@
       box-shadow: 0 0 8px var(--emerald-500);
       animation: pulse-dot 2s infinite ease-in-out;
     }
+
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.85);
+      }
     }
 
     /* Layout Wrapper */
@@ -273,6 +308,7 @@
       position: relative;
       overflow: hidden;
     }
+
     .portal-hero::after {
       content: '';
       position: absolute;
@@ -283,6 +319,7 @@
       background: radial-gradient(circle, var(--maroon-glow) 0%, transparent 70%);
       pointer-events: none;
     }
+
     .hero-badge-row {
       display: flex;
       align-items: center;
@@ -290,6 +327,7 @@
       margin-bottom: 14px;
       flex-wrap: wrap;
     }
+
     .hero-badge {
       font-size: 11px;
       font-family: var(--font-mono);
@@ -298,9 +336,24 @@
       border-radius: 6px;
       text-transform: uppercase;
     }
-    .badge-standalone { background: rgba(16, 185, 129, 0.16); color: var(--emerald-400); border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-sqlite { background: rgba(2, 132, 199, 0.16); color: var(--sky-400); border: 1px solid rgba(2, 132, 199, 0.3); }
-    .badge-render { background: rgba(217, 119, 6, 0.16); color: var(--amber-400); border: 1px solid rgba(217, 119, 6, 0.3); }
+
+    .badge-standalone {
+      background: rgba(16, 185, 129, 0.16);
+      color: var(--emerald-400);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-sqlite {
+      background: rgba(2, 132, 199, 0.16);
+      color: var(--sky-400);
+      border: 1px solid rgba(2, 132, 199, 0.3);
+    }
+
+    .badge-render {
+      background: rgba(217, 119, 6, 0.16);
+      color: var(--amber-400);
+      border: 1px solid rgba(217, 119, 6, 0.3);
+    }
 
     .portal-hero h1 {
       font-size: 2rem;
@@ -310,6 +363,7 @@
       letter-spacing: -0.4px;
       color: #FFF;
     }
+
     .portal-hero p {
       font-size: 0.98rem;
       color: var(--text-2);
@@ -324,6 +378,7 @@
       gap: 14px;
       margin-top: 24px;
     }
+
     .stat-box {
       background: var(--bg-base);
       border: 1px solid var(--border);
@@ -331,10 +386,12 @@
       border-radius: var(--radius-md);
       transition: all 0.2s;
     }
+
     .stat-box:hover {
       border-color: var(--border-strong);
       transform: translateY(-1px);
     }
+
     .stat-box-val {
       font-family: var(--font-mono);
       font-size: 1.35rem;
@@ -344,6 +401,7 @@
       align-items: center;
       gap: 8px;
     }
+
     .stat-box-lbl {
       font-size: 0.8rem;
       color: var(--text-3);
@@ -355,18 +413,28 @@
       display: none;
       animation: fadeIn 0.25s ease-out;
     }
+
     .tab-panel.active {
       display: block;
     }
+
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* Section Component */
     .doc-section {
       margin-bottom: 48px;
     }
+
     .section-header {
       display: flex;
       align-items: center;
@@ -377,6 +445,7 @@
       flex-wrap: wrap;
       gap: 12px;
     }
+
     .section-title {
       font-size: 1.35rem;
       font-weight: 800;
@@ -385,6 +454,7 @@
       align-items: center;
       gap: 10px;
     }
+
     .section-desc {
       font-size: 0.92rem;
       color: var(--text-2);
@@ -403,11 +473,13 @@
       gap: 16px;
       margin-bottom: 30px;
     }
+
     .arch-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
     }
+
     .arch-card {
       background: var(--bg-subtle);
       border: 1px solid var(--border);
@@ -417,11 +489,13 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+
     .arch-card:hover {
       border-color: var(--maroon-400);
       transform: translateY(-2px);
       box-shadow: 0 8px 24px var(--maroon-glow);
     }
+
     .arch-tag {
       font-family: var(--font-mono);
       font-size: 10px;
@@ -432,10 +506,26 @@
       display: inline-block;
       margin-bottom: 8px;
     }
-    .tag-ui { background: rgba(2, 132, 199, 0.16); color: #38BDF8; }
-    .tag-api { background: rgba(158, 42, 43, 0.22); color: #F87171; }
-    .tag-db { background: rgba(16, 185, 129, 0.16); color: #34D399; }
-    .tag-cloud { background: rgba(217, 119, 6, 0.16); color: #FBBF24; }
+
+    .tag-ui {
+      background: rgba(2, 132, 199, 0.16);
+      color: #38BDF8;
+    }
+
+    .tag-api {
+      background: rgba(158, 42, 43, 0.22);
+      color: #F87171;
+    }
+
+    .tag-db {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34D399;
+    }
+
+    .tag-cloud {
+      background: rgba(217, 119, 6, 0.16);
+      color: #FBBF24;
+    }
 
     .arch-name {
       font-weight: 800;
@@ -443,6 +533,7 @@
       color: #FFF;
       margin-bottom: 4px;
     }
+
     .arch-file {
       font-family: var(--font-mono);
       font-size: 0.76rem;
@@ -451,6 +542,7 @@
       text-align: left;
       margin-bottom: 8px;
     }
+
     .arch-text {
       font-size: 0.82rem;
       color: var(--text-2);
@@ -470,7 +562,11 @@
       font-family: var(--font-mono);
       color: var(--text-3);
     }
-    .connector-banner b { color: var(--text-1); font-weight: 700; }
+
+    .connector-banner b {
+      color: var(--text-1);
+      font-weight: 700;
+    }
 
     /* Filter Pills */
     .filter-group {
@@ -479,6 +575,7 @@
       gap: 8px;
       flex-wrap: wrap;
     }
+
     .filter-btn {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -491,10 +588,12 @@
       cursor: pointer;
       transition: all 0.15s;
     }
+
     .filter-btn:hover {
       color: var(--text-1);
       border-color: var(--border-strong);
     }
+
     .filter-btn.active {
       background: rgba(158, 42, 43, 0.25);
       border-color: var(--maroon-500);
@@ -507,6 +606,7 @@
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
       gap: 16px;
     }
+
     .file-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -519,11 +619,13 @@
       cursor: pointer;
       position: relative;
     }
+
     .file-card:hover {
       background: var(--surface-hover);
       border-color: var(--border-strong);
       transform: translateY(-2px);
     }
+
     .file-card-top {
       display: flex;
       align-items: flex-start;
@@ -531,6 +633,7 @@
       gap: 12px;
       margin-bottom: 10px;
     }
+
     .file-path {
       font-family: var(--font-mono);
       font-size: 0.84rem;
@@ -540,6 +643,7 @@
       text-align: left;
       word-break: break-all;
     }
+
     .file-role-badge {
       font-size: 10px;
       font-family: var(--font-mono);
@@ -548,12 +652,14 @@
       border-radius: 4px;
       white-space: nowrap;
     }
+
     .file-summary {
       font-size: 0.86rem;
       color: var(--text-2);
       line-height: 1.6;
       margin-bottom: 16px;
     }
+
     .file-meta-row {
       display: flex;
       align-items: center;
@@ -563,6 +669,7 @@
       font-size: 0.78rem;
       color: var(--text-3);
     }
+
     .btn-inspect {
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--border);
@@ -576,6 +683,7 @@
       gap: 4px;
       transition: all 0.15s;
     }
+
     .btn-inspect:hover {
       background: var(--maroon-500);
       border-color: var(--maroon-400);
@@ -589,11 +697,16 @@
       border-radius: var(--radius-lg);
       overflow: hidden;
     }
+
     .api-item {
       border-bottom: 1px solid var(--border);
       transition: background 0.15s;
     }
-    .api-item:last-child { border-bottom: none; }
+
+    .api-item:last-child {
+      border-bottom: none;
+    }
+
     .api-header {
       padding: 16px 20px;
       display: flex;
@@ -603,9 +716,11 @@
       user-select: none;
       gap: 16px;
     }
+
     .api-header:hover {
       background: rgba(255, 255, 255, 0.02);
     }
+
     .api-main-col {
       display: flex;
       align-items: center;
@@ -613,6 +728,7 @@
       flex: 1;
       min-width: 0;
     }
+
     .method-badge {
       font-family: var(--font-mono);
       font-size: 11px;
@@ -623,10 +739,30 @@
       text-align: center;
       display: inline-block;
     }
-    .m-get { background: rgba(2, 132, 199, 0.18); color: #38BDF8; border: 1px solid rgba(2, 132, 199, 0.3); }
-    .m-post { background: rgba(16, 185, 129, 0.18); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .m-patch { background: rgba(217, 119, 6, 0.18); color: #FBBF24; border: 1px solid rgba(217, 119, 6, 0.3); }
-    .m-delete { background: rgba(239, 68, 68, 0.18); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .m-get {
+      background: rgba(2, 132, 199, 0.18);
+      color: #38BDF8;
+      border: 1px solid rgba(2, 132, 199, 0.3);
+    }
+
+    .m-post {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .m-patch {
+      background: rgba(217, 119, 6, 0.18);
+      color: #FBBF24;
+      border: 1px solid rgba(217, 119, 6, 0.3);
+    }
+
+    .m-delete {
+      background: rgba(239, 68, 68, 0.18);
+      color: #F87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
 
     .api-route-path {
       font-family: var(--font-mono);
@@ -636,6 +772,7 @@
       direction: ltr;
       text-align: left;
     }
+
     .api-summary-text {
       font-size: 0.85rem;
       color: var(--text-2);
@@ -643,11 +780,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .api-chevron {
       color: var(--text-3);
       font-size: 12px;
       transition: transform 0.2s;
     }
+
     .api-item.expanded .api-chevron {
       transform: rotate(180deg);
     }
@@ -658,21 +797,25 @@
       background: var(--bg-base);
       border-top: 1px solid var(--border);
     }
+
     .api-item.expanded .api-details {
       display: block;
     }
+
     .api-spec-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 16px;
       margin-bottom: 16px;
     }
+
     .spec-block {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 14px;
     }
+
     .spec-label {
       font-size: 11px;
       font-weight: 800;
@@ -680,6 +823,7 @@
       text-transform: uppercase;
       margin-bottom: 8px;
     }
+
     .spec-code {
       font-family: var(--font-mono);
       font-size: 0.78rem;
@@ -696,6 +840,7 @@
       grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: 18px;
     }
+
     .db-table-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -704,6 +849,7 @@
       display: flex;
       flex-direction: column;
     }
+
     .db-table-header {
       padding: 14px 18px;
       background: var(--bg-subtle);
@@ -712,6 +858,7 @@
       align-items: center;
       justify-content: space-between;
     }
+
     .db-table-title {
       font-family: var(--font-mono);
       font-size: 0.94rem;
@@ -719,6 +866,7 @@
       color: var(--amber-400);
       direction: ltr;
     }
+
     .db-col-list {
       list-style: none;
       padding: 12px 18px;
@@ -726,6 +874,7 @@
       font-size: 0.77rem;
       flex: 1;
     }
+
     .db-col-item {
       display: flex;
       align-items: center;
@@ -733,10 +882,23 @@
       padding: 5px 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     }
-    .db-col-item:last-child { border-bottom: none; }
-    .col-pk { color: var(--emerald-400); font-weight: bold; }
-    .col-fk { color: var(--sky-400); }
-    .col-type { color: var(--text-3); }
+
+    .db-col-item:last-child {
+      border-bottom: none;
+    }
+
+    .col-pk {
+      color: var(--emerald-400);
+      font-weight: bold;
+    }
+
+    .col-fk {
+      color: var(--sky-400);
+    }
+
+    .col-type {
+      color: var(--text-3);
+    }
 
     /* Interactive Flow Simulator */
     .flow-card {
@@ -746,6 +908,7 @@
       padding: 24px;
       margin-bottom: 24px;
     }
+
     .flow-steps {
       display: flex;
       flex-direction: column;
@@ -753,6 +916,7 @@
       margin-top: 18px;
       position: relative;
     }
+
     .flow-step-item {
       display: flex;
       align-items: flex-start;
@@ -763,10 +927,12 @@
       padding: 16px;
       transition: all 0.2s;
     }
+
     .flow-step-item:hover {
       border-color: var(--maroon-400);
       background: var(--surface-hover);
     }
+
     .step-number {
       width: 28px;
       height: 28px;
@@ -781,20 +947,24 @@
       justify-content: center;
       shrink-0;
     }
+
     .step-content {
       flex: 1;
     }
+
     .step-title {
       font-size: 0.92rem;
       font-weight: 800;
       color: #FFF;
       margin-bottom: 4px;
     }
+
     .step-desc {
       font-size: 0.82rem;
       color: var(--text-2);
       line-height: 1.5;
     }
+
     .step-code {
       margin-top: 8px;
       background: var(--bg-subtle);
@@ -816,6 +986,7 @@
       overflow: hidden;
       margin-bottom: 20px;
     }
+
     .terminal-head {
       background: rgba(255, 255, 255, 0.04);
       padding: 8px 16px;
@@ -824,14 +995,29 @@
       justify-content: space-between;
       border-bottom: 1px solid var(--border);
     }
+
     .terminal-dots {
       display: flex;
       gap: 6px;
     }
-    .t-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .t-red { background: #EF4444; }
-    .t-yellow { background: #F59E0B; }
-    .t-green { background: #10B981; }
+
+    .t-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .t-red {
+      background: #EF4444;
+    }
+
+    .t-yellow {
+      background: #F59E0B;
+    }
+
+    .t-green {
+      background: #10B981;
+    }
 
     .terminal-body {
       padding: 16px 20px;
@@ -843,9 +1029,19 @@
       line-height: 1.8;
       overflow-x: auto;
     }
-    .t-prompt { color: var(--maroon-400); font-weight: 700; }
-    .t-comment { color: var(--text-3); }
-    .t-accent { color: var(--emerald-400); }
+
+    .t-prompt {
+      color: var(--maroon-400);
+      font-weight: 700;
+    }
+
+    .t-comment {
+      color: var(--text-3);
+    }
+
+    .t-accent {
+      color: var(--emerald-400);
+    }
 
     /* Code Inspection Drawer (Slide-Over) */
     .drawer-overlay {
@@ -858,10 +1054,12 @@
       pointer-events: none;
       transition: opacity 0.25s ease;
     }
+
     .drawer-overlay.open {
       opacity: 1;
       pointer-events: auto;
     }
+
     .drawer-panel {
       position: fixed;
       top: 0;
@@ -871,16 +1069,18 @@
       height: 100vh;
       background: var(--surface);
       border-right: 1px solid var(--border-strong);
-      box-shadow: 10px 0 40px rgba(0,0,0,0.8);
+      box-shadow: 10px 0 40px rgba(0, 0, 0, 0.8);
       z-index: 1000;
       transform: translateX(-100%);
       transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
     }
+
     .drawer-overlay.open .drawer-panel {
       transform: translateX(0);
     }
+
     .drawer-header {
       padding: 20px 24px;
       border-bottom: 1px solid var(--border);
@@ -889,6 +1089,7 @@
       justify-content: space-between;
       background: var(--bg-subtle);
     }
+
     .drawer-title {
       font-family: var(--font-mono);
       font-size: 0.95rem;
@@ -896,6 +1097,7 @@
       color: #FFF;
       direction: ltr;
     }
+
     .drawer-close {
       background: transparent;
       border: none;
@@ -905,12 +1107,17 @@
       line-height: 1;
       padding: 4px;
     }
-    .drawer-close:hover { color: #FFF; }
+
+    .drawer-close:hover {
+      color: #FFF;
+    }
+
     .drawer-body {
       padding: 24px;
       overflow-y: auto;
       flex: 1;
     }
+
     .code-preview-box {
       background: #050408;
       border: 1px solid var(--border);
@@ -938,7 +1145,7 @@
       border-radius: var(--radius-md);
       font-size: 0.85rem;
       font-weight: 700;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
       transform: translateY(100px);
       opacity: 0;
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -947,6 +1154,7 @@
       align-items: center;
       gap: 8px;
     }
+
     .toast-box.show {
       transform: translateY(0);
       opacity: 1;
@@ -954,15 +1162,33 @@
 
     /* Responsive adjustments */
     @media (max-width: 900px) {
-      .topbar { padding: 0 16px; }
-      .top-nav-tabs { display: none; }
-      .main-content { padding: 20px 16px 60px; }
-      .portal-hero { padding: 24px 20px; }
-      .quick-search input { width: 180px; }
-      .quick-search input:focus { width: 220px; }
+      .topbar {
+        padding: 0 16px;
+      }
+
+      .top-nav-tabs {
+        display: none;
+      }
+
+      .main-content {
+        padding: 20px 16px 60px;
+      }
+
+      .portal-hero {
+        padding: 24px 20px;
+      }
+
+      .quick-search input {
+        width: 180px;
+      }
+
+      .quick-search input:focus {
+        width: 220px;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- Top Sticky Navigation -->
@@ -1013,7 +1239,9 @@
         </div>
         <h1>بوابة التوثيق الهندسي والمعمارية البرمجية للمطورين</h1>
         <p>
-          مرجع تقني مباشر وهندسي خالٍ تماماً من الحشو والذكاء الاصطناعي العام: يوثق طبقات التنفيذ الحقيقية، ملفات الكود الفعلية، 16 مسار REST API مع عينات cURL، و23 جدولاً معيارياً في محرك SQLite WAL المدمج ونظام الاسترداد التلقائي للكوارث (Disaster Recovery) مع Supabase.
+          مرجع تقني مباشر وهندسي خالٍ تماماً من الحشو والذكاء الاصطناعي العام: يوثق طبقات التنفيذ الحقيقية، ملفات الكود
+          الفعلية، 16 مسار REST API مع عينات cURL، و23 جدولاً معيارياً في محرك SQLite WAL المدمج ونظام الاسترداد
+          التلقائي للكوارث (Disaster Recovery) مع Supabase.
         </p>
 
         <!-- Metric Strips -->
@@ -1046,7 +1274,9 @@
             <h2 class="section-title">📐 المعمارية الهندسية الهجينة (Hybrid Stack Architecture)</h2>
           </div>
           <p class="section-desc">
-            تعتمد منصة سرد رقمي نمط <strong>Local-First In-Memory with Hybrid Cloud Sync</strong>. القراءة والكتابة الفورية تتم في خادم Node 22 ومحرك SQLite WAL محلي بأقل من نصف ملي ثانية، بينما تتم المزامنة السحابية المزدوجة مع PostgreSQL و Supabase في الخلفية دون أي تعطيل للمستخدم.
+            تعتمد منصة سرد رقمي نمط <strong>Local-First In-Memory with Hybrid Cloud Sync</strong>. القراءة والكتابة
+            الفورية تتم في خادم Node 22 ومحرك SQLite WAL محلي بأقل من نصف ملي ثانية، بينما تتم المزامنة السحابية
+            المزدوجة مع PostgreSQL و Supabase في الخلفية دون أي تعطيل للمستخدم.
           </p>
 
           <div class="arch-diagram">
@@ -1056,13 +1286,15 @@
                 <span class="arch-tag tag-ui">Tier 1: Client Presentation</span>
                 <div class="arch-name">تطبيق React 19 + Vite SPA</div>
                 <div class="arch-file">apps/web/src/pages/app/Feed.tsx</div>
-                <div class="arch-text">واجهة مستخدم تفاعلية RTL، توجيه خفيف عبر Wouter، تحديثات واجهة متفائلة (Optimistic UI)، وزر سرد بالأيقونة فقط لتفادي الاقتطاع على الهواتف.</div>
+                <div class="arch-text">واجهة مستخدم تفاعلية RTL، توجيه خفيف عبر Wouter، تحديثات واجهة متفائلة
+                  (Optimistic UI)، وزر سرد بالأيقونة فقط لتفادي الاقتطاع على الهواتف.</div>
               </div>
               <div class="arch-card" onclick="openInspector('ActivityGroupChat.tsx')">
                 <span class="arch-tag tag-ui">Realtime Client Components</span>
                 <div class="arch-name">محادثات الفعاليات بالشاشة الكاملة</div>
                 <div class="arch-file">apps/web/src/components/activities/ActivityGroupChat.tsx</div>
-                <div class="arch-text">واجهة محادثة 100dvh كاملة الشاشة مع نافذة تحكم مصغرة ومحمية للمشرفين لضبط الصلاحيات (الجميع / المنظمين فقط / صامت).</div>
+                <div class="arch-text">واجهة محادثة 100dvh كاملة الشاشة مع نافذة تحكم مصغرة ومحمية للمشرفين لضبط
+                  الصلاحيات (الجميع / المنظمين فقط / صامت).</div>
               </div>
             </div>
 
@@ -1076,13 +1308,15 @@
                 <span class="arch-tag tag-api">Tier 2: Express 5 Server Entry</span>
                 <div class="arch-name">خادم Node 22 ESM النظيف</div>
                 <div class="arch-file">apps/api/server.mjs & app.mjs</div>
-                <div class="arch-text">مدخل تشغيل مصغر (67 سطراً)، قياس دقيق لسرعة الاستجابة (metricsMiddleware)، وخدمة ملفات الواجهة في بيئة الإنتاج على Render.</div>
+                <div class="arch-text">مدخل تشغيل مصغر (67 سطراً)، قياس دقيق لسرعة الاستجابة (metricsMiddleware)، وخدمة
+                  ملفات الواجهة في بيئة الإنتاج على Render.</div>
               </div>
               <div class="arch-card" onclick="openInspector('routes/posts.mjs')">
                 <span class="arch-tag tag-api">Layered REST API Routers</span>
                 <div class="arch-name">16 موجّه مسارات منفصل</div>
                 <div class="arch-file">apps/api/routes/*.mjs</div>
-                <div class="arch-text">كل كيان (المنشورات، الفعاليات، الدورات، المجتمعات، بترا) له موجّه مستقل مع فحص المستخدمين المحظورين في الذاكرة O(1).</div>
+                <div class="arch-text">كل كيان (المنشورات، الفعاليات، الدورات، المجتمعات، بترا) له موجّه مستقل مع فحص
+                  المستخدمين المحظورين في الذاكرة O(1).</div>
               </div>
             </div>
 
@@ -1096,13 +1330,15 @@
                 <span class="arch-tag tag-db">Tier 3: Primary SQLite WAL Engine</span>
                 <div class="arch-name">محرك SQLite 3 الأصيل (Node:sqlite)</div>
                 <div class="arch-file">apps/api/db/index.mjs & schema.mjs</div>
-                <div class="arch-text">تفعيل PRAGMA journal_mode = WAL مع PRAGMA synchronous = NORMAL و 64MB In-Memory Cache لضمان قراءة لا تحجب الكتابة إطلاقاً.</div>
+                <div class="arch-text">تفعيل PRAGMA journal_mode = WAL مع PRAGMA synchronous = NORMAL و 64MB In-Memory
+                  Cache لضمان قراءة لا تحجب الكتابة إطلاقاً.</div>
               </div>
               <div class="arch-card" onclick="openInspector('db/persistence.mjs')">
                 <span class="arch-tag tag-cloud">Tier 4: Background Cloud Persistence</span>
                 <div class="arch-name">مزامنة PostgreSQL & Supabase</div>
                 <div class="arch-file">apps/api/db/persistence.mjs & disaster-recovery.mjs</div>
-                <div class="arch-text">نسخ احتياطي غير متزامن في الخلفية، وفحص سلامة الجداول واسترجاعها تلقائياً عند إقلاع السيرفر على Render في حال فقدان القرص المؤقت.</div>
+                <div class="arch-text">نسخ احتياطي غير متزامن في الخلفية، وفحص سلامة الجداول واسترجاعها تلقائياً عند
+                  إقلاع السيرفر على Render في حال فقدان القرص المؤقت.</div>
               </div>
             </div>
           </div>
@@ -1150,7 +1386,8 @@
             </div>
           </div>
           <p class="section-desc">
-            قائمة تفصيلية بكافة نقاط النهاية الحقيقية المفعلة في خادم Express. انقر على أي مسار لعرض معايير الطلب، نموذج JSON، وأمر cURL الجاهز للنسخ:
+            قائمة تفصيلية بكافة نقاط النهاية الحقيقية المفعلة في خادم Express. انقر على أي مسار لعرض معايير الطلب، نموذج
+            JSON، وأمر cURL الجاهز للنسخ:
           </p>
 
           <div class="api-container" id="apiContainer">
@@ -1167,12 +1404,14 @@
           <div class="section-header">
             <h2 class="section-title">🗄️ قاموس جداول قاعدة البيانات (23 جدولاً معيارياً)</h2>
             <div class="filter-group">
-              <button class="filter-btn active" id="btnToggleCols" onclick="toggleSchemaMode('columns')">عرض الأعمدة والأنواع</button>
+              <button class="filter-btn active" id="btnToggleCols" onclick="toggleSchemaMode('columns')">عرض الأعمدة
+                والأنواع</button>
               <button class="filter-btn" id="btnToggleSql" onclick="toggleSchemaMode('sql')">عرض كود SQL DDL</button>
             </div>
           </div>
           <p class="section-desc">
-            هيكلية جداول محرك SQLite WAL الحقيقية المأخوذة مباشرة من <code>apps/api/db/schema.mjs</code> متضمنة الفهارس والمفاتيح الأساسية والأجنبية:
+            هيكلية جداول محرك SQLite WAL الحقيقية المأخوذة مباشرة من <code>apps/api/db/schema.mjs</code> متضمنة الفهارس
+            والمفاتيح الأساسية والأجنبية:
           </p>
 
           <div class="db-container" id="dbContainer">
@@ -1183,7 +1422,8 @@
           <div id="rawSqlView" style="display: none; margin-top: 20px;">
             <div class="terminal-card">
               <div class="terminal-head">
-                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">schema.sql — 23 Tables & Indexes DDL</span>
+                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">schema.sql — 23
+                  Tables & Indexes DDL</span>
                 <button class="btn-inspect" onclick="copyRawSql()">📋 نسخ كود الـ DDL بالكامل</button>
               </div>
               <pre class="terminal-body" id="rawSqlText">
@@ -1220,7 +1460,8 @@
                 <div class="step-number">1</div>
                 <div class="step-content">
                   <div class="step-title">واجهة المستخدم (Feed.tsx)</div>
-                  <div class="step-desc">يقوم المستخدم بكتابة المنشور والضغط على زر السرد (أيقونة السرد فقط 36x36px). يتم فحص عدد الأحرف (&le; 280) وإرسال الطلب مع Bearer Token.</div>
+                  <div class="step-desc">يقوم المستخدم بكتابة المنشور والضغط على زر السرد (أيقونة السرد فقط 36x36px).
+                    يتم فحص عدد الأحرف (&le; 280) وإرسال الطلب مع Bearer Token.</div>
                   <div class="step-code">POST /api/posts { content: "فكرة تقنية جديدة #سرد_رقمي" }</div>
                 </div>
               </div>
@@ -1229,7 +1470,8 @@
                 <div class="step-number">2</div>
                 <div class="step-content">
                   <div class="step-title">وسيط الخادم ومصادقة التوكن (requireAuth Middleware)</div>
-                  <div class="step-desc">يتحقق خادم Express من صحة توكن الـ JWT عبر <code>jsonwebtoken.verify</code>، ويفحص الذاكرة للتأكد من أن المستخدم ليس ضمن قائمة المحظورين O(1).</div>
+                  <div class="step-desc">يتحقق خادم Express من صحة توكن الـ JWT عبر <code>jsonwebtoken.verify</code>،
+                    ويفحص الذاكرة للتأكد من أن المستخدم ليس ضمن قائمة المحظورين O(1).</div>
                   <div class="step-code">jwt.verify(token, JWT_SECRET) & checkBannedUsersCache(userId)</div>
                 </div>
               </div>
@@ -1238,8 +1480,10 @@
                 <div class="step-number">3</div>
                 <div class="step-content">
                   <div class="step-title">الكتابة في محرك SQLite WAL (Node Native DatabaseSync)</div>
-                  <div class="step-desc">تنفيذ استعلام جاهز (Prepared Statement) لإدراج المنشور في جدول <code>posts</code> وتوليد التوقيت النسبي اللحظي العربي وحفظ الوسوم المستخرجة.</div>
-                  <div class="step-code">INSERT INTO posts (id, author_id, content, tags, created_at, timestamp_text) VALUES (...)</div>
+                  <div class="step-desc">تنفيذ استعلام جاهز (Prepared Statement) لإدراج المنشور في جدول
+                    <code>posts</code> وتوليد التوقيت النسبي اللحظي العربي وحفظ الوسوم المستخرجة.</div>
+                  <div class="step-code">INSERT INTO posts (id, author_id, content, tags, created_at, timestamp_text)
+                    VALUES (...)</div>
                 </div>
               </div>
 
@@ -1247,7 +1491,8 @@
                 <div class="step-number">4</div>
                 <div class="step-content">
                   <div class="step-title">استجابة فورية للعميل وتحديث الواجهة المتفائل (&lt; 0.5ms)</div>
-                  <div class="step-desc">يرجع الخادم كائن المنشور المحدث بحالة HTTP 201، فتظهر السردة أعلى التغذية فوراً مع حساب التوقيت بدقة عبر <code>formatArabicRelativeTime</code>.</div>
+                  <div class="step-desc">يرجع الخادم كائن المنشور المحدث بحالة HTTP 201، فتظهر السردة أعلى التغذية فوراً
+                    مع حساب التوقيت بدقة عبر <code>formatArabicRelativeTime</code>.</div>
                   <div class="step-code">HTTP 201 Created { success: true, post: { ... } }</div>
                 </div>
               </div>
@@ -1256,7 +1501,8 @@
                 <div class="step-number">5</div>
                 <div class="step-content">
                   <div class="step-title">مزامنة سحابية غير معطلة (PostgreSQL Cloud Persistence)</div>
-                  <div class="step-desc">في الخلفية وبدون تأخير العميل، يتم وضع المعاملة في رتل المزامنة السحابية لنقلها إلى Supabase PostgreSQL لضمان الديمومة الطويلة.</div>
+                  <div class="step-desc">في الخلفية وبدون تأخير العميل، يتم وضع المعاملة في رتل المزامنة السحابية لنقلها
+                    إلى Supabase PostgreSQL لضمان الديمومة الطويلة.</div>
                   <div class="step-code">await syncTableToPostgres('posts', records)</div>
                 </div>
               </div>
@@ -1269,7 +1515,8 @@
               💬 مسار محادثة الفعاليات وضبط الصلاحيات (Event Chat Moderation Flow)
             </h3>
             <p style="font-size: 0.85rem; color: var(--text-2);">
-              يوضح كيفية تشغيل محادثة الفعالية بشاشة كاملة (100dvh) مع إدارة المشرفين لصلاحيات التحدث والإعلانات المثبتة:
+              يوضح كيفية تشغيل محادثة الفعالية بشاشة كاملة (100dvh) مع إدارة المشرفين لصلاحيات التحدث والإعلانات
+              المثبتة:
             </p>
 
             <div class="flow-steps">
@@ -1277,7 +1524,8 @@
                 <div class="step-number">1</div>
                 <div class="step-content">
                   <div class="step-title">فتح المحادثة (ActivityGroupChat.tsx)</div>
-                  <div class="step-desc">عرض الغرفة بنمط 100dvh كامل الشاشة، وجلب آخر 50 رسالة مع إعدادات الغرفة الحالية عبر <code>GET /api/activities/:id/chat/messages</code>.</div>
+                  <div class="step-desc">عرض الغرفة بنمط 100dvh كامل الشاشة، وجلب آخر 50 رسالة مع إعدادات الغرفة الحالية
+                    عبر <code>GET /api/activities/:id/chat/messages</code>.</div>
                 </div>
               </div>
 
@@ -1285,7 +1533,8 @@
                 <div class="step-number">2</div>
                 <div class="step-content">
                   <div class="step-title">زر التحكم المصغر للمشرفين (Control Button)</div>
-                  <div class="step-desc">إذا كان المستخدم هو منظم الفعالية أو مشرف معتمد، يظهر له زر ضبط مصغر يفتح نافذة إعدادات الغرفة (الصلاحيات، تثبيت إعلان، كتم).</div>
+                  <div class="step-desc">إذا كان المستخدم هو منظم الفعالية أو مشرف معتمد، يظهر له زر ضبط مصغر يفتح نافذة
+                    إعدادات الغرفة (الصلاحيات، تثبيت إعلان، كتم).</div>
                 </div>
               </div>
 
@@ -1293,8 +1542,10 @@
                 <div class="step-number">3</div>
                 <div class="step-content">
                   <div class="step-title">تعديل الصلاحيات الفوري (PATCH Settings)</div>
-                  <div class="step-desc">إرسال طلب التعديل إلى <code>PATCH /api/activities/:id/chat/settings</code> وتحديث جدول <code>activity_chat_settings</code> في SQLite فوراً.</div>
-                  <div class="step-code">PATCH /api/activities/:id/chat/settings { permission_mode: "organizer_only", pinned_announcement: "مرحباً بكم" }</div>
+                  <div class="step-desc">إرسال طلب التعديل إلى <code>PATCH /api/activities/:id/chat/settings</code>
+                    وتحديث جدول <code>activity_chat_settings</code> في SQLite فوراً.</div>
+                  <div class="step-code">PATCH /api/activities/:id/chat/settings { permission_mode: "organizer_only",
+                    pinned_announcement: "مرحباً بكم" }</div>
                 </div>
               </div>
             </div>
@@ -1323,7 +1574,8 @@
                 <div class="t-dot t-yellow"></div>
                 <div class="t-dot t-green"></div>
               </div>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Local Development Commands</span>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Local Development
+                Commands</span>
               <button class="btn-inspect" onclick="copyText('pnpm dev')">📋 نسخ الأمر</button>
             </div>
             <pre class="terminal-body">
@@ -1349,7 +1601,8 @@
                 <div class="t-dot t-yellow"></div>
                 <div class="t-dot t-green"></div>
               </div>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Supabase Dual-Sync & Disaster Recovery CLI</span>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Supabase Dual-Sync &
+                Disaster Recovery CLI</span>
               <button class="btn-inspect" onclick="copyText('pnpm backup:sync')">📋 نسخ الأمر</button>
             </div>
             <pre class="terminal-body">
@@ -1372,7 +1625,8 @@
                 <div class="t-dot t-yellow"></div>
                 <div class="t-dot t-green"></div>
               </div>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Environment Variables (.env)</span>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Environment
+                Variables (.env)</span>
               <button class="btn-inspect" onclick="copyText('PORT=5000\nNODE_ENV=production')">📋 نسخ القالب</button>
             </div>
             <pre class="terminal-body">
@@ -2471,4 +2725,5 @@ CREATE INDEX IF NOT EXISTS idx_backup_audit_created_at ON backup_audit_logs(crea
     renderDb();
   </script>
 </body>
+
 </html>
