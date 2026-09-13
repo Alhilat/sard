@@ -249,6 +249,8 @@ router.get('/:id/comments', (_req, res) => {
 
     const comments = rows.map((c) => ({
       id: c.id,
+      postId: c.post_id,
+      parentId: c.parent_id || null,
       author: {
         id: c.author_id,
         name: c.author_name || 'مستخدم سرد',
@@ -272,7 +274,7 @@ router.get('/:id/comments', (_req, res) => {
   }
 });
 
-// Add Comment
+// Add Comment (with nested reply support)
 router.post('/:id/comments', authenticateToken, (req, res) => {
   try {
     const postId = req.params.id;
@@ -284,7 +286,8 @@ router.post('/:id/comments', authenticateToken, (req, res) => {
       return res.status(403).json({ success: false, message: 'الحساب محظور من التعليق' });
     }
 
-    const { content } = req.body;
+    const { content, parentId, parent_id } = req.body;
+    const targetParentId = parentId || parent_id || null;
     const cleanContent = (content || '').trim();
     if (!cleanContent) {
       return res.status(400).json({ success: false, message: 'يرجى كتابة نص التعليق' });
@@ -296,6 +299,7 @@ router.post('/:id/comments', authenticateToken, (req, res) => {
     stmts.stmtInsertComment.run({
       id: commentId,
       post_id: postId,
+      parent_id: targetParentId,
       author_id: author.id,
       content: cleanContent,
       likes_count: 0,
@@ -305,15 +309,31 @@ router.post('/:id/comments', authenticateToken, (req, res) => {
 
     stmts.stmtIncrementPostComments.run(postId);
 
-    // Send notification to post author if not self
+    const snippet = cleanContent.length > 35 ? cleanContent.slice(0, 35) + '...' : cleanContent;
+
+    // 1. Notify parent comment author if replying to a comment
+    if (targetParentId) {
+      const parentComment = stmts.stmtGetCommentById.get(targetParentId);
+      if (parentComment && parentComment.author_id && parentComment.author_id !== author.id) {
+        createNotification({
+          userId: parentComment.author_id,
+          actorId: author.id,
+          type: 'comment',
+          title: 'رد جديد على تعليقك',
+          content: `رد ${author.name} على تعليقك: "${snippet}"`,
+          link: '/app/feed',
+        });
+      }
+    }
+
+    // 2. Send notification to post author if not self
     const post = stmts.stmtGetPostById.get(postId);
     if (post && post.author_id && post.author_id !== author.id) {
-      const snippet = cleanContent.length > 35 ? cleanContent.slice(0, 35) + '...' : cleanContent;
       createNotification({
         userId: post.author_id,
         actorId: author.id,
         type: 'comment',
-        title: 'رد جديد على سردتك',
+        title: targetParentId ? 'رد جديد في نقاش سردتك' : 'رد جديد على سردتك',
         content: `علق ${author.name}: "${snippet}"`,
         link: '/app/feed',
       });
@@ -323,6 +343,8 @@ router.post('/:id/comments', authenticateToken, (req, res) => {
 
     const createdComment = {
       id: commentId,
+      postId,
+      parentId: targetParentId,
       author: {
         id: author.id,
         name: author.name,

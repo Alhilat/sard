@@ -34,8 +34,8 @@ export function createPostsStatements(db) {
       ORDER BY c.created_at ASC
     `),
     stmtInsertComment: db.prepare(`
-      INSERT INTO comments (id, post_id, author_id, content, likes_count, created_at, timestamp_text)
-      VALUES (@id, @post_id, @author_id, @content, @likes_count, @created_at, @timestamp_text)
+      INSERT INTO comments (id, post_id, parent_id, author_id, content, likes_count, created_at, timestamp_text)
+      VALUES (@id, @post_id, @parent_id, @author_id, @content, @likes_count, @created_at, @timestamp_text)
     `),
     stmtDeleteComment: db.prepare('DELETE FROM comments WHERE id = ?'),
     stmtGetCommentById: db.prepare('SELECT * FROM comments WHERE id = ?'),

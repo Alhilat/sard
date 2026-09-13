@@ -41,6 +41,32 @@ interface SuggestedUser {
   isFollowing?: boolean;
 }
 
+interface ThreadedComment extends Comment {
+  replies?: ThreadedComment[];
+}
+
+function buildCommentTree(comments: Comment[]): ThreadedComment[] {
+  const commentMap = new Map<string, ThreadedComment>();
+  const rootComments: ThreadedComment[] = [];
+
+  // Pass 1: Clone with empty replies
+  comments.forEach((c) => {
+    commentMap.set(c.id, { ...c, replies: [] });
+  });
+
+  // Pass 2: Connect children to parent or add to roots
+  comments.forEach((c) => {
+    const item = commentMap.get(c.id)!;
+    if (c.parentId && commentMap.has(c.parentId)) {
+      commentMap.get(c.parentId)!.replies!.push(item);
+    } else {
+      rootComments.push(item);
+    }
+  });
+
+  return rootComments;
+}
+
 export default function Feed() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -92,6 +118,9 @@ export default function Feed() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>({});
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
+  const [replyingToCommentMap, setReplyingToCommentMap] = useState<
+    Record<string, { id: string; authorName: string; username: string } | null>
+  >({});
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
   // Real Followed users and dynamic suggestions state
@@ -183,25 +212,28 @@ export default function Feed() {
     }
   };
 
-  // Submit a reply to a post
-  const handleSendReply = async (postId: string) => {
+  // Submit a reply to a post or comment
+  const handleSendReply = async (postId: string, parentCommentId?: string) => {
     const text = (replyInputMap[postId] || '').trim();
     if (!text) return;
 
+    const targetParentId = parentCommentId || replyingToCommentMap[postId]?.id;
+
     setIsSubmittingReply(true);
     try {
-      const comment = await postsService.addComment(postId, text);
+      const comment = await postsService.addComment(postId, text, targetParentId);
       setCommentsMap((prev) => ({
         ...prev,
-        [postId]: [comment, ...(prev[postId] || [])],
+        [postId]: [...(prev[postId] || []), comment],
       }));
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, comments: p.comments + 1 } : p))
       );
       setReplyInputMap((prev) => ({ ...prev, [postId]: '' }));
+      setReplyingToCommentMap((prev) => ({ ...prev, [postId]: null }));
 
       toast({
-        title: 'تم إرسال الرد بنجاح',
+        title: targetParentId ? 'تم إرسال الرد على التعليق بنجاح' : 'تم إرسال الرد بنجاح',
         description: 'ردك مضاف الآن إلى سلسلة الحوار.',
       });
     } catch {
@@ -772,10 +804,34 @@ export default function Feed() {
                             </span>
                           </div>
 
+                          {/* Active Replying Target Banner */}
+                          {replyingToCommentMap[post.id] && (
+                            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-primary/10 border border-primary/25 text-xs text-primary animate-in fade-in-50 duration-150">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <CornerDownLeft className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">
+                                  الرد على تعليق <b>{replyingToCommentMap[post.id]?.authorName}</b> (@{replyingToCommentMap[post.id]?.username})
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setReplyingToCommentMap((prev) => ({ ...prev, [post.id]: null }))}
+                                className="text-muted-foreground hover:text-destructive p-1 rounded-md cursor-pointer shrink-0"
+                                title="إلغاء الرد على هذا التعليق"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+
                           {/* Reply Input Form */}
                           <div className="flex gap-2 items-center">
                             <Input
-                              placeholder={`أضف رداً على @${post.author.username}...`}
+                              placeholder={
+                                replyingToCommentMap[post.id]
+                                  ? `اكتب ردك على @${replyingToCommentMap[post.id]?.username}...`
+                                  : `أضف رداً على @${post.author.username}...`
+                              }
                               value={replyInputMap[post.id] || ''}
                               onChange={(e) =>
                                 setReplyInputMap((prev) => ({ ...prev, [post.id]: e.target.value }))
@@ -802,49 +858,148 @@ export default function Feed() {
                           </div>
 
                           {/* Threaded Replies List */}
-                          <div className="space-y-2.5 pt-1">
-                            {postComments.length === 0 ? (
-                              <p className="text-xs text-muted-foreground text-center py-4">
-                                لا توجد ردود بعد. كن أول من يفتح باب النقاش!
-                              </p>
-                            ) : (
-                              postComments.map((comment) => (
-                                <div
-                                  key={comment.id}
-                                  className="p-3.5 rounded-xl bg-muted/40 border border-border/70 text-xs space-y-1.5 relative ms-3"
-                                >
-                                  {/* Visual Thread Connector Line */}
-                                  <div className="absolute top-0 -start-3 bottom-0 w-0.5 bg-border" />
+                          <div className="space-y-3 pt-1">
+                            {(() => {
+                              const threadedComments = buildCommentTree(postComments);
+                              if (threadedComments.length === 0) {
+                                return (
+                                  <p className="text-xs text-muted-foreground text-center py-4">
+                                    لا توجد ردود بعد. كن أول من يفتح باب النقاش!
+                                  </p>
+                                );
+                              }
+                              return threadedComments.map((comment) => (
+                                <div key={comment.id} className="space-y-2">
+                                  {/* Parent Comment Card */}
+                                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/70 text-xs space-y-2 relative ms-3">
+                                    {/* Visual Thread Connector Line */}
+                                    <div className="absolute top-0 -start-3 bottom-0 w-0.5 bg-border" />
 
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenUserProfile(comment.author)}
-                                        className="font-bold text-foreground hover:text-primary transition-colors cursor-pointer text-start"
-                                      >
-                                        {comment.author.name}
-                                      </button>
-                                      {comment.author.verified && (
-                                        <Badge className="h-3.5 px-1 text-[9px] bg-sky-500 text-white border-0">
-                                          موثق
-                                        </Badge>
-                                      )}
-                                      <span className="text-[10px] text-muted-foreground font-mono">
-                                        @{comment.author.username}
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenUserProfile(comment.author)}
+                                          className="font-bold text-foreground hover:text-primary transition-colors cursor-pointer text-start"
+                                        >
+                                          {comment.author.name}
+                                        </button>
+                                        {comment.author.verified && (
+                                          <Badge className="h-3.5 px-1 text-[9px] bg-sky-500 text-white border-0">
+                                            موثق
+                                          </Badge>
+                                        )}
+                                        <span className="text-[10px] text-muted-foreground font-mono">
+                                          @{comment.author.username}
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {formatArabicRelativeTime(comment.created_at, comment.created_at)}
                                       </span>
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {formatArabicRelativeTime(comment.created_at, comment.created_at)}
-                                    </span>
+
+                                    <p className="text-foreground/90 leading-relaxed text-xs">
+                                      {comment.content}
+                                    </p>
+
+                                    {/* Reply action button on parent comment */}
+                                    <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setReplyingToCommentMap((prev) => ({
+                                            ...prev,
+                                            [post.id]: {
+                                              id: comment.id,
+                                              authorName: comment.author.name,
+                                              username: comment.author.username,
+                                            },
+                                          }));
+                                          setReplyInputMap((prev) => ({
+                                            ...prev,
+                                            [post.id]: `@${comment.author.username} `,
+                                          }));
+                                        }}
+                                        className="text-[11px] font-bold text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-primary/10"
+                                      >
+                                        <CornerDownLeft className="w-3 h-3" />
+                                        <span>رد على هذا التعليق</span>
+                                      </button>
+
+                                      {comment.replies && comment.replies.length > 0 && (
+                                        <span className="text-[10px] text-muted-foreground font-medium bg-muted/60 px-2 py-0.5 rounded-md">
+                                          {comment.replies.length} {comment.replies.length === 1 ? 'رد' : 'ردود'}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
 
-                                  <p className="text-foreground/90 leading-relaxed text-xs">
-                                    {comment.content}
-                                  </p>
+                                  {/* Sub-Replies (Nested & Indented) */}
+                                  {comment.replies && comment.replies.length > 0 && (
+                                    <div className="ms-6 sm:ms-8 border-s-2 border-primary/25 ps-3 sm:ps-4 space-y-2">
+                                      {comment.replies.map((reply) => (
+                                        <div
+                                          key={reply.id}
+                                          className="p-3 rounded-xl bg-card/90 border border-border/70 text-xs space-y-1.5 relative shadow-2xs"
+                                        >
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleOpenUserProfile(reply.author)}
+                                                className="font-bold text-foreground hover:text-primary transition-colors cursor-pointer text-start text-xs"
+                                              >
+                                                {reply.author.name}
+                                              </button>
+                                              {reply.author.verified && (
+                                                <Badge className="h-3.5 px-1 text-[9px] bg-sky-500 text-white border-0">
+                                                  موثق
+                                                </Badge>
+                                              )}
+                                              <span className="text-[10px] text-muted-foreground font-mono">
+                                                @{reply.author.username}
+                                              </span>
+                                            </div>
+                                            <span className="text-[10px] text-muted-foreground">
+                                              {formatArabicRelativeTime(reply.created_at, reply.created_at)}
+                                            </span>
+                                          </div>
+
+                                          <p className="text-foreground/90 leading-relaxed text-xs">
+                                            {reply.content}
+                                          </p>
+
+                                          {/* Sub-reply action */}
+                                          <div className="flex items-center justify-start pt-1">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setReplyingToCommentMap((prev) => ({
+                                                  ...prev,
+                                                  [post.id]: {
+                                                    id: comment.id,
+                                                    authorName: reply.author.name,
+                                                    username: reply.author.username,
+                                                  },
+                                                }));
+                                                setReplyInputMap((prev) => ({
+                                                  ...prev,
+                                                  [post.id]: `@${reply.author.username} `,
+                                                }));
+                                              }}
+                                              className="text-[10px] font-bold text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors cursor-pointer py-0.5 px-2 rounded-md hover:bg-primary/10"
+                                            >
+                                              <CornerDownLeft className="w-2.5 h-2.5" />
+                                              <span>رد</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                              ))
-                            )}
+                              ));
+                            })()}
                           </div>
                         </div>
                       )}

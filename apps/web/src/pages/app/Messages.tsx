@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Search, Send, Phone, Video, CheckCheck,
+  Search, Send, Maximize2, Minimize2, CheckCheck,
   Smile, Paperclip, ArrowRight, Circle, X,
   UserPlus, Users, Sparkles, Loader2, MessageSquare
 } from 'lucide-react';
@@ -48,6 +48,7 @@ export default function Messages() {
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
 
   // Search by name state
@@ -488,10 +489,14 @@ export default function Messages() {
         </div>
       </aside>
 
-      {/* 2. Chat Area */}
+      {/* 2. Chat Area (Full Screen Capable) */}
       <main
         className={`flex-1 flex flex-col bg-background min-w-0 transition-all duration-200 ${
-          showMobileChat ? 'flex' : 'hidden md:flex'
+          showMobileChat
+            ? 'fixed inset-0 z-50 bg-background flex flex-col h-[100dvh] w-full overflow-hidden'
+            : isFullScreen
+            ? 'fixed inset-0 z-50 bg-background flex flex-col h-[100dvh] w-full overflow-hidden'
+            : 'hidden md:flex'
         }`}
       >
         {!activeConv ? (
@@ -518,11 +523,16 @@ export default function Messages() {
             {/* Chat Header */}
             <div className="h-16 border-b border-border/70 flex items-center justify-between px-4 sm:px-6 bg-card/60 backdrop-blur-xs flex-shrink-0">
               <div className="flex items-center gap-3">
-                {/* Mobile Back Button */}
+                {/* Back Button (Mobile or Fullscreen) */}
                 <button
                   type="button"
-                  onClick={() => setShowMobileChat(false)}
-                  className="md:hidden p-1.5 rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"
+                  onClick={() => {
+                    setShowMobileChat(false);
+                    setIsFullScreen(false);
+                  }}
+                  className={`${
+                    showMobileChat || isFullScreen ? 'inline-flex' : 'md:hidden'
+                  } p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer`}
                   title="العودة لقائمة المحادثات"
                 >
                   <ArrowRight className="w-5 h-5" />
@@ -555,33 +565,19 @@ export default function Messages() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
+              {/* Quick Actions (Full Screen Toggle, Call Symbols Removed) */}
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() =>
-                    toast({
-                      title: 'المكالمة الصوتية',
-                      description: `جاري الاتصال بـ ${activeConv.user.name}...`,
-                    })
-                  }
+                  onClick={() => setIsFullScreen((prev) => !prev)}
                   className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="اتصال صوتي"
+                  title={isFullScreen ? 'تصغير الشاشة' : 'محادثة في وضع الشاشة الكاملة'}
                 >
-                  <Phone className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast({
-                      title: 'مكالمة الفيديو',
-                      description: `جاري بدء اتصال مرئي مع ${activeConv.user.name}...`,
-                    })
-                  }
-                  className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="اتصال فيديو"
-                >
-                  <Video className="w-4 h-4" />
+                  {isFullScreen ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>

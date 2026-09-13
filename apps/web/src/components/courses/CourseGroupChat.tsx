@@ -194,6 +194,7 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
       const senderRole: 'instructor' | 'student' = isInstructor ? 'instructor' : 'student';
 
       const created = await coursesService.sendChatMessage(course.id, {
+        senderId: user?.id || 'usr-default',
         senderName,
         senderRole,
         content,

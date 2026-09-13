@@ -40,6 +40,7 @@ export function initSchema(db) {
     CREATE TABLE IF NOT EXISTS comments (
       id TEXT PRIMARY KEY,
       post_id TEXT NOT NULL,
+      parent_id TEXT DEFAULT NULL,
       author_id TEXT NOT NULL,
       content TEXT NOT NULL,
       likes_count INTEGER DEFAULT 0,
@@ -274,4 +275,12 @@ export function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_course_chat_messages_course ON course_chat_messages(course_id, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_backup_audit_created_at ON backup_audit_logs(created_at DESC);
   `);
+
+  try {
+    db.exec("ALTER TABLE comments ADD COLUMN parent_id TEXT DEFAULT NULL;");
+  } catch {}
+
+  try {
+    db.exec("CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);");
+  } catch {}
 }

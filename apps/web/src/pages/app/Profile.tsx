@@ -39,6 +39,7 @@ interface PostItem {
   id: string;
   content: string;
   timestamp?: string;
+  createdAt?: number | string;
   likes?: number;
   comments?: number;
   shares?: number;

@@ -48,6 +48,8 @@ export interface Post {
 
 export interface Comment {
   id: string;
+  postId?: string;
+  parentId?: string | null;
   author: {
     id: string;
     name: string;
@@ -59,6 +61,7 @@ export interface Comment {
   created_at: string;
   likes_count: number;
   isLiked?: boolean;
+  replies?: Comment[];
 }
 
 let inMemoryPosts: Post[] = [];
@@ -222,15 +225,19 @@ export const postsService = {
     return sessionComments[postId] || [];
   },
 
-  addComment: async (postId: string, content: string): Promise<Comment> => {
+  addComment: async (postId: string, content: string, parentId?: string | null): Promise<Comment> => {
     try {
-      const res = await api.post<any>(`/posts/${postId}/comments`, { content });
+      const res = await api.post<any>(`/posts/${postId}/comments`, {
+        content,
+        parentId: parentId || null,
+        parent_id: parentId || null,
+      });
       const commentObj: Comment = res?.comment || (res?.id ? res : null);
       if (commentObj && commentObj.id) {
         if (!sessionComments[postId]) {
           sessionComments[postId] = [];
         }
-        sessionComments[postId].unshift(commentObj);
+        sessionComments[postId].push(commentObj);
         inMemoryPosts = inMemoryPosts.map((p) =>
           p.id === postId ? { ...p, comments: p.comments + 1 } : p
         );
@@ -244,6 +251,8 @@ export const postsService = {
 
     const newComment: Comment = {
       id: `c-${Date.now()}`,
+      postId,
+      parentId: parentId || null,
       author: {
         id: commentAuthor.id,
         name: commentAuthor.name,
@@ -260,7 +269,7 @@ export const postsService = {
     if (!sessionComments[postId]) {
       sessionComments[postId] = [];
     }
-    sessionComments[postId].unshift(newComment);
+    sessionComments[postId].push(newComment);
 
     // Increment comment count on post
     inMemoryPosts = inMemoryPosts.map((p) =>
