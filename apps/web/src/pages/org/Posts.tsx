@@ -86,14 +86,14 @@ export default function OrgPosts() {
   const totalComments = items.reduce((s, p) => s + (p.comments || 0), 0);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto" dir="rtl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-24 lg:pb-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black">المنشورات</h1>
-          <p className="text-muted-foreground text-sm">إدارة المحتوى والتدوينات الرسمية للمنظمة</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">إدارة المحتوى والتدوينات الرسمية للمنظمة</p>
         </div>
         <Button
-          className="gap-2 bg-primary text-primary-foreground font-bold rounded-xl"
+          className="w-full sm:w-auto gap-2 bg-primary text-primary-foreground font-bold rounded-xl h-10 shadow-xs"
           onClick={() => setCreating(!creating)}
         >
           <Plus className="w-4 h-4" />

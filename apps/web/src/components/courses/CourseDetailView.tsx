@@ -97,7 +97,7 @@ export default function CourseDetailView({
   };
 
   return (
-    <div className="space-y-6 pb-16 max-w-5xl mx-auto" dir="rtl">
+    <div className="space-y-6 pb-24 lg:pb-16 max-w-5xl mx-auto" dir="rtl">
       {/* Breadcrumbs & Navigation */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <button
@@ -191,7 +191,7 @@ export default function CourseDetailView({
         {/* Action Strip */}
         <div className="p-4 sm:p-5 bg-card border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">
               <GraduationCap className="w-5 h-5" />
             </div>
             <div>
@@ -200,13 +200,13 @@ export default function CourseDetailView({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
             {canManage && (
               <Button
                 variant="outline"
                 disabled={isDeleting}
                 onClick={handleDeleteCourse}
-                className="gap-2 font-bold px-4 h-11 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-2xs"
+                className="w-full sm:w-auto gap-2 font-bold px-4 h-11 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-2xs"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>{isDeleting ? 'جاري الحذف...' : 'حذف وإدارة الدورة'}</span>

@@ -229,7 +229,7 @@ export default function ActivityGroupChat({ activity, onBack }: ActivityGroupCha
   const orgDisplayName = activity.org?.name || activity.organization?.name || activity.orgName || 'الجهة المنظمة';
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-12" dir="rtl">
+    <div className="space-y-4 max-w-5xl mx-auto pb-24 lg:pb-12" dir="rtl">
       {/* Top Bar Navigation & Role Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-card-border p-3.5 sm:p-4 rounded-2xl shadow-2xs">
         <button

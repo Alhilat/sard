@@ -230,7 +230,7 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
     (settings.permissionMode === 'instructor_only' || settings.permissionMode === 'muted');
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-12" dir="rtl">
+    <div className="space-y-4 max-w-5xl mx-auto pb-24 lg:pb-12" dir="rtl">
       {/* Top Bar Navigation & Role Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-card-border p-3.5 sm:p-4 rounded-2xl shadow-2xs">
         <button
@@ -571,10 +571,10 @@ export default function CourseGroupChat({ course, onBack }: CourseGroupChatProps
                 <Button
                   type="submit"
                   disabled={isSending || !inputText.trim()}
-                  className="h-11 px-5 gap-2 font-bold shrink-0 shadow-xs"
+                  className="h-11 px-4 sm:px-5 gap-2 font-bold shrink-0 shadow-xs"
                 >
                   <Send className="w-4 h-4 rtl:rotate-180" />
-                  <span className="hidden sm:inline">إرسال</span>
+                  <span className="text-xs sm:text-sm">إرسال</span>
                 </Button>
               </div>
 

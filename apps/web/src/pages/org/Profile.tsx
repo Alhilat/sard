@@ -67,7 +67,7 @@ export default function OrgProfile() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6" dir="rtl">
       <h1 className="text-2xl font-black mb-6">ملف المنظمة</h1>
 
       {/* Cover & Logo */}
@@ -82,8 +82,8 @@ export default function OrgProfile() {
           </button>
         </div>
         <CardContent className="p-5">
-          <div className="flex items-end gap-4 -mt-10 mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-amber-600 flex items-center justify-center text-white text-3xl font-black border-4 border-card shadow-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 -mt-10 mb-4">
+            <div className="w-20 h-20 rounded-2xl bg-amber-600 flex items-center justify-center text-white text-3xl font-black border-4 border-card shadow-md shrink-0">
               {orgName[0] || 'م'}
             </div>
             <Button

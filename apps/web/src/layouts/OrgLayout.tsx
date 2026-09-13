@@ -178,7 +178,39 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
             <OrgAvatar name={orgDisplayName} />
           </div>
         </header>
-        <main className="flex-1 page-enter pb-16 lg:pb-0 overflow-x-hidden">{children}</main>
+
+        <main className="flex-1 page-enter pb-20 lg:pb-6 overflow-x-hidden">{children}</main>
+
+        {/* Mobile Sticky Bottom Navigation Bar for Organizations */}
+        <nav
+          aria-label="التنقل السريع لإدارة المنظمة"
+          className="lg:hidden fixed bottom-0 start-0 end-0 z-40 bg-background/95 backdrop-blur-md border-t border-border/80 px-2 py-1.5 flex items-center justify-around shadow-lg"
+        >
+          {[
+            { href: '/org', icon: LayoutDashboard, label: 'الرئيسية', exact: true },
+            { href: '/org/activities', icon: Calendar, label: 'الأنشطة' },
+            { href: '/org/courses', icon: BookOpen, label: 'الدورات' },
+            { href: '/org/members', icon: Users, label: 'الأعضاء' },
+            { href: '/org/profile', icon: Building2, label: 'المنظمة' },
+          ].map((item) => {
+            const active = isActive(item.href, item.exact);
+            return (
+              <Link key={item.href} href={item.href}>
+                <button
+                  type="button"
+                  className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer ${
+                    active
+                      ? 'text-primary font-bold scale-105'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 ${active ? 'stroke-[2.5]' : 'stroke-2'}`} />
+                  <span className="text-[10px] mt-0.5 tracking-tight">{item.label}</span>
+                </button>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

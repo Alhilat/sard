@@ -221,7 +221,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6" dir="rtl">
       <h1 className="text-2xl font-black mb-6">الإعدادات</h1>
       <Tabs defaultValue="profile">
         <TabsList className="mb-6 flex-wrap h-auto gap-1">

@@ -330,7 +330,7 @@ export default function Feed() {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5" dir="rtl">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 pb-24 lg:pb-6" dir="rtl">
       {/* Top Banner: Introducing Sard */}
       <div className="bg-gradient-to-r from-[#6B1B1B] via-[#8C2424] to-[#3B0E0E] text-white p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden">
         <div
@@ -691,8 +691,8 @@ export default function Feed() {
                       </p>
 
                       {/* Twitter Action Bar */}
-                      <div className="flex items-center justify-between pt-3 border-t border-border/60 text-muted-foreground">
-                        <div className="flex items-center gap-4 sm:gap-6">
+                      <div className="flex items-center justify-between pt-3 border-t border-border/60 text-muted-foreground gap-1">
+                        <div className="flex items-center gap-2.5 sm:gap-6 flex-wrap">
                           {/* Reply Button */}
                           <button
                             type="button"

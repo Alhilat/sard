@@ -201,7 +201,7 @@ export default function Groups() {
             <Button
               size="sm"
               variant={group.joined ? 'outline' : 'default'}
-              className={`h-8 px-3 text-xs font-bold gap-1 shadow-2xs ${
+              className={`h-8 px-3 text-xs font-bold gap-1 shadow-2xs shrink-0 ${
                 group.joined
                   ? 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/40'
                   : ''
@@ -227,7 +227,7 @@ export default function Groups() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 pb-24 lg:pb-6" dir="rtl">
       {/* Header (Arabic Brand Identity) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div>
@@ -243,7 +243,7 @@ export default function Groups() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+        <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto w-full sm:w-auto">
           <Button
             onClick={handleOpenCreateModal}
             variant={isVerified ? 'default' : 'outline'}

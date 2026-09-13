@@ -243,13 +243,13 @@ export default function Courses() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-3 border-t border-border/60 gap-2">
-              <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+            <div className="flex items-center justify-between pt-3 border-t border-border/60 gap-2 flex-wrap sm:flex-nowrap">
+              <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium shrink-0">
                 <Award className="w-3.5 h-3.5 text-primary" />
                 شهادة إتمام معتمدة
               </span>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0 ms-auto">
                 {canManage && (
                   <Button
                     size="sm"
@@ -267,7 +267,7 @@ export default function Courses() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 px-3 text-xs font-bold gap-1 text-primary border-primary/30 hover:bg-primary/5"
+                    className="h-8 px-3 text-xs font-bold gap-1 text-primary border-primary/30 hover:bg-primary/5 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveChatCourse(course);
@@ -279,7 +279,7 @@ export default function Courses() {
                 ) : (
                   <Button
                     size="sm"
-                    className="h-8 px-3 text-xs font-bold gap-1 shadow-2xs"
+                    className="h-8 px-3 text-xs font-bold gap-1 shadow-2xs shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedCourse(course);
@@ -314,11 +314,11 @@ export default function Courses() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+        <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto w-full sm:w-auto">
           <Button
             onClick={handleOpenCreateCourse}
             variant={isVerified ? 'default' : 'outline'}
-            className={`gap-2 font-bold shadow-xs h-10 px-4 ${
+            className={`w-full sm:w-auto gap-2 font-bold shadow-xs h-10 px-4 ${
               !isVerified ? 'border-dashed border-border text-muted-foreground hover:text-foreground' : ''
             }`}
           >

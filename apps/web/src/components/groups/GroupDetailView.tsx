@@ -133,7 +133,7 @@ export default function GroupDetailView({ group, onBack, onMembershipChanged, on
   };
 
   return (
-    <div className="space-y-6 pb-16" dir="rtl">
+    <div className="space-y-6 pb-24 lg:pb-16" dir="rtl">
       {/* Arabic Breadcrumb & Back Navigation */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <button
@@ -237,13 +237,13 @@ export default function GroupDetailView({ group, onBack, onMembershipChanged, on
             </div>
 
             {/* Actions: Membership & Admin Delete */}
-            <div className="flex items-center gap-2 self-start md:self-end shrink-0 flex-wrap">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-end shrink-0 w-full md:w-auto">
               {canManage && (
                 <Button
                   onClick={handleDeleteGroup}
                   variant="outline"
                   disabled={isDeleting}
-                  className="gap-1.5 font-bold px-3.5 h-10 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-2xs"
+                  className="w-full sm:w-auto gap-1.5 font-bold px-3.5 h-10 border-destructive/40 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-2xs"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>{isDeleting ? 'جاري الحذف...' : 'حذف وإدارة المجتمع'}</span>
@@ -253,7 +253,7 @@ export default function GroupDetailView({ group, onBack, onMembershipChanged, on
               <Button
                 onClick={handleToggleMembership}
                 variant={currentGroup.joined ? 'outline' : 'default'}
-                className={`gap-2 font-bold px-5 h-10 shadow-xs ${
+                className={`w-full sm:w-auto gap-2 font-bold px-5 h-10 shadow-xs ${
                   currentGroup.joined ? 'border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30' : ''
                 }`}
               >

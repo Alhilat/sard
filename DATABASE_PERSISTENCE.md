@@ -75,3 +75,37 @@ https://<your-render-url>/api/health
 }
 ```
 عندما ترى `"cloud_persistence": "active"` فهذا يعني أن بياناتك محفوظة سحابياً بشكل آمن ودائم ولن تُفقد أبداً مهما نامت الحاوية المجانية!
+
+---
+
+## الاسترداد التلقائي الشامل للكوارث من Supabase (Automatic Disaster Recovery)
+
+إذا حدث وفُقدت البيانات، أو تم حذف قاعدة بيانات Render PostgreSQL لانتهاء الفترة المجانية، أو أُعيد تشغيل الحاوية دون قرص تخزين:
+
+### كيف يعمل الاسترداد التلقائي؟
+1. **عند إقلاع الخادم (Server Boot)**:
+   - يفحص النظام قاعدة البيانات الأساسية `DATABASE_URL` وقاعدة البيانات المحلية.
+   - إذا وجد أن قاعدة البيانات مفقودة أو فارغة (0 مستخدمين) أو أن رابط Render لم يعد يستجيب، يقوم النظام **تلقائياً بالاتصال بـ Supabase عبر `SUPABASE_DATABASE_URL`**.
+   - يتم تنزيل واسترجاع آخر لقطة مشفرة (Snapshot) أو إعادة بناء الجداول الـ 19 بالكامل دون أي تدخل بشري!
+   - يتم تحويل Supabase تلقائياً ليكون الهدف النشط (Live Failover Persistence) لضمان حفظ كل التعديلات القادمة مباشرة في Supabase.
+
+2. **حماية النسخ الاحتياطي (Safety Guard)**:
+   - إذا كانت قاعدة البيانات المحلية فارغة، يرفض محرك المزامنة الكتابة فوق نسخة Supabase الاحتياطية ببيانات فارغة، وبدلاً من ذلك يطلق الاسترجاع العكسي فوراً.
+
+### لتفعيل الاسترداد التلقائي:
+أضف المتغير البيئي التالي في لوحة تحكم Render:
+- **Key**: `SUPABASE_DATABASE_URL`
+- **Value**: رابط الاتصال بـ Supabase (`postgres://postgres.xxxx:password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`)
+
+### فحص حالة الاسترداد التلقائي:
+```
+https://<your-render-url>/api/backup/status
+```
+ستجد:
+```json
+{
+  "auto_recovery_enabled": true,
+  "auto_recovery_source": "Supabase PostgreSQL (Automatic)"
+}
+```
+

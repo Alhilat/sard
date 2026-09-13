@@ -51,20 +51,20 @@ export default function OrgDashboard() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6" dir="rtl">
       {/* Welcome banner */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-black">لوحة تحكم المنظمة</h1>
-          <p className="text-muted-foreground text-sm mt-1">{orgName} · مرحباً بك في لوحة الإشراف المؤسسي</p>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">{orgName} · مرحباً بك في لوحة الإشراف المؤسسي</p>
         </div>
-        <Badge className="text-amber-700 bg-amber-50 border-amber-300 gap-1 px-3 py-1.5 font-bold">
+        <Badge className="self-start sm:self-auto text-amber-700 bg-amber-50 border-amber-300 gap-1 px-3 py-1.5 font-bold">
           ✓ منظمة موثّقة
         </Badge>
       </div>
 
       {/* KPIs */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {kpis.map((kpi) => (
           <Card key={kpi.label} className="border-card-border">
             <CardContent className="p-4">

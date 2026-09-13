@@ -324,7 +324,7 @@ export default function Messages() {
   });
 
   return (
-    <div className="flex h-[calc(100vh-4.1rem)] bg-background overflow-hidden" dir="rtl">
+    <div className="flex h-[calc(100vh-8.25rem)] lg:h-[calc(100vh-4.1rem)] bg-background overflow-hidden" dir="rtl">
       {/* 1. Conversations Sidebar */}
       <aside
         className={`w-full md:w-80 lg:w-96 border-e border-border flex flex-col bg-card flex-shrink-0 transition-all duration-200 ${
@@ -681,10 +681,10 @@ export default function Messages() {
                 <Button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="rounded-xl h-11 px-4 sm:px-5 font-bold gap-2 shrink-0 shadow-xs cursor-pointer"
+                  className="rounded-xl h-11 px-3.5 sm:px-5 font-bold gap-1.5 shrink-0 shadow-xs cursor-pointer"
                 >
                   <Send className="w-4 h-4 rtl:rotate-180" />
-                  <span className="hidden sm:inline">إرسال</span>
+                  <span className="text-xs sm:text-sm">إرسال</span>
                 </Button>
               </form>
             </div>

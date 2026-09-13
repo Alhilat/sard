@@ -341,36 +341,68 @@ export async function getPrimarySqliteDb() {
     }
   }
 
-  // Fallback: If not found on local disk, pull snapshot from Render PostgreSQL (DATABASE_URL)
+  // Fallback 1: If not found on local disk, pull snapshot from primary PostgreSQL (DATABASE_URL)
   if (process.env.DATABASE_URL) {
-    console.log('[Sync Engine] Local SQLite not on disk. Fetching latest snapshot from Render DATABASE_URL...');
-    const renderPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
-      connectionTimeoutMillis: 10000
-    });
-
+    console.log('[Sync Engine] Local SQLite not on disk. Fetching latest snapshot from primary DATABASE_URL...');
     try {
-      const res = await renderPool.query('SELECT value FROM public.sard_cloud_store WHERE key = $1', ['sard_main_db']);
-      if (res.rows.length > 0 && res.rows[0].value) {
-        const tempPath = path.resolve('/tmp', `sard_sync_${Date.now()}.sqlite`);
-        fs.writeFileSync(tempPath, res.rows[0].value);
-        console.log(`[Sync Engine] Successfully fetched snapshot (${res.rows[0].value.length} bytes) from Render PostgreSQL.`);
-        await renderPool.end();
-        return {
-          db: new DatabaseSync(tempPath),
-          path: tempPath,
-          isTemp: true
-        };
+      const renderPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000
+      });
+
+      try {
+        const res = await renderPool.query('SELECT value FROM public.sard_cloud_store WHERE key = $1', ['sard_main_db']);
+        if (res.rows.length > 0 && res.rows[0].value) {
+          const tempPath = path.resolve('/tmp', `sard_sync_${Date.now()}.sqlite`);
+          fs.writeFileSync(tempPath, res.rows[0].value);
+          console.log(`[Sync Engine] Successfully fetched snapshot (${res.rows[0].value.length} bytes) from primary PostgreSQL.`);
+          await renderPool.end();
+          return {
+            db: new DatabaseSync(tempPath),
+            path: tempPath,
+            isTemp: true
+          };
+        }
+      } finally {
+        await renderPool.end().catch(() => {});
       }
-      await renderPool.end();
     } catch (err) {
-      await renderPool.end();
-      throw new Error(`Failed to fetch database snapshot from Render PostgreSQL: ${err.message}`);
+      console.log(`[Sync Engine] Primary DATABASE_URL note: ${err.message}`);
     }
   }
 
-  throw new Error('No primary database found! Neither local SQLite file nor Render DATABASE_URL snapshot is available.');
+  // Fallback 2: Check Supabase if primary failed or local disk empty
+  const supaBackupUrl = process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL;
+  if (supaBackupUrl) {
+    console.log('[Sync Engine] Checking Supabase for backup snapshot...');
+    try {
+      const supaPool = new Pool({
+        connectionString: supaBackupUrl,
+        ssl: supaBackupUrl.includes('localhost') ? false : { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000
+      });
+      try {
+        const res = await supaPool.query('SELECT value FROM public.sard_cloud_store WHERE key = $1', ['sard_main_db']);
+        if (res.rows.length > 0 && res.rows[0].value) {
+          const tempPath = path.resolve('/tmp', `sard_supa_sync_${Date.now()}.sqlite`);
+          fs.writeFileSync(tempPath, res.rows[0].value);
+          console.log(`[Sync Engine] Successfully fetched backup snapshot (${res.rows[0].value.length} bytes) from Supabase.`);
+          return {
+            db: new DatabaseSync(tempPath),
+            path: tempPath,
+            isTemp: true
+          };
+        }
+      } finally {
+        await supaPool.end().catch(() => {});
+      }
+    } catch (supaErr) {
+      console.log(`[Sync Engine] Supabase snapshot lookup note: ${supaErr.message}`);
+    }
+  }
+
+  throw new Error('No primary database found! Neither local SQLite file, Render DATABASE_URL, nor Supabase snapshot is available.');
 }
 
 /**
@@ -450,6 +482,50 @@ export async function runBackupSync(options = {}) {
       log('[Backup Engine] Ensuring Supabase table schemas and indexes exist...');
       await supaPool.query(TABLE_SCHEMAS_SQL);
       log('[Backup Engine] ✅ Supabase schema synchronized.');
+    }
+
+    // 2.5 Safety Guard: Detect if local database was wiped/empty (0 users) while Supabase has data
+    if (!verifyOnly && !dryRun) {
+      let localUserCount = 0;
+      try {
+        const userTbl = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").all();
+        if (userTbl.length > 0) {
+          localUserCount = Number(db.prepare("SELECT count(*) as c FROM users").get()?.c || 0);
+        }
+      } catch {}
+
+      let supaUserCount = 0;
+      try {
+        const sRes = await supaPool.query('SELECT count(*) as c FROM public.users');
+        supaUserCount = Number(sRes.rows[0]?.c || 0);
+      } catch {}
+
+      if (localUserCount === 0 && supaUserCount > 0) {
+        log('================================================================================');
+        log(`[Backup Engine] 🚨 SAFETY GUARD TRIGGERED: Local database has 0 users, but Supabase has ${supaUserCount} users!`);
+        log(`[Backup Engine] 🛡️ Refusing to overwrite Supabase backup. Initiating AUTOMATIC RECOVERY from Supabase...`);
+        log('================================================================================');
+
+        const { restoreFromSupabase } = await import('./restore-from-supabase.mjs');
+        const restoreRes = await restoreFromSupabase({
+          force: true,
+          silent: false,
+          isAutoRecovery: true
+        });
+
+        const durationMs = Date.now() - startTime;
+        log(`[Backup Engine] ✅ Automatic recovery finished successfully! Restored ${restoreRes.recordsCount} records.`);
+
+        return {
+          success: true,
+          status: 'auto_restored_from_supabase',
+          triggerType,
+          tablesSyncedCount: restoreRes.tablesCount,
+          totalSyncedRecords: restoreRes.recordsCount,
+          durationMs,
+          discrepancies: []
+        };
+      }
     }
 
     // 3. Replicate Binary Snapshot to sard_cloud_store on Supabase

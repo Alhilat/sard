@@ -56,7 +56,7 @@ export default function SearchPage() {
   const showCourses = tab === 'all' || tab === 'courses';
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 pb-24 lg:pb-6" dir="rtl">
       {/* Search Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black mb-4 font-display">البحث الشامل</h1>

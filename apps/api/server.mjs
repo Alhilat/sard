@@ -10,6 +10,7 @@ import pg from 'pg';
 const { Pool } = pg;
 import { startBackupScheduler, getSchedulerStatus } from '../../scripts/backup-scheduler.mjs';
 import { runBackupSync } from '../../scripts/sync-and-verify-backup.mjs';
+import { restoreFromSupabase } from '../../scripts/restore-from-supabase.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +32,9 @@ let pgPool = null;
 let isCloudPersistenceActive = false;
 let isDirty = false;
 let syncTimeout = null;
+
+let primaryConnected = false;
+let primaryHasSnapshot = false;
 
 // Initialize Cloud PostgreSQL if DATABASE_URL is provided (Neon / Supabase / Render Postgres)
 if (process.env.DATABASE_URL) {
@@ -62,17 +66,94 @@ if (process.env.DATABASE_URL) {
 
       fs.writeFileSync(dbPath, snapshot);
       console.log('[Cloud Database] ✅ Database state successfully restored from Cloud PostgreSQL! Zero data lost across sleeps.');
+      primaryHasSnapshot = true;
     } else {
       console.log('[Cloud Database] No previous snapshot in Cloud PostgreSQL. Fresh store initialized.');
     }
 
     isCloudPersistenceActive = true;
+    primaryConnected = true;
   } catch (err) {
-    console.error('[Cloud Database] Warning: Could not connect to Cloud PostgreSQL:', err.message);
-    console.log('[Cloud Database] Falling back to local SQLite storage.');
+    console.error('[Cloud Database] Warning: Could not connect to primary Cloud PostgreSQL:', err.message);
+    console.log('[Cloud Database] Falling back to local SQLite or backup target.');
+    if (pgPool) {
+      await pgPool.end().catch(() => {});
+      pgPool = null;
+    }
+    isCloudPersistenceActive = false;
   }
 } else {
-  console.log('[Cloud Database] No DATABASE_URL set. Running with local SQLite.');
+  console.log('[Cloud Database] No DATABASE_URL set.');
+}
+
+// ── Check Local SQLite Data Health ──────────────────────────────────────────
+let localHasData = false;
+let localUserCount = 0;
+if (fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0) {
+  try {
+    const probeDb = new DatabaseSync(dbPath);
+    const tbls = probeDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").all();
+    if (tbls.length > 0) {
+      localUserCount = Number(probeDb.prepare("SELECT COUNT(*) as c FROM users").get()?.c || 0);
+      if (localUserCount > 0) {
+        localHasData = true;
+      }
+    }
+    probeDb.close();
+  } catch (probeErr) {
+    console.log('[Database Probe] Note on local file:', probeErr.message);
+  }
+}
+
+// ── Automatic Disaster Recovery from Supabase ────────────────────────────────
+// Triggers automatically if:
+// 1. Primary database (e.g. Render Postgres) failed, expired, or has no snapshot, AND
+// 2. Local database has no user data (missing, wiped, or 0 records).
+const supaBackupUrl = process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL;
+
+if (supaBackupUrl && (!primaryHasSnapshot || !localHasData)) {
+  console.log(`[Auto-Disaster Recovery] 🛡️ Verifying data integrity (Local users: ${localUserCount}, Primary snapshot: ${primaryHasSnapshot})...`);
+  console.log('[Auto-Disaster Recovery] 🔄 Automatically checking Supabase for latest backup snapshot or records...');
+  try {
+    const autoRestoreRes = await restoreFromSupabase({
+      force: true,
+      silent: false,
+      isAutoRecovery: true,
+      supaUrl: supaBackupUrl
+    });
+
+    if (autoRestoreRes && autoRestoreRes.success) {
+      console.log(`[Auto-Disaster Recovery] ✅ SUCCESS: Automatically restored ${autoRestoreRes.recordsCount} records across ${autoRestoreRes.tablesCount} tables from Supabase!`);
+      localHasData = true;
+    }
+  } catch (autoErr) {
+    console.error('[Auto-Disaster Recovery] Note on automatic Supabase restoration:', autoErr.message);
+  }
+}
+
+// ── Auto-Persistence Failover to Supabase ────────────────────────────────────
+// If primary DATABASE_URL is not active (e.g. Render Postgres expired/deleted),
+// automatically promote Supabase to be the LIVE cloud persistence target!
+if (!isCloudPersistenceActive && supaBackupUrl) {
+  try {
+    console.log('[Auto-Persistence] 🚀 Primary database is down/expired. Promoting Supabase to ACTIVE persistence target for live sync...');
+    pgPool = new Pool({
+      connectionString: supaBackupUrl,
+      ssl: supaBackupUrl.includes('localhost') ? false : { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+    });
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS public.sard_cloud_store (
+        key TEXT PRIMARY KEY,
+        value BYTEA NOT NULL,
+        updated_at BIGINT NOT NULL
+      );
+    `);
+    isCloudPersistenceActive = true;
+    console.log('[Auto-Persistence] ✅ Live persistence to Supabase is ACTIVE. All future changes will be saved to Supabase!');
+  } catch (supaPersistErr) {
+    console.error('[Auto-Persistence] Warning: Could not activate live persistence with Supabase:', supaPersistErr.message);
+  }
 }
 
 console.log(`[Database] Initializing SQLite production engine at: ${dbPath}`);
@@ -807,16 +888,24 @@ function authenticatePetra(req, res, next) {
 // Health & Ultra-Speed Performance Benchmark
 app.get(['/api/health', '/api/ping'], (_req, res) => {
   const avgLatency = metrics.totalRequests > 0 ? (metrics.totalQueryTimeMs / metrics.totalRequests).toFixed(2) : '0.18';
+  let dbProvider = 'Local SQLite';
+  if (isCloudPersistenceActive && pgPool) {
+    if (process.env.DATABASE_URL && primaryConnected) {
+      dbProvider = (process.env.DATABASE_URL.includes('supabase') || process.env.DATABASE_URL.includes('pooler.')) ? 'Supabase PostgreSQL' :
+        process.env.DATABASE_URL.includes('neon.tech') ? 'Neon PostgreSQL' :
+        (process.env.DATABASE_URL.includes('render.com') || process.env.DATABASE_URL.includes('dpg-')) ? 'Render PostgreSQL' : 'Cloud PostgreSQL';
+    } else if (supaBackupUrl) {
+      dbProvider = 'Supabase PostgreSQL (Active Failover Target)';
+    }
+  }
+
   res.json({
     status: 'ok',
     mode: 'production',
     engine: 'sqlite-wal-inmemory',
     cloud_persistence: isCloudPersistenceActive ? 'active' : 'local_only',
-    database_provider: process.env.DATABASE_URL ? (
-      (process.env.DATABASE_URL.includes('supabase') || process.env.DATABASE_URL.includes('pooler.')) ? 'Supabase PostgreSQL' :
-      process.env.DATABASE_URL.includes('neon.tech') ? 'Neon PostgreSQL' :
-      (process.env.DATABASE_URL.includes('render.com') || process.env.DATABASE_URL.includes('dpg-')) ? 'Render PostgreSQL' : 'Cloud PostgreSQL'
-    ) : 'Local SQLite',
+    database_provider: dbProvider,
+    auto_recovery_from_supabase: Boolean(supaBackupUrl),
     avg_latency_ms: Number(avgLatency),
     total_requests: metrics.totalRequests,
     uptime_sec: Math.floor((Date.now() - metrics.startedAt) / 1000),
@@ -2043,7 +2132,10 @@ app.get('/api/backup/status', (_req, res) => {
       scheduler,
       latest_audit: latestLogs[0] || null,
       history: latestLogs,
-      target: (process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL) ? 'Supabase PostgreSQL (Configured)' : 'Standby (SUPABASE_DATABASE_URL not set)',
+      auto_recovery_enabled: Boolean(supaBackupUrl),
+      auto_recovery_source: supaBackupUrl ? 'Supabase PostgreSQL (Automatic)' : 'Disabled (Set SUPABASE_DATABASE_URL)',
+      target: supaBackupUrl ? 'Supabase PostgreSQL (Configured)' : 'Standby (SUPABASE_DATABASE_URL not set)',
+      persistence_target: isCloudPersistenceActive ? (primaryConnected ? 'Primary Cloud PostgreSQL' : 'Supabase (Failover Live)') : 'Local SQLite',
       timestamp: new Date().toISOString()
     });
   } catch (err) {
@@ -2079,6 +2171,43 @@ app.post('/api/petra/backup/trigger', async (req, res) => {
     res.status(500).json({
       success: false,
       message: `فشلت عملية النسخ الاحتياطي: ${err.message}`
+    });
+  }
+});
+
+// Petra / Admin Disaster Recovery Endpoint (Restore from Supabase on demand)
+app.post('/api/petra/backup/restore', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const backupKey = req.headers['x-backup-key'] || req.query.key;
+
+  const isPetraAdmin = token && token.startsWith('petra_session_');
+  const isKeyAuthorized = Boolean(backupKey && process.env.BACKUP_SECRET_KEY && backupKey === process.env.BACKUP_SECRET_KEY);
+
+  if (!isPetraAdmin && !isKeyAuthorized) {
+    return res.status(401).json({
+      success: false,
+      message: 'غير مصرح لك باسترجاع النسخة الاحتياطية (Admin Token or Backup Key required)'
+    });
+  }
+
+  try {
+    const result = await restoreFromSupabase({
+      force: true,
+      silent: false,
+      isAutoRecovery: true,
+      supaUrl: supaBackupUrl
+    });
+
+    res.json({
+      success: true,
+      message: `تم استرجاع قاعدة البيانات من Supabase بنجاح (${result.recordsCount} سجل)`,
+      result
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: `فشلت عملية الاسترجاع: ${err.message}`
     });
   }
 });

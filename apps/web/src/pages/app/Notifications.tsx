@@ -128,7 +128,7 @@ export default function Notifications() {
   const unreadCount = notifs.filter((n) => !n.read).length;
 
   return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-5" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-5 pb-24 lg:pb-6" dir="rtl">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -172,12 +172,12 @@ export default function Notifications() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto w-full sm:w-auto">
             {devicePermission !== 'granted' ? (
               <Button
                 size="sm"
                 onClick={handleEnableDeviceNotifications}
-                className="text-xs font-bold gap-1.5 h-9 px-4 shadow-xs"
+                className="w-full sm:w-auto text-xs font-bold gap-1.5 h-9 px-4 shadow-xs"
               >
                 <Bell className="w-3.5 h-3.5" />
                 <span>تفعيل إشعارات جهازي</span>
@@ -188,7 +188,7 @@ export default function Notifications() {
                 variant="outline"
                 onClick={handleSendTestNotification}
                 disabled={isSendingTest}
-                className="text-xs font-bold gap-1.5 h-9 px-3.5 border-primary/30 text-primary hover:bg-primary/10"
+                className="w-full sm:w-auto text-xs font-bold gap-1.5 h-9 px-3.5 border-primary/30 text-primary hover:bg-primary/10"
               >
                 <Volume2 className="w-3.5 h-3.5" />
                 <span>{isSendingTest ? 'جاري الإرسال...' : 'إرسال إشعار تجريبي للجهاز'}</span>

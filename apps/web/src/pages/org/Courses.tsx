@@ -62,15 +62,15 @@ export default function OrgCourses() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto" dir="rtl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto pb-24 lg:pb-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black">الدورات التدريبية</h1>
-          <p className="text-muted-foreground text-sm">إدارة وتقديم البرامج التدريبية المعتمدة للمنظمة</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">إدارة وتقديم البرامج التدريبية المعتمدة للمنظمة</p>
         </div>
         <Button
           onClick={() => setIsCreateModalOpen(true)}
-          className="gap-2 bg-primary text-primary-foreground font-bold rounded-xl"
+          className="w-full sm:w-auto gap-2 bg-primary text-primary-foreground font-bold rounded-xl h-10 shadow-xs"
         >
           <Plus className="w-4 h-4" />
           دورة جديدة
@@ -78,7 +78,7 @@ export default function OrgCourses() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'إجمالي الدورات', value: items.length },
           { label: 'إجمالي المسجّلين', value: items.reduce((s, c) => s + (c.students || 0), 0).toLocaleString('ar') },

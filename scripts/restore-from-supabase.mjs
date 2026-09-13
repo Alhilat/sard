@@ -23,17 +23,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function restoreFromSupabase(options = {}) {
-  const { force = false, silent = false } = options;
+  const { force = false, silent = false, isAutoRecovery = false } = options;
   const log = (...args) => { if (!silent) console.log(...args); };
 
-  if (!force) {
+  if (!force && !isAutoRecovery) {
     throw new Error(
       'SAFETY CHECK: Restoring will overwrite the current Render database.\n' +
       'Pass `--force` flag to confirm restoration (e.g. `node scripts/restore-from-supabase.mjs --force`).'
     );
   }
 
-  const supaUrl = process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL;
+  const supaUrl = options.supaUrl || process.env.SUPABASE_DATABASE_URL || process.env.BACKUP_DATABASE_URL;
   if (!supaUrl) {
     throw new Error('SUPABASE_DATABASE_URL environment variable is missing.');
   }
@@ -126,44 +126,52 @@ export async function restoreFromSupabase(options = {}) {
           log(`  - Table "${table}" skip: ${tableErr.message}`);
         }
       }
+      try { db.close(); } catch {}
     }
 
-    // 3. If Render DATABASE_URL is configured, also push restored data to Render Postgres
+    // 3. If primary DATABASE_URL is configured, also push restored data to primary Postgres
     if (process.env.DATABASE_URL) {
-      log('[Disaster Recovery] Syncing restored state into Render PostgreSQL (DATABASE_URL)...');
-      const renderPool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000
-      });
-
+      log('[Disaster Recovery] Syncing restored state into primary PostgreSQL (DATABASE_URL)...');
       try {
-        const restoredBuffer = fs.readFileSync(dbPath);
-        await renderPool.query(`
-          CREATE TABLE IF NOT EXISTS public.sard_cloud_store (
-            key TEXT PRIMARY KEY,
-            value BYTEA NOT NULL,
-            updated_at BIGINT NOT NULL
-          );
-          INSERT INTO public.sard_cloud_store (key, value, updated_at)
-          VALUES ($1, $2, $3)
-          ON CONFLICT (key) DO UPDATE
-          SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at;
-        `, ['sard_main_db', restoredBuffer, Date.now()]);
-        log('[Disaster Recovery] ✅ Render PostgreSQL persistent store updated.');
-      } finally {
-        await renderPool.end().catch(() => {});
+        const renderPool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000
+        });
+
+        try {
+          const restoredBuffer = fs.readFileSync(dbPath);
+          await renderPool.query(`
+            CREATE TABLE IF NOT EXISTS public.sard_cloud_store (
+              key TEXT PRIMARY KEY,
+              value BYTEA NOT NULL,
+              updated_at BIGINT NOT NULL
+            );
+            INSERT INTO public.sard_cloud_store (key, value, updated_at)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (key) DO UPDATE
+            SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at;
+          `, ['sard_main_db', restoredBuffer, Date.now()]);
+          log('[Disaster Recovery] ✅ Primary PostgreSQL persistent store updated.');
+        } catch (syncErr) {
+          log(`[Disaster Recovery] Note: Could not sync back to primary DATABASE_URL (${syncErr.message}). Local SQLite and Supabase remain fully intact.`);
+        } finally {
+          await renderPool.end().catch(() => {});
+        }
+      } catch (poolErr) {
+        log(`[Disaster Recovery] Note on primary pool init: ${poolErr.message}`);
       }
     }
 
     // 4. Verify Local SQLite Health
-    const db = new DatabaseSync(dbPath);
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
+    const verifyDb = new DatabaseSync(dbPath);
+    const tables = verifyDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
     let totalRestoredRecords = 0;
     for (const t of tables) {
-      const cnt = db.prepare(`SELECT COUNT(*) as c FROM "${t.name}"`).get();
+      const cnt = verifyDb.prepare(`SELECT COUNT(*) as c FROM "${t.name}"`).get();
       totalRestoredRecords += Number(cnt?.c || 0);
     }
+    try { verifyDb.close(); } catch {}
 
     log('\n================================================================================');
     log(`[Disaster Recovery] 🎉 RESTORATION COMPLETE!`);

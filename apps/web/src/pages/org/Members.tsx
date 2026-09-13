@@ -95,22 +95,22 @@ export default function OrgMembers() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto" dir="rtl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black">أعضاء المنظمة</h1>
-          <p className="text-muted-foreground text-sm">إدارة وتوزيع صلاحيات طاقم العمل والمشرفين</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">إدارة وتوزيع صلاحيات طاقم العمل والمشرفين</p>
         </div>
         <Button
           onClick={() => setIsInviteModalOpen(true)}
-          className="gap-2 bg-primary text-primary-foreground font-bold rounded-xl"
+          className="w-full sm:w-auto gap-2 bg-primary text-primary-foreground font-bold rounded-xl h-10 shadow-xs"
         >
           <UserPlus className="w-4 h-4" />
           دعوة عضو
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'إجمالي الأعضاء', value: members.length },
           { label: 'المشرفون والمدراء', value: members.filter((m) => m.role === 'مشرف' || m.role === 'مدير').length },
@@ -126,15 +126,15 @@ export default function OrgMembers() {
       </div>
 
       <Card className="border-card-border">
-        <CardHeader className="flex-row items-center justify-between pb-0">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-0">
           <CardTitle className="text-base font-bold">قائمة الأعضاء والطاقم</CardTitle>
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute top-1/2 -translate-y-1/2 end-3 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="بحث بالاسم أو البريد..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pe-9 h-8 text-sm border-border"
+              className="pe-9 h-9 text-sm border-border"
             />
           </div>
         </CardHeader>
@@ -158,7 +158,7 @@ export default function OrgMembers() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead className="border-b border-border">
                   <tr>
                     <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs">العضو</th>

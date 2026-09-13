@@ -197,7 +197,7 @@ export default function Profile({ targetUserId }: { targetUserId?: string }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6" dir="rtl">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-24 lg:pb-6" dir="rtl">
       {/* Profile Card Header */}
       <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-xs mb-6">
         {/* Cover */}
@@ -212,28 +212,28 @@ export default function Profile({ targetUserId }: { targetUserId?: string }) {
         </div>
 
         {/* Profile info */}
-        <div className="px-6 pb-6">
-          <div className="flex items-end justify-between -mt-12 sm:-mt-14 mb-4 gap-4">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground text-3xl font-black border-4 border-card shadow-md">
+        <div className="px-4 sm:px-6 pb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between -mt-12 sm:-mt-14 mb-4 gap-3">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground text-3xl font-black border-4 border-card shadow-md shrink-0">
               {initials}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               {!isOtherUser ? (
-                <Link href="/app/settings">
-                  <Button variant="outline" size="sm" className="gap-2 font-bold rounded-xl cursor-pointer">
+                <Link href="/app/settings" className="w-full sm:w-auto">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 font-bold rounded-xl cursor-pointer h-10 sm:h-9">
                     <Edit className="w-4 h-4" />
                     تعديل الملف الشخصي
                   </Button>
                 </Link>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                   <Button
                     size="sm"
                     variant={isFollowing ? 'outline' : 'default'}
                     onClick={handleToggleFollow}
                     disabled={isTogglingFollow}
-                    className="gap-1.5 font-bold rounded-xl cursor-pointer shadow-xs"
+                    className="flex-1 sm:flex-initial gap-1.5 font-bold rounded-xl cursor-pointer shadow-xs h-10 sm:h-9 min-w-[100px]"
                   >
                     {isFollowing ? (
                       <>
@@ -252,7 +252,7 @@ export default function Profile({ targetUserId }: { targetUserId?: string }) {
                     size="sm"
                     onClick={handleStartChat}
                     disabled={isStartingChat}
-                    className="gap-2 font-bold rounded-xl cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                    className="flex-1 sm:flex-initial gap-2 font-bold rounded-xl cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs h-10 sm:h-9 min-w-[110px]"
                   >
                     {isStartingChat ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

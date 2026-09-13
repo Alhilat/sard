@@ -81,15 +81,15 @@ export default function OrgActivities() {
   const totalSeats = items.reduce((s, a) => s + (a.capacity || a.seats || 100), 0);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto" dir="rtl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto pb-24 lg:pb-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black">الأنشطة والفعاليات</h1>
-          <p className="text-muted-foreground text-sm">تنظيم ومتابعة فعاليات ومبادرات المنظمة</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">تنظيم ومتابعة فعاليات ومبادرات المنظمة</p>
         </div>
         <Button
           onClick={() => setIsCreateModalOpen(true)}
-          className="gap-2 bg-primary text-primary-foreground font-bold rounded-xl"
+          className="w-full sm:w-auto gap-2 bg-primary text-primary-foreground font-bold rounded-xl h-10 shadow-xs"
         >
           <Plus className="w-4 h-4" />
           نشاط جديد
@@ -97,7 +97,7 @@ export default function OrgActivities() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'إجمالي الأنشطة', value: items.length },
           { label: 'المشاركون المسجلون', value: totalRegistered.toLocaleString('ar') },
@@ -137,7 +137,7 @@ export default function OrgActivities() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[650px] text-sm">
                 <thead className="border-b border-border">
                   <tr className="text-start">
                     <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs">النشاط</th>

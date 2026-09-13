@@ -1,75 +1,63 @@
 import { Link } from 'wouter';
 import {
   Users, Calendar, BookOpen, MessageSquare, Building2,
-  ArrowLeft, CheckCircle2, Star, Globe, Shield, Zap, ChevronLeft
+  ArrowLeft, CheckCircle2, Globe, Shield, Sparkles, Award,
+  ChevronLeft, Compass, HeartHandshake, Laptop, UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-
-const features = [
+const platformPillars = [
   {
-    icon: Users,
-    title: 'الشبكة الاجتماعية',
-    desc: 'تواصل مع أفراد ومنظمات من مجتمعك، شارك أفكارك وتجاربك في تغذية اجتماعية غنية بالمحتوى.',
+    icon: Sparkles,
+    title: 'ساحة سرد التفاعلية',
+    desc: 'فضاء حي لطرح الأفكار، تبادل التجارب، ومتابعة القضايا المجتمعية والمعرفية المتداولة لحظة بلحظة.',
     color: 'bg-primary/10 text-primary',
   },
   {
     icon: Calendar,
-    title: 'الأنشطة والفعاليات',
-    desc: 'اكتشف مئات الأنشطة والفعاليات القريبة منك، سجّل واحجز مكانك بخطوات بسيطة.',
-    color: 'bg-amber-100 text-amber-700',
+    title: 'الأنشطة والفعاليات الميدانية',
+    desc: 'اكتشف المبادرات والفعاليات القريبة منك، سجّل حضورك فوراً، وشارك في غرف النقاش المباشرة مع المنظمين.',
+    color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
   },
   {
     icon: BookOpen,
-    title: 'الدورات التدريبية',
-    desc: 'طوّر مهاراتك من خلال دورات معتمدة يقدّمها خبراء ومنظمات رائدة في مختلف التخصصات.',
-    color: 'bg-orange-100 text-orange-700',
+    title: 'الدورات والبرامج المعتمدة',
+    desc: 'مسارات تعليمية وتدريبية متخصصة يشرف عليها مدربون معتمدون، مع شهادات إتمام موثقة ومجتمعات طلابية تفاعلية.',
+    color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   },
   {
     icon: Building2,
-    title: 'المنظمات الموثّقة',
-    desc: 'منصة خاصة للمنظمات لإدارة أنشطتها، نشر محتواها، وبناء مجتمع متفاعل حول أهدافها.',
-    color: 'bg-orange-100 text-orange-600',
+    title: 'توثيق المنظمات والمؤسسات',
+    desc: 'بيئة موثوقة تمنح المؤسسات والجمعيات الفاعلة هوية رقمية لإدارة الفعاليات وبناء جمهورها الحقيقي.',
+    color: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
   },
   {
-    icon: MessageSquare,
-    title: 'المجتمعات والمجموعات',
-    desc: 'انضم إلى مجموعات تتشارك اهتماماتك، ناقش وتعاون مع أعضاء من خلفيات متنوعة.',
-    color: 'bg-pink-100 text-pink-600',
+    icon: Users,
+    title: 'المجتمعات التخصصية',
+    desc: 'انضم إلى مجموعات معرفية متخصصة في التقنية، التطوع، ريادة الأعمال، والثقافة، وتحاور مع رواد مجالك.',
+    color: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
   },
   {
     icon: Shield,
-    title: 'الأمان والموثوقية',
-    desc: 'بيئة آمنة تضمن خصوصية بياناتك مع توثيق رسمي للمنظمات والشهادات المعتمدة.',
-    color: 'bg-stone-100 text-stone-600',
+    title: 'أصالة وموثوقية رقمية',
+    desc: 'تصميم يراعي الخصوصية التامة، الهوية العربية الأصيلة، والتأكد من موثوقية الهيئات والشهادات الصادرة.',
+    color: 'bg-stone-500/10 text-stone-700 dark:text-stone-300',
   },
 ];
 
-const steps = [
-  { num: '١', title: 'أنشئ حسابك', desc: 'سجّل كفرد أو منظمة في دقائق معدودة' },
-  { num: '٢', title: 'اكتشف وتواصل', desc: 'ابحث عن أنشطة ودورات ومنظمات تناسب اهتماماتك' },
-  { num: '٣', title: 'شارك وأسهم', desc: 'شارك في الفعاليات، التعليم، والمجتمع' },
-];
-
-const testimonials = [
+const ecosystemRoles = [
   {
-    name: 'سارة الأحمد',
-    role: 'معلمة ومدربة',
-    text: 'سرد رقمي غيّر طريقة تواصلي مع المجتمع. وجدت فرصاً تطوعية وتدريبية لم أكن أعلم بوجودها!',
-    rating: 5,
+    title: 'للأفراد والمبدعين',
+    icon: UserCheck,
+    desc: 'منصة واحدة تفتح لك آفاق التعلم المستمر، بناء شبكة علاقات مهنية، وحضور أبرز الفعاليات المجتمعية.',
+    perks: ['متابعة الساحة العامة والتفاعل بحرية', 'التسجيل في الدورات والأنشطة وحجز المقاعد', 'غرف محادثة تفاعلية للمشاركين والطلاب', 'الحصول على شهادات إتمام معتمدة'],
   },
   {
-    name: 'محمد الفيصل',
-    role: 'رائد أعمال',
-    text: 'المنصة تجمع ما كنت أبحث عنه في عشر تطبيقات مختلفة. التصميم رائع والتجربة سلسة جداً.',
-    rating: 5,
-  },
-  {
-    name: 'منظمة رواد التطوع',
-    role: 'منظمة مجتمعية',
-    text: 'ضاعفت تفاعل جمهورنا ثلاثة أضعاف منذ انضمامنا للمنصة. أدوات الإدارة احترافية جداً.',
-    rating: 5,
+    title: 'للمنظمات والمؤسسات',
+    icon: Building2,
+    desc: 'أدوات متطورة لإدارة الفعاليات والدورات التدريبية، وبناء مجتمع مخلص ومتفاعل حول أهداف المنظمة.',
+    perks: ['شارة التوثيق الرسمي للمنظمة', 'إدارة تسجيلات الحضور والمشاركين بسهولة', 'قنوات إعلانية وغرف نقاش مخصصة لكل نشاط', 'تحليلات تفاعلية وإدارة طاقم العمل والصلاحيات'],
   },
 ];
 
@@ -78,24 +66,30 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-foreground" dir="rtl">
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-lg">س</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-xs">
+              <span className="text-white font-bold text-lg font-display">س</span>
             </div>
-            <span className="font-bold text-xl">سرد رقمي</span>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <span className="font-bold text-lg sm:text-xl font-display">سرد رقمي</span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-6 text-xs sm:text-sm font-medium text-muted-foreground">
+            <a href="#about" className="hover:text-foreground transition-colors">عن المنصة</a>
             <a href="#features" className="hover:text-foreground transition-colors">المميزات</a>
-            <a href="#how" className="hover:text-foreground transition-colors">كيف يعمل</a>
-            <a href="#testimonials" className="hover:text-foreground transition-colors">آراء المستخدمين</a>
+            <a href="#ecosystem" className="hover:text-foreground transition-colors">منظومة سرد</a>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2 shrink-0">
             <Link href="/auth/login">
-              <Button variant="ghost" size="sm">تسجيل الدخول</Button>
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm font-bold px-3 sm:px-4">
+                تسجيل الدخول
+              </Button>
             </Link>
             <Link href="/auth/register">
-              <Button size="sm">ابدأ مجاناً</Button>
+              <Button size="sm" className="text-xs sm:text-sm font-bold px-3 sm:px-4 shadow-xs">
+                انضم إلينا
+              </Button>
             </Link>
           </div>
         </div>
@@ -103,127 +97,166 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(135deg, hsl(0, 65%, 8%) 0%, hsl(0, 61%, 18%) 50%, hsl(15, 55%, 22%) 100%)'
-        }} />
-        {/* Decorative orbs */}
-        <div className="absolute top-20 start-20 w-72 h-72 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, hsl(33,60%,72%), transparent)' }} />
-        <div className="absolute bottom-10 end-32 w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, hsl(20,72%,52%), transparent)' }} />
-        {/* Subtle dashed ring — إيماءة لحلقة اللوقو */}
-        <div className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5" style={{ border: '3px dashed hsl(33,60%,72%)' }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, hsl(0, 65%, 8%) 0%, hsl(0, 61%, 18%) 50%, hsl(15, 55%, 22%) 100%)',
+          }}
+        />
+        {/* Decorative Arabesque Orbs & Patterns */}
+        <div
+          className="absolute top-20 start-20 w-72 h-72 rounded-full opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, hsl(33,60%,72%), transparent)' }}
+        />
+        <div
+          className="absolute bottom-10 end-32 w-96 h-96 rounded-full opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, hsl(20,72%,52%), transparent)' }}
+        />
+        <div
+          className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] rounded-full opacity-5 pointer-events-none"
+          style={{ border: '2px dashed hsl(33,60%,72%)' }}
+        />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-24 text-center">
-          <Badge className="mb-6 bg-white/10 text-white border-white/20 text-sm px-4 py-1.5">
-            🚀 منصة المجتمع الرقمي العربية
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
+          <Badge className="mb-6 bg-white/10 text-white border-white/20 text-xs sm:text-sm px-4 py-1.5 backdrop-blur-xs gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>منصة المجتمعات والتعليم المستمر</span>
           </Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
-            منصة واحدة لكل
-            <span className="block" style={{ color: 'hsl(33, 60%, 72%)' }}>
-              تجربة مجتمعية
+
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6 font-display">
+            البيئة الرقمية الموحدة
+            <span className="block mt-2" style={{ color: 'hsl(33, 60%, 72%)' }}>
+              للمعرفة والعمل المجتمعي
             </span>
           </h1>
-          <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10 leading-relaxed">
-            سرد رقمي تجمع الشبكة الاجتماعية، الأنشطة المجتمعية، والدورات التدريبية
-            في منصة عربية واحدة سلسة ومتكاملة.
+
+          <p className="text-base sm:text-xl text-white/80 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
+            تجمع منصة «سرد رقمي» بين التفاعل المجتمعي الحي، تنظيم الأنشطة والفعاليات،
+            والبرامج التدريبية المعتمدة في بيئة عربية رصينة وموثوقة.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-bold px-8 h-12">
-                إنشاء حساب جديد
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-white/90 font-bold px-8 h-12 shadow-md">
+                <span>إنشاء حساب كفرد</span>
                 <ArrowLeft className="w-5 h-5 ms-2 rtl:rotate-180" />
               </Button>
             </Link>
-            <Link href="/auth/login">
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 h-12 px-8 font-bold">
-                تسجيل الدخول للمنصة
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/30 text-white hover:bg-white/10 h-12 px-8 font-bold">
+                <Building2 className="w-4 h-4 ms-2" />
+                <span>تسجيل منظمة أو جهة</span>
               </Button>
             </Link>
           </div>
 
-          {/* Pillars - No Fake Numbers */}
-          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-3xl mx-auto">
+          {/* Genuine Core Values */}
+          <div className="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto">
             {[
-              { title: 'أصالة عربية', desc: 'هوية وثقافة متجذرة' },
-              { title: 'مجتمعات حية', desc: 'حوارات ونقاشات متخصصة' },
+              { title: 'أصالة وهوية', desc: 'لغة وثقافة عربية رصينة' },
+              { title: 'أنشطة حية', desc: 'حضور وتفاعل مجتمعي' },
               { title: 'برامج معتمدة', desc: 'دورات وشهادات تدريبية' },
-              { title: 'أمان وموثوقية', desc: 'خصوصية وأداء فائق السرعة' },
-            ].map(pillar => (
-              <div key={pillar.title} className="text-center p-4 rounded-2xl bg-white/5 border border-white/10">
-                <p className="text-lg font-black text-white">{pillar.title}</p>
-                <p className="text-xs text-white/70 mt-1">{pillar.desc}</p>
+              { title: 'منظمات موثقة', desc: 'بيئة رسمية آمنة' },
+            ].map((pillar) => (
+              <div key={pillar.title} className="text-center p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+                <p className="text-sm sm:text-base font-black text-white font-display">{pillar.title}</p>
+                <p className="text-[11px] sm:text-xs text-white/70 mt-1">{pillar.desc}</p>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* About Platform */}
+      <section id="about" className="py-16 sm:py-20 bg-background border-b border-border/60">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-4">
+          <Badge variant="secondary" className="mb-2">عن سرد رقمي</Badge>
+          <h2 className="text-2xl sm:text-3xl font-black font-display text-foreground">
+            فضاء عربي متكامل لصناعة الأثر وبناء المعرفة
+          </h2>
+          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+            انطلقت «سرد رقمي» لتسد الفجوة بين المنصات الاجتماعية التقليدية والبيئات التعليمية والتطوعية.
+            نهدف لتمكين الأفراد والمؤسسات من التعاون والمشاركة في فعاليات حقيقية، حضور ورش تدريبية،
+            والانخراط في نقاشات فكرية متخصصة تثري المجتمع الرقمي العربي.
+          </p>
         </div>
       </section>
 
       {/* Features */}
-      <section id="features" className="py-20 bg-background">
+      <section id="features" className="py-16 sm:py-20 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <Badge variant="secondary" className="mb-4">المميزات</Badge>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">كل ما تحتاجه في مكان واحد</h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              استمتع بتجربة رقمية متكاملة تجمع أفضل ما في منصات التواصل الاجتماعي، التعليم، والفعاليات
+          <div className="text-center mb-12 sm:mb-16">
+            <Badge variant="secondary" className="mb-3">ركائز المنصة</Badge>
+            <h2 className="text-2xl sm:text-4xl font-black font-display mb-3">
+              كل ما تحتاجه للمشاركة والتطور في مكان واحد
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
+              أدوات تفاعلية صممت بدقة لتخدم رحلتك في التعلم، بناء المجتمعات، وتنظيم الفعاليات.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map(f => (
-              <div key={f.title} className="bg-card border border-card-border rounded-2xl p-6 hover:shadow-lg transition-shadow">
-                <div className={`w-12 h-12 rounded-xl ${f.color} flex items-center justify-center mb-4`}>
-                  <f.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold mb-2">{f.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* How it works */}
-      <section id="how" className="py-20 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <Badge variant="secondary" className="mb-4">كيف يعمل</Badge>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">ابدأ في ثلاث خطوات</h2>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {steps.map((step, i) => (
-              <div key={step.num} className="text-center relative">
-                {i < steps.length - 1 && (
-                  <div className="hidden sm:block absolute top-8 start-full w-full h-0.5 bg-border -translate-y-0.5 z-0" />
-                )}
-                <div className="relative z-10 w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-black mx-auto mb-4">
-                  {step.num}
-                </div>
-                <h3 className="text-lg font-bold mb-2">{step.title}</h3>
-                <p className="text-muted-foreground text-sm">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section id="testimonials" className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <Badge variant="secondary" className="mb-4">آراء المستخدمين</Badge>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">ماذا يقول مجتمعنا</h2>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {testimonials.map(t => (
-              <div key={t.name} className="bg-card border border-card-border rounded-2xl p-6">
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">"{t.text}"</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {platformPillars.map((f) => (
+              <div
+                key={f.title}
+                className="bg-card border border-card-border rounded-2xl p-5 sm:p-6 hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between"
+              >
                 <div>
-                  <p className="font-bold text-sm">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                  <div className={`w-12 h-12 rounded-xl ${f.color} flex items-center justify-center mb-4 shadow-2xs`}>
+                    <f.icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold mb-2 font-display text-foreground">{f.title}</h3>
+                  <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Ecosystem: Individuals & Organizations */}
+      <section id="ecosystem" className="py-16 sm:py-20 bg-background">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <Badge variant="secondary" className="mb-3">منظومة العمل</Badge>
+            <h2 className="text-2xl sm:text-4xl font-black font-display mb-3">
+              تكامل فعال بين الأفراد والمؤسسات
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base max-w-lg mx-auto">
+              سواء كنت تبحث عن تنمية مهاراتك أو تسعى كمنظمة لتوسيع أثر برامجك، توفر المنصة الأدوات المثالية للطرفين.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+            {ecosystemRoles.map((role) => (
+              <div
+                key={role.title}
+                className="rounded-2xl border border-card-border bg-card p-6 sm:p-8 space-y-5 shadow-xs flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <role.icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold font-display text-foreground">{role.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                    {role.desc}
+                  </p>
+                  <div className="space-y-2.5 pt-2">
+                    {role.perks.map((perk, i) => (
+                      <div key={i} className="flex items-start gap-2.5 text-xs sm:text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-foreground/90">{perk}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border/60">
+                  <Link href="/auth/register">
+                    <Button variant="outline" className="w-full font-bold text-xs sm:text-sm">
+                      ابدأ الآن كـ {role.title.replace('لـ', '').replace('للـ', '')}
+                    </Button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -232,68 +265,118 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-20" style={{ background: 'linear-gradient(135deg, hsl(0,65%,8%), hsl(0,61%,18%), hsl(15,55%,22%))' }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
-            انضم إلى مجتمعنا اليوم
+      <section
+        className="py-16 sm:py-20 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, hsl(0,65%,8%), hsl(0,61%,18%), hsl(15,55%,22%))',
+        }}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center space-y-6 relative z-10">
+          <h2 className="text-2xl sm:text-4xl font-black text-white font-display leading-tight">
+            انضم إلى مجتمع سرد رقمي
           </h2>
-          <p className="text-white/70 text-lg mb-8">
-            أكثر من 48,000 فرد ومنظمة يبنون المجتمع الرقمي العربي معاً
+          <p className="text-white/80 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+            بيئة تفاعلية صممت لتلبي تطلعات الشباب والمؤسسات في الأردن والعالم العربي. أنشئ حسابك واكتشف الفرص المجتمعية والتعليمية المتاحة.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-bold px-8 h-12">
-                سجّل مجاناً كفرد
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-white/90 font-bold px-8 h-12 shadow-md">
+                إنشاء حساب مجاني
+                <ArrowLeft className="w-4 h-4 ms-2 rtl:rotate-180" />
               </Button>
             </Link>
-            <Link href="/auth/register">
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 h-12">
-                سجّل منظمتك
+            <Link href="/auth/login" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/30 text-white hover:bg-white/10 h-12 px-8 font-bold">
+                تسجيل الدخول للمنصة
               </Button>
             </Link>
           </div>
-          <p className="text-white/40 text-sm mt-6">لا يلزم بطاقة ائتمانية • مجاني للأفراد</p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-sidebar text-sidebar-foreground py-12">
+      <footer className="bg-sidebar text-sidebar-foreground py-12 border-t border-sidebar-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid sm:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-                  <span className="text-white font-bold">س</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
+            <div className="col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-xs">
+                  <span className="text-white font-bold font-display">س</span>
                 </div>
-                <span className="font-bold text-white">سرد رقمي</span>
+                <span className="font-bold text-lg text-white font-display">سرد رقمي</span>
               </div>
-              <p className="text-sidebar-foreground/50 text-sm leading-relaxed">
-                منصة المجتمع الرقمي العربية الأولى
+              <p className="text-sidebar-foreground/60 text-xs sm:text-sm leading-relaxed">
+                منصة المجتمعات والأنشطة والتعليم المستمر في العالم العربي.
               </p>
             </div>
-            {[
-              { title: 'المنصة', links: ['الأنشطة', 'الدورات', 'المجموعات', 'المنظمات'] },
-              { title: 'الشركة', links: ['من نحن', 'الوظائف', 'المدونة', 'الشراكات'] },
-              { title: 'الدعم', links: ['مركز المساعدة', 'تواصل معنا', 'الخصوصية', 'الشروط'] },
-            ].map(col => (
-              <div key={col.title}>
-                <p className="font-semibold text-white mb-3 text-sm">{col.title}</p>
-                <ul className="space-y-2">
-                  {col.links.map(link => (
-                    <li key={link}>
-                      <a href="#" className="text-sidebar-foreground/50 hover:text-sidebar-foreground text-sm transition-colors">{link}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-sidebar-border pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-sidebar-foreground/40 text-sm">© 2025 سرد رقمي. جميع الحقوق محفوظة.</p>
-            <div className="flex items-center gap-4">
-              <Globe className="w-4 h-4 text-sidebar-foreground/40" />
-              <span className="text-sidebar-foreground/40 text-sm">العربية</span>
+
+            <div>
+              <p className="font-bold text-white mb-3 text-xs sm:text-sm">أقسام المنصة</p>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li>
+                  <Link href="/app/feed" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    ساحة سرد
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/app/activities" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    الأنشطة والفعاليات
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/app/courses" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    الدورات التدريبية
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/app/groups" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    المجتمعات والمجموعات
+                  </Link>
+                </li>
+              </ul>
             </div>
+
+            <div>
+              <p className="font-bold text-white mb-3 text-xs sm:text-sm">الحسابات والوصول</p>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li>
+                  <Link href="/auth/login" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    تسجيل الدخول
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/auth/register" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    إنشاء حساب جديد
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/org" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    بوابة المنظمات الموثقة
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/app/search" className="text-sidebar-foreground/60 hover:text-white transition-colors">
+                    البحث الشامل
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <p className="font-bold text-white mb-3 text-xs sm:text-sm">الهوية والأمان</p>
+              <p className="text-xs text-sidebar-foreground/60 leading-relaxed mb-3">
+                جميع الحقوق محفوظة للمحتوى المعرفي والمؤسسي المنشور على منصة سرد رقمي.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-sidebar-foreground/50">
+                <Globe className="w-3.5 h-3.5" />
+                <span>اللغة العربية · الأردن والعالم العربي</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-sidebar-border pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-sidebar-foreground/50">
+            <p>© 2026 سرد رقمي. جميع الحقوق محفوظة.</p>
+            <p>منصة مجتمعية عربية متكاملة</p>
           </div>
         </div>
       </footer>

@@ -70,7 +70,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 pb-24 lg:pb-6" dir="rtl">
       {/* Welcome banner */}
       <div
         className="relative rounded-3xl overflow-hidden p-6 sm:p-8 text-white shadow-xs"

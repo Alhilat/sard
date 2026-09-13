@@ -157,11 +157,11 @@ export default function Activities() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+        <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto w-full sm:w-auto">
           <Button
             onClick={handleOpenCreate}
             variant={isVerified ? 'default' : 'outline'}
-            className={`gap-2 font-bold shadow-xs h-10 px-4 ${
+            className={`w-full sm:w-auto gap-2 font-bold shadow-xs h-10 px-4 ${
               !isVerified ? 'border-dashed border-border text-muted-foreground hover:text-foreground' : ''
             }`}
           >
@@ -317,14 +317,14 @@ export default function Activities() {
 
                 <div className="p-5 pt-0 space-y-2">
                   {/* Action buttons: Register & Group Chat */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     {full ? (
-                      <Button variant="outline" className="flex-1 text-xs font-bold" disabled>
+                      <Button variant="outline" className="flex-1 min-w-[120px] text-xs font-bold" disabled>
                         اكتمل العدد
                       </Button>
                     ) : (
                       <Button
-                        className={`flex-1 text-xs font-bold gap-1.5 shadow-2xs ${
+                        className={`flex-1 min-w-[120px] text-xs font-bold gap-1.5 shadow-2xs ${
                           registered ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
                         }`}
                         onClick={() => handleRegister(activity.id)}
@@ -344,7 +344,7 @@ export default function Activities() {
                       variant="outline"
                       size="default"
                       onClick={() => setActiveChatActivity(activity)}
-                      className="gap-1.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/10"
+                      className="flex-1 sm:flex-initial min-w-[110px] gap-1.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/10"
                       title="فتح غرفة محادثة الفعالية"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
