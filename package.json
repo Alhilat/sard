@@ -9,6 +9,7 @@
     "start": "node ./apps/api/server.mjs",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --filter \"@workspace/*\" --if-present run typecheck",
+    "test:backend": "node ./scripts/test-backend-suite.mjs",
     "backup:sync": "node ./scripts/sync-and-verify-backup.mjs",
     "backup:check": "node ./scripts/sync-and-verify-backup.mjs --verify-only",
     "backup:restore": "node ./scripts/restore-from-supabase.mjs",

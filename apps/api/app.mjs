@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { metricsMiddleware } from './middleware/metrics.mjs';
 import { autoSyncMiddleware } from './middleware/auto-sync.mjs';
 import { errorHandler } from './middleware/error-handler.mjs';
+import { apiRateLimiter } from './middleware/rate-limiter.mjs';
 import apiRouter from './routes/index.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,8 +26,8 @@ export function createApp(db) {
   app.use(metricsMiddleware);
   app.use(autoSyncMiddleware);
 
-  // Mount API Router
-  app.use('/api', apiRouter);
+  // Mount API Router with global rate limiter protection
+  app.use('/api', apiRateLimiter, apiRouter);
 
   // Static Frontend Serving (Render & Production Support)
   const candidatePaths = [

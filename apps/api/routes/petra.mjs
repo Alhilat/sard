@@ -2,17 +2,19 @@ import { Router } from 'express';
 import { PETRA_USER, PETRA_PASS } from '../config/env.mjs';
 import { getStatements } from '../db/statements/index.mjs';
 import { authenticatePetra } from '../middleware/petra-auth.mjs';
+import { authRateLimiter } from '../middleware/rate-limiter.mjs';
+import { createPetraSession, revokePetraSession } from '../services/petra-sessions.mjs';
 import { metrics, bannedUserIds } from '../services/cache.mjs';
 import { createNotification } from '../services/notification.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
 
 const router = Router();
 
-// POST /api/petra/login
-router.post('/login', (req, res) => {
+// POST /api/petra/login (with brute-force protection)
+router.post('/login', authRateLimiter, (req, res) => {
   const { username, password } = req.body;
   if (username === PETRA_USER && password === PETRA_PASS) {
-    const sessionToken = `petra_session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const sessionToken = createPetraSession(PETRA_USER);
     const { stmtInsertAuditLog } = getStatements();
     stmtInsertAuditLog.run(
       `log_${Date.now()}`,
@@ -34,6 +36,16 @@ router.post('/login', (req, res) => {
     success: false,
     message: 'اسم المستخدم أو كلمة المرور غير صحيحة لبوابة بترا',
   });
+});
+
+// POST /api/petra/logout
+router.post('/logout', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (token) {
+    revokePetraSession(token);
+  }
+  res.json({ success: true, message: 'تم تسجيل الخروج بنجاح من بوابة بترا' });
 });
 
 // GET /api/petra/stats

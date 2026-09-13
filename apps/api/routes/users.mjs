@@ -57,18 +57,30 @@ router.get('/suggestions', authenticateToken, (req, res) => {
   const stmts = getStatements();
   const currentUserId = req.user ? req.user.id : '';
   const rows = stmts.stmtGetSuggestions.all(currentUserId);
-  const suggestions = rows.map((u) => {
-    const isFollowing = currentUserId ? Boolean(stmts.stmtIsFollowing.get(currentUserId, u.id)) : false;
-    return {
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      avatar: u.avatar || '',
-      verified: Boolean(u.verified),
-      role: u.role === 'org' ? 'منظمة معتمدة' : (u.bio || 'عضو في مجتمع سرد'),
-      isFollowing,
-    };
-  });
+
+  let followingSet = new Set();
+  if (currentUserId && rows.length > 0) {
+    const userIds = rows.map((u) => u.id);
+    const placeholders = userIds.map(() => '?').join(',');
+    const db = req.app.locals.db;
+    if (db) {
+      const followRows = db.prepare(
+        `SELECT following_id FROM user_follows WHERE follower_id = ? AND following_id IN (${placeholders})`
+      ).all(currentUserId, ...userIds);
+      followingSet = new Set(followRows.map((f) => f.following_id));
+    }
+  }
+
+  const suggestions = rows.map((u) => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    avatar: u.avatar || '',
+    verified: Boolean(u.verified),
+    role: u.role === 'org' ? 'منظمة معتمدة' : (u.bio || 'عضو في مجتمع سرد'),
+    isFollowing: followingSet.has(u.id),
+  }));
+
   res.json(suggestions);
 });
 

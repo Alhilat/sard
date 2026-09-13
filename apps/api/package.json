@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ./server.mjs",
+    "dev": "node --watch ./server.mjs",
     "build": "echo 'Build skipped: server is standalone ESM'",
     "start": "node ./server.mjs"
   },

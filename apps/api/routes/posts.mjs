@@ -18,13 +18,21 @@ router.get('/', authenticateToken, (req, res) => {
 
     const rows = groupId ? stmts.stmtGetGroupPosts.all(groupId, limit, offset) : stmts.stmtGetPosts.all(limit, offset);
     const currentUserId = req.user ? req.user.id : null;
+    let likedPostIds = new Set();
+    if (currentUserId && rows.length > 0) {
+      const postIds = rows.map((r) => r.id);
+      const placeholders = postIds.map(() => '?').join(',');
+      const db = req.app.locals.db;
+      if (db) {
+        const likedRows = db.prepare(
+          `SELECT post_id FROM post_likes WHERE user_id = ? AND post_id IN (${placeholders})`
+        ).all(currentUserId, ...postIds);
+        likedPostIds = new Set(likedRows.map((l) => l.post_id));
+      }
+    }
 
     const posts = rows.map((r) => {
-      let isLiked = false;
-      if (currentUserId) {
-        const likeRow = stmts.stmtGetLike.get(r.id, currentUserId);
-        isLiked = Boolean(likeRow);
-      }
+      const isLiked = likedPostIds.has(r.id);
 
       let tags = [];
       try {

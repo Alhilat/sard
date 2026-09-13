@@ -132,9 +132,10 @@ export default function Feed() {
 
   // Fetch real suggestions from SQLite
   useEffect(() => {
+    const activeToken = tokenStorage.get() || localStorage.getItem('sard_auth_token') || localStorage.getItem('sard_token') || '';
     fetch('/api/users/suggestions', {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('sard_token') || ''}`,
+        'Authorization': activeToken ? `Bearer ${activeToken}` : '',
       },
     })
       .then((res) => res.json())

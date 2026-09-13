@@ -29,10 +29,18 @@ export async function flushToPostgres(db = currentDb, dbPath = currentDbPath) {
   if (!isCloudPersistenceActive || !pgPool) return;
   try {
     if (db) {
-      db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+      db.exec('PRAGMA wal_checkpoint(PASSIVE);');
     }
     if (!dbPath || !fs.existsSync(dbPath)) return;
-    const data = fs.readFileSync(dbPath);
+
+    // Check file size: avoid sending massive blobs that exhaust Node.js heap memory
+    const stat = await fs.promises.stat(dbPath);
+    if (stat.size > 50 * 1024 * 1024) {
+      console.warn(`[Cloud Database] Database size (${(stat.size / (1024 * 1024)).toFixed(1)}MB) exceeds direct blob backup limit (50MB). Row-level replication or volume snapshots recommended.`);
+      return;
+    }
+
+    const data = await fs.promises.readFile(dbPath);
     const now = Date.now();
     await pgPool.query(`
       INSERT INTO public.sard_cloud_store (key, value, updated_at)

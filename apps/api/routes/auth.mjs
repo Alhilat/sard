@@ -5,10 +5,11 @@ import { JWT_SECRET } from '../config/env.mjs';
 import { getStatements } from '../db/statements/index.mjs';
 import { bannedUserIds } from '../services/cache.mjs';
 import { formatUserResponse } from '../services/user-service.mjs';
+import { authRateLimiter } from '../middleware/rate-limiter.mjs';
 
 const router = Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', authRateLimiter, async (req, res) => {
   try {
     const { email, password, full_name, legal_name, name, role, phone, country, location } = req.body;
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -39,7 +40,7 @@ router.post('/register', (req, res) => {
     }
 
     const userId = `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const passwordHash = bcrypt.hashSync(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
     const monthsArabic = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
     const now = new Date();
     const joinDate = `${monthsArabic[now.getMonth()]} ${now.getFullYear()}`;
@@ -80,7 +81,7 @@ router.post('/register', (req, res) => {
   }
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -104,7 +105,7 @@ router.post('/login', (req, res) => {
       });
     }
 
-    const isValid = bcrypt.compareSync(password, user.password_hash);
+    const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ success: false, message: 'بيانات الدخول غير صحيحة، يرجى التأكد' });
     }

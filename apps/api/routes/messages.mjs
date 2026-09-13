@@ -90,10 +90,20 @@ router.post('/', authenticateToken, (req, res) => {
 
 // GET /api/conversations/:id/messages
 router.get('/:id/messages', authenticateToken, (req, res) => {
-  if (!req.user) return res.json({ success: true, messages: [] });
+  if (!req.user) return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
   try {
     const convId = req.params.id;
-    const { stmtGetDirectMessages } = getStatements();
+    const { stmtGetConversationById, stmtGetDirectMessages } = getStatements();
+    const conv = stmtGetConversationById.get(convId);
+    if (!conv) {
+      return res.status(404).json({ success: false, message: 'المحادثة غير موجودة' });
+    }
+
+    // Verify user is a legitimate participant of this conversation
+    if (conv.user1_id !== req.user.id && conv.user2_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بالوصول إلى هذه المحادثة' });
+    }
+
     const rows = stmtGetDirectMessages.all(convId);
 
     const messages = rows.map((r) => ({
@@ -130,6 +140,12 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
     if (!conv) {
       return res.status(404).json({ success: false, message: 'المحادثة غير موجودة' });
     }
+
+    // Verify user is a legitimate participant of this conversation
+    if (conv.user1_id !== req.user.id && conv.user2_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بإرسال رسائل في هذه المحادثة' });
+    }
+
     const otherUserId = conv.user1_id === req.user.id ? conv.user2_id : conv.user1_id;
 
     const msgId = `msg_${Date.now()}_${Math.floor(Math.random() * 10000)}`;

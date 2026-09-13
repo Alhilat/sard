@@ -17,22 +17,6 @@ export function authenticateToken(req, res, next) {
 
   const stmts = getStatements();
 
-  // Handle direct user ID tokens if matching a real user
-  if (token.startsWith('usr_')) {
-    const userRow = stmts.stmtFindUserById.get(token);
-    if (userRow) {
-      if (bannedUserIds.has(userRow.id) || userRow.is_banned) {
-        return res.status(403).json({
-          success: false,
-          message: 'تم حظر هذا الحساب لمخالفته شروط وسياسات المنصة',
-          is_banned: true,
-        });
-      }
-      req.user = userRow;
-      return next();
-    }
-  }
-
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRow = stmts.stmtFindUserById.get(decoded.id);
