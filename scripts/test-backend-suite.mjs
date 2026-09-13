@@ -279,6 +279,62 @@ async function runTests() {
   const presOffData = await presOffRes.json();
   assert(presOffData.online === false, `User A presence query reflects offline after disconnect`);
 
+  // ──────────────────────────────────────────────────────────
+  // TEST 9: Direct Notification Links & Auto-Clearing on Read
+  // ──────────────────────────────────────────────────────────
+  console.log('\n[Test 9] Testing Notification Direct Links & Auto-Clearing...');
+  // 1. Send message from User A to User B and check notification deep link
+  const notifMsgRes = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenA}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ content: 'مرحبا، هذا اختبار الرابط المباشر للإشعار' })
+  });
+  assert(notifMsgRes.status === 200 || notifMsgRes.status === 201, `Message sent successfully (status: ${notifMsgRes.status})`);
+
+  const notifsListRes = await fetch(`${BASE_URL}/api/notifications`, {
+    headers: { Authorization: `Bearer ${tokenB}` }
+  });
+  const notifsListData = await notifsListRes.json();
+  const msgNotif = notifsListData.notifications?.find(
+    (n) => n.type === 'message' && n.user?.id === userA.id
+  );
+  assert(
+    msgNotif && msgNotif.link === `/app/messages?user=${userA.id}`,
+    `Message notification contains direct link to sender chat: ${msgNotif?.link}`
+  );
+
+  // 2. User B opens/reads the conversation messages -> should auto-clear message notification
+  const readConvRes = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`, {
+    headers: { Authorization: `Bearer ${tokenB}` }
+  });
+  assert(readConvRes.status === 200, `User B opened conversation messages`);
+
+  // Check that message notification is now marked read
+  const updatedNotifsRes = await fetch(`${BASE_URL}/api/notifications`, {
+    headers: { Authorization: `Bearer ${tokenB}` }
+  });
+  const updatedNotifsData = await updatedNotifsRes.json();
+  const updatedMsgNotif = updatedNotifsData.notifications?.find((n) => n.id === msgNotif?.id);
+  assert(
+    updatedMsgNotif && updatedMsgNotif.read === true,
+    `Message notification automatically marked read when conversation was opened`
+  );
+
+  // 3. Test mark-type-read endpoint
+  const markTypeRes = await fetch(`${BASE_URL}/api/notifications/mark-type-read`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${tokenB}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ type: 'message' })
+  });
+  const markTypeData = await markTypeRes.json();
+  assert(markTypeRes.status === 200 && markTypeData.success === true, `mark-type-read endpoint works correctly`);
+
   console.log('\n═══════════════════════════════════════════════════════════');
   console.log(`  Suite Finished: ${passed} Passed, ${failed} Failed`);
   console.log('═══════════════════════════════════════════════════════════\n');

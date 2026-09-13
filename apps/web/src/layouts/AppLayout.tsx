@@ -56,22 +56,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     deviceNotificationService.init();
     websocketService.connect();
 
-    // Fetch unread count on mount or route transition
-    api.get<any>('/notifications/unread-count')
-      .then((data) => {
-        const count = typeof data?.count === 'number' ? data.count : (data?.unreadCount || 0);
-        setUnreadCount(count);
-      })
-      .catch(() => {});
+    const fetchUnreadCount = () => {
+      api.get<any>('/notifications/unread-count')
+        .then((data) => {
+          const count = typeof data?.count === 'number' ? data.count : (data?.unreadCount || 0);
+          setUnreadCount(count);
+        })
+        .catch(() => {});
+    };
+
+    fetchUnreadCount();
 
     // Instant real-time push for new notifications (zero polling overhead)
-    const unsubNotif = websocketService.on('notification:new', () => {
+    const unsubNotif = websocketService.on('notification:new', (payload: any) => {
+      const notifData = payload?.notification || payload;
+      // If user is currently on /app/messages and incoming notification is a message, suppress notification alert
+      if (location.startsWith('/app/messages') && (notifData?.type === 'message' || notifData?.link?.startsWith('/app/messages'))) {
+        return;
+      }
       deviceNotificationService.playNotificationSound();
       setUnreadCount((prev) => prev + 1);
     });
 
+    const handleRefresh = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('notifications:refresh', handleRefresh);
+
     return () => {
       unsubNotif();
+      window.removeEventListener('notifications:refresh', handleRefresh);
     };
   }, [user, location]);
 

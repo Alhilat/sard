@@ -168,7 +168,7 @@ router.post('/:id/follow', authenticateToken, (req, res) => {
       type: 'follow',
       title: 'متابع جديد',
       content: `بدأ ${req.user.name} بمتابعة حسابك في سرد رقمي`,
-      link: '/app/profile',
+      link: `/app/profile/${req.user.id}`,
     });
     scheduleCloudSync();
     return res.json({ success: true, following: true });

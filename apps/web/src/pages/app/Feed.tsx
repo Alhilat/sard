@@ -129,6 +129,7 @@ export default function Feed() {
 
   // Bookmarks
   const [bookmarkedMap, setBookmarkedMap] = useState<Record<string, boolean>>({});
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
 
   // Fetch real suggestions from SQLite
   useEffect(() => {
@@ -167,6 +168,44 @@ export default function Feed() {
     const syncInterval = setInterval(fetchLatestFeed, 3500);
     return () => clearInterval(syncInterval);
   }, []);
+
+  // Deep-linking to a specific post via ?post=postId
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const targetPostId = params.get('post');
+    if (!targetPostId) return;
+
+    // Reset filter and switch to forYou to ensure post is visible
+    setSelectedTagFilter(null);
+    setActiveTab('forYou');
+
+    // Automatically expand comments for this post
+    setExpandedPostId(targetPostId);
+    postsService.getComments(targetPostId).then((fetched) => {
+      setCommentsMap((prev) => ({ ...prev, [targetPostId]: fetched }));
+    });
+
+    // Set highlight
+    setHighlightedPostId(targetPostId);
+
+    // Smoothly scroll to the target post after render
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`post-${targetPostId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 350);
+
+    // Remove highlight after 4.5 seconds
+    const unhighlightTimer = setTimeout(() => {
+      setHighlightedPostId(null);
+    }, 4500);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(unhighlightTimer);
+    };
+  }, [posts.length]);
 
   // When expanding comments for a post
   const handleToggleComments = async (postId: string) => {
@@ -619,7 +658,12 @@ export default function Feed() {
                 return (
                   <Card
                     key={post.id}
-                    className="border-card-border/80 shadow-xs hover:border-primary/40 transition-all bg-card/90 overflow-hidden"
+                    id={`post-${post.id}`}
+                    className={`border-card-border/80 shadow-xs hover:border-primary/40 transition-all bg-card/90 overflow-hidden ${
+                      highlightedPostId === post.id
+                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg shadow-primary/15 border-primary/80 animate-in fade-in duration-300'
+                        : ''
+                    }`}
                   >
                     <CardContent className="p-4 sm:p-5">
                       {/* Post Header */}

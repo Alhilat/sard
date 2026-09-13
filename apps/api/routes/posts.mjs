@@ -208,7 +208,7 @@ router.post('/:id/like', authenticateToken, (req, res) => {
           type: 'like',
           title: 'إعجاب جديد',
           content: `أعجب ${req.user.name} بسردتك: "${snippet}"`,
-          link: '/app/feed',
+          link: `/app/feed?post=${postId}`,
         });
       }
     }
@@ -329,7 +329,7 @@ router.post('/:id/comments', authenticateToken, (req, res) => {
           type: 'comment',
           title: 'رد جديد على تعليقك',
           content: `رد ${author.name} على تعليقك: "${snippet}"`,
-          link: '/app/feed',
+          link: `/app/feed?post=${postId}`,
         });
       }
     }
@@ -343,7 +343,7 @@ router.post('/:id/comments', authenticateToken, (req, res) => {
         type: 'comment',
         title: targetParentId ? 'رد جديد في نقاش سردتك' : 'رد جديد على سردتك',
         content: `علق ${author.name}: "${snippet}"`,
-        link: '/app/feed',
+        link: `/app/feed?post=${postId}`,
       });
     }
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import {
   Bell, Heart, MessageCircle, UserPlus, Calendar, BookOpen, Info,
-  CheckCheck, Smartphone, Volume2, ShieldCheck, Sparkles, Send
+  CheckCheck, Smartphone, Volume2, ShieldCheck, Sparkles, Send, ChevronLeft
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -15,11 +16,14 @@ interface NotificationItem {
   type: string;
   title?: string;
   content: string;
+  link?: string;
   read: boolean;
   time: string;
   user?: {
+    id?: string;
     name: string;
     avatar?: string;
+    username?: string;
   };
 }
 
@@ -33,6 +37,7 @@ const icons: Record<string, any> = {
 };
 
 export default function Notifications() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +108,7 @@ export default function Notifications() {
     setNotifs(notifs.map((n) => ({ ...n, read: true })));
     try {
       await api.patch('/notifications/mark-all-read', {});
+      window.dispatchEvent(new Event('notifications:refresh'));
     } catch {
       // best-effort
     }
@@ -112,9 +118,53 @@ export default function Notifications() {
     setNotifs(notifs.map((n) => (n.id === id ? { ...n, read: true } : n)));
     try {
       await api.patch(`/notifications/${id}/read`, {});
+      window.dispatchEvent(new Event('notifications:refresh'));
     } catch {
       // best-effort
     }
+  };
+
+  const resolveTargetUrl = (notif: NotificationItem): string => {
+    // 1. Direct message notification
+    if (notif.type === 'message' || notif.link?.startsWith('/app/messages')) {
+      if (notif.link && notif.link.includes('user=')) {
+        return notif.link;
+      }
+      if (notif.user?.id) {
+        return `/app/messages?user=${notif.user.id}`;
+      }
+      return '/app/messages';
+    }
+
+    // 2. Follower notification
+    if (notif.type === 'follow' || notif.link?.startsWith('/app/profile')) {
+      if (notif.link && notif.link !== '/app/profile') {
+        return notif.link;
+      }
+      if (notif.user?.id) {
+        return `/app/profile/${notif.user.id}`;
+      }
+      return '/app/profile';
+    }
+
+    // 3. Post interactions (like, comment)
+    if (notif.type === 'like' || notif.type === 'comment' || notif.link?.startsWith('/app/feed')) {
+      if (notif.link && notif.link.includes('post=')) {
+        return notif.link;
+      }
+      return '/app/feed';
+    }
+
+    // 4. Default to explicit link if available, or fallback
+    return notif.link || '/app/feed';
+  };
+
+  const handleNotificationClick = async (notif: NotificationItem) => {
+    if (!notif.read) {
+      markRead(notif.id);
+    }
+    const targetUrl = resolveTargetUrl(notif);
+    navigate(targetUrl);
   };
 
   const filtered = notifs.filter((n) => {
@@ -234,19 +284,19 @@ export default function Notifications() {
             return (
               <div
                 key={notif.id}
-                onClick={() => markRead(notif.id)}
-                className={`flex items-start gap-3.5 p-3.5 rounded-2xl cursor-pointer transition-colors border ${
+                onClick={() => handleNotificationClick(notif)}
+                className={`group flex items-start gap-3.5 p-3.5 rounded-2xl cursor-pointer transition-all border ${
                   !notif.read
-                    ? 'bg-primary/5 border-primary/20 hover:bg-primary/10'
-                    : 'bg-card border-border/60 hover:bg-muted/40'
+                    ? 'bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/40'
+                    : 'bg-card border-border/60 hover:bg-muted/40 hover:border-border'
                 }`}
               >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color} group-hover:scale-105 transition-transform`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs sm:text-sm font-bold text-foreground truncate">
+                    <p className="text-xs sm:text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
                       {notif.title || actorName}
                     </p>
                     <span className="text-[11px] text-muted-foreground shrink-0">{notif.time}</span>
@@ -255,9 +305,12 @@ export default function Notifications() {
                     {notif.content}
                   </p>
                 </div>
-                {!notif.read && (
-                  <span className="w-2 h-2 rounded-full bg-primary shrink-0 self-center" />
-                )}
+                <div className="flex items-center gap-2 self-center shrink-0">
+                  {!notif.read && (
+                    <span className="w-2 h-2 rounded-full bg-primary" />
+                  )}
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:-translate-x-0.5 transition-all" />
+                </div>
               </div>
             );
           })

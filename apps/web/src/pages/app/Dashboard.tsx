@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Calendar, BookOpen, Sparkles, ArrowLeft, Bell, MapPin, Clock, Award, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { coursesService, Course } from '@/services/coursesService';
@@ -13,6 +13,7 @@ import { UserAvatar } from '@/layouts/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [coursesList, setCoursesList] = useState<Course[]>([]);
@@ -231,11 +232,32 @@ export default function Dashboard() {
                 <p className="text-xs text-muted-foreground text-center py-4">لا توجد إشعارات جديدة</p>
               ) : (
                 notificationsList.slice(0, 3).map((notif) => (
-                  <div key={notif.id} className="flex items-start gap-2.5">
+                  <div
+                    key={notif.id}
+                    onClick={() => {
+                      if (!notif.read) {
+                        api.patch(`/notifications/${notif.id}/read`, {})
+                          .then(() => window.dispatchEvent(new Event('notifications:refresh')))
+                          .catch(() => {});
+                      }
+                      let targetUrl = notif.link || '/app/feed';
+                      if (notif.type === 'message' || notif.link?.startsWith('/app/messages')) {
+                        targetUrl = (notif.link && notif.link.includes('user='))
+                          ? notif.link
+                          : (notif.user?.id ? `/app/messages?user=${notif.user.id}` : '/app/messages');
+                      } else if (notif.type === 'follow' || notif.link?.startsWith('/app/profile')) {
+                        targetUrl = (notif.link && notif.link !== '/app/profile')
+                          ? notif.link
+                          : (notif.user?.id ? `/app/profile/${notif.user.id}` : '/app/profile');
+                      }
+                      navigate(targetUrl);
+                    }}
+                    className="flex items-start gap-2.5 p-1.5 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors group"
+                  >
                     <UserAvatar name={notif.user?.name || 'سرد'} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold">{notif.user?.name || 'إشعار'}</p>
-                      <p className="text-xs text-muted-foreground">{notif.content || notif.title}</p>
+                      <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{notif.user?.name || 'إشعار'}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{notif.content || notif.title}</p>
                     </div>
                   </div>
                 ))

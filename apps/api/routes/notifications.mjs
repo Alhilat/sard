@@ -60,6 +60,23 @@ router.patch('/mark-all-read', authenticateToken, (req, res) => {
   }
 });
 
+router.patch('/mark-type-read', authenticateToken, (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false });
+  try {
+    const { type, actorId } = req.body;
+    const { stmtMarkNotificationsReadByType, stmtMarkNotificationsReadByActorAndType } = getStatements();
+    if (actorId && type) {
+      stmtMarkNotificationsReadByActorAndType.run(req.user.id, type, actorId);
+    } else if (type) {
+      stmtMarkNotificationsReadByType.run(req.user.id, type);
+    }
+    scheduleCloudSync();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'تعذر تحديث الإشعارات' });
+  }
+});
+
 router.patch('/:id/read', authenticateToken, (req, res) => {
   if (!req.user) return res.status(401).json({ success: false });
   try {

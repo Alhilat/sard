@@ -17,6 +17,7 @@ import {
   messagesService, ConversationItem, MessageItem, UserSearchResult
 } from '@/services/messagesService';
 import { websocketService } from '@/services/websocketService';
+import { api } from '@/lib/api';
 
 function isSameDay(d1?: number | string, d2?: number | string): boolean {
   if (!d1 || !d2) return false;
@@ -159,6 +160,15 @@ export default function Messages() {
     };
   }, [currentUser?.id]);
 
+  // Clear unread message notifications when entering Messages
+  useEffect(() => {
+    api.patch('/notifications/mark-type-read', { type: 'message' })
+      .then(() => {
+        window.dispatchEvent(new Event('notifications:refresh'));
+      })
+      .catch(() => {});
+  }, []);
+
   // Fetch messages when active conversation changes
   useEffect(() => {
     if (!activeConvId) return;
@@ -172,6 +182,8 @@ export default function Messages() {
           ...prev,
           [activeConvId]: msgs,
         }));
+        // Notify AppLayout to refresh notification count since opening conversation marks notifications read in backend
+        window.dispatchEvent(new Event('notifications:refresh'));
       } catch (err) {
         console.error('Failed to load messages for active conv:', err);
       }

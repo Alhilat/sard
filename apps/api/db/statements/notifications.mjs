@@ -12,6 +12,8 @@ export function createNotificationsStatements(db) {
     stmtInsertNotification: db.prepare('INSERT INTO notifications (id, user_id, actor_id, type, title, content, link, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)'),
     stmtMarkNotificationRead: db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?'),
     stmtMarkAllNotificationsRead: db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?'),
+    stmtMarkNotificationsReadByType: db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND type = ?'),
+    stmtMarkNotificationsReadByActorAndType: db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND type = ? AND actor_id = ?'),
 
     // Device Tokens
     stmtGetDeviceTokensByUser: db.prepare('SELECT * FROM device_tokens WHERE user_id = ? ORDER BY updated_at DESC'),

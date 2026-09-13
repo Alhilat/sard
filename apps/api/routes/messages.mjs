@@ -120,6 +120,15 @@ router.get('/:id/messages', authenticateToken, (req, res) => {
       return res.status(403).json({ success: false, message: 'غير مصرح لك بالوصول إلى هذه المحادثة' });
     }
 
+    const otherUserId = conv.user1_id === req.user.id ? conv.user2_id : conv.user1_id;
+    try {
+      const { stmtMarkNotificationsReadByActorAndType } = getStatements();
+      if (stmtMarkNotificationsReadByActorAndType) {
+        stmtMarkNotificationsReadByActorAndType.run(req.user.id, 'message', otherUserId);
+        scheduleCloudSync();
+      }
+    } catch {}
+
     const rows = stmtGetDirectMessages.all(convId);
 
     const messages = rows.map((r) => ({
@@ -201,7 +210,7 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
       type: 'message',
       title: `رسالة جديدة من ${req.user.name}`,
       content: content.trim().length > 60 ? content.trim().slice(0, 60) + '...' : content.trim(),
-      link: '/app/messages',
+      link: `/app/messages?user=${req.user.id}`,
     });
 
     scheduleCloudSync();
