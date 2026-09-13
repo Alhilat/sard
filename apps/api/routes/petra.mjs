@@ -110,12 +110,15 @@ router.get('/stats', authenticatePetra, (req, res) => {
       stmtCountAllGroups,
     } = getStatements();
 
+    const db = req.app.locals.db;
     const totalUsers = stmtCountAllUsers.get().c;
     const activeUsers = stmtCountActiveUsers.get().c;
     const bannedUsers = stmtCountBannedUsers.get().c;
     const totalPosts = stmtCountAllPosts.get().c;
     const totalComments = stmtCountAllComments.get().c;
     const totalGroups = stmtCountAllGroups.get().c;
+    const totalArticles = db.prepare('SELECT COUNT(*) as c FROM articles').get()?.c || 0;
+    const totalArticleComments = db.prepare('SELECT COUNT(*) as c FROM article_comments').get()?.c || 0;
 
     const mem = process.memoryUsage();
 
@@ -128,6 +131,8 @@ router.get('/stats', authenticatePetra, (req, res) => {
         totalPosts,
         totalComments,
         totalGroups,
+        totalArticles,
+        totalArticleComments,
         totalRequests: metrics.totalRequests,
         uptimeSeconds: Math.floor((Date.now() - metrics.startedAt) / 1000),
         nodeVersion: process.version,
@@ -150,7 +155,8 @@ router.get('/users', authenticatePetra, (req, res) => {
     const users = db.prepare(`
       SELECT u.id, u.name, u.email, u.username, u.role, u.verified, u.is_banned, u.ban_reason, u.join_date, u.created_at,
              (SELECT COUNT(*) FROM posts WHERE author_id = u.id) as posts_count,
-             (SELECT COUNT(*) FROM comments WHERE author_id = u.id) as comments_count
+             (SELECT COUNT(*) FROM comments WHERE author_id = u.id) as comments_count,
+             (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as articles_count
       FROM users u
       ORDER BY u.created_at DESC
     `).all();
@@ -161,6 +167,7 @@ router.get('/users', authenticatePetra, (req, res) => {
         ...u,
         verified: Boolean(u.verified),
         is_banned: Boolean(u.is_banned),
+        articles_count: u.articles_count || 0,
       })),
     });
   } catch (err) {
@@ -444,6 +451,83 @@ router.delete('/groups/:id', authenticatePetra, (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'تعذر حذف المجموعة' });
+  }
+});
+
+// GET /api/petra/articles
+router.get('/articles', authenticatePetra, (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const articles = db.prepare(`
+      SELECT a.*,
+             COALESCE(u.name, 'مستخدم غير معروف') as author_name,
+             COALESCE(u.username, 'unknown') as author_username,
+             COALESCE(u.email, '') as author_email
+      FROM articles a
+      LEFT JOIN users u ON a.author_id = u.id
+      ORDER BY a.created_at DESC
+      LIMIT 200
+    `).all();
+
+    res.json({
+      success: true,
+      articles: articles.map((art) => ({
+        ...art,
+        char_count: art.char_count || (art.content ? art.content.length : 0),
+        word_count: art.word_count || 0,
+        read_time_minutes: art.read_time_minutes || 1,
+        views_count: art.views_count || 0,
+        likes_count: art.likes_count || 0,
+        comments_count: art.comments_count || 0,
+        timestamp_text: new Date(art.created_at).toLocaleDateString('ar-EG', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        }),
+      })),
+    });
+  } catch (err) {
+    console.error('Error in petra get articles:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب المقالات' });
+  }
+});
+
+// DELETE /api/petra/articles/:id
+router.delete('/articles/:id', authenticatePetra, (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const db = req.app.locals.db;
+    const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(articleId);
+
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'المقال غير موجود أو تم حذفه مسبقاً' });
+    }
+
+    const { stmtInsertAuditLog } = getStatements();
+    db.prepare('DELETE FROM article_comments WHERE article_id = ?').run(articleId);
+    db.prepare('DELETE FROM article_likes WHERE article_id = ?').run(articleId);
+    db.prepare('DELETE FROM article_bookmarks WHERE article_id = ?').run(articleId);
+    db.prepare('DELETE FROM articles WHERE id = ?').run(articleId);
+
+    const adminActor = req.petraAdmin || PETRA_USER || 'admin';
+    stmtInsertAuditLog.run(
+      `log_${Date.now()}`,
+      adminActor,
+      'حذف مقال',
+      'article',
+      articleId,
+      `تم حذف المقال: "${article.title}" لكاتبه: ${article.author_id}`,
+      Date.now()
+    );
+
+    scheduleCloudSync();
+    res.json({
+      success: true,
+      message: `تم حذف مقال "${article.title}" وجميع ملحقاته بنجاح`,
+    });
+  } catch (err) {
+    console.error('Delete article error:', err);
+    res.status(500).json({ success: false, message: 'تعذر حذف المقال' });
   }
 });
 

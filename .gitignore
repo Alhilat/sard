@@ -51,6 +51,7 @@ Thumbs.db
 # Environment and local databases
 .env
 .env.local
+*.db
 database/*.sqlite
 database/*.sqlite-shm
 database/*.sqlite-wal

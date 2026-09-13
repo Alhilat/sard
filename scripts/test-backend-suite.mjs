@@ -94,6 +94,20 @@ async function runTests() {
   });
   const petraStatsData = await petraStatsRes.json();
   assert(petraStatsRes.status === 200 && petraStatsData.stats, `Petra stats accessible with real session`);
+  assert(
+    typeof petraStatsData.stats.totalArticles === 'number' && typeof petraStatsData.stats.totalArticleComments === 'number',
+    `Petra stats include totalArticles and totalArticleComments metrics`
+  );
+
+  // Access articles with petra session
+  const petraArticlesRes = await fetch(`${BASE_URL}/api/petra/articles`, {
+    headers: { Authorization: `Bearer ${petraToken}` }
+  });
+  const petraArticlesData = await petraArticlesRes.json();
+  assert(
+    petraArticlesRes.status === 200 && Array.isArray(petraArticlesData.articles),
+    `Petra articles endpoint accessible with real session (${petraArticlesData.articles?.length} articles)`
+  );
 
   // Logout from Petra
   const petraLogoutRes = await fetch(`${BASE_URL}/api/petra/logout`, {
@@ -334,6 +348,156 @@ async function runTests() {
   });
   const markTypeData = await markTypeRes.json();
   assert(markTypeRes.status === 200 && markTypeData.success === true, `mark-type-read endpoint works correctly`);
+
+  // ──────────────────────────────────────────────────────────
+  // TEST 10: Articles System (Public Access, 500-Char Min, Replies & Likes)
+  // ──────────────────────────────────────────────────────────
+  console.log('\n[Test 10] Testing Articles System (Public Access, 500-Char Min, Replies & Likes)...');
+
+  // 1. Unauthenticated public access to list of articles (SEO & Guests)
+  const publicArticlesRes = await fetch(`${BASE_URL}/api/articles`);
+  const publicArticlesData = await publicArticlesRes.json();
+  assert(
+    publicArticlesRes.status === 200 && Array.isArray(publicArticlesData.articles) && publicArticlesData.articles.length > 0,
+    `Unauthenticated guest can fetch articles list without login (${publicArticlesData.articles?.length || 0} articles found)`
+  );
+
+  const sampleArticle = publicArticlesData.articles[0];
+
+  // 2. Unauthenticated public access to single article by slug or ID
+  const publicSingleRes = await fetch(`${BASE_URL}/api/articles/${sampleArticle.slug || sampleArticle.id}`);
+  const publicSingleData = await publicSingleRes.json();
+  assert(
+    publicSingleRes.status === 200 && publicSingleData.article?.id === sampleArticle.id,
+    `Unauthenticated guest can read complete article content without login`
+  );
+
+  // 3. Unauthenticated public access to article comments
+  const publicCommentsRes = await fetch(`${BASE_URL}/api/articles/${sampleArticle.id}/comments`);
+  const publicCommentsData = await publicCommentsRes.json();
+  assert(
+    publicCommentsRes.status === 200 && Array.isArray(publicCommentsData.comments),
+    `Unauthenticated guest can view discussion thread and comments on article`
+  );
+
+  // 4. Unauthenticated attempt to like must fail with 401
+  const guestLikeRes = await fetch(`${BASE_URL}/api/articles/${sampleArticle.id}/like`, { method: 'POST' });
+  assert(guestLikeRes.status === 401, `Unauthenticated guest cannot like article (blocked with 401, got ${guestLikeRes.status})`);
+
+  // 5. Unauthenticated attempt to comment must fail with 401
+  const guestCommentRes = await fetch(`${BASE_URL}/api/articles/${sampleArticle.id}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: 'تعليق زائر غير مسجل' })
+  });
+  assert(guestCommentRes.status === 401, `Unauthenticated guest cannot comment on article (blocked with 401, got ${guestCommentRes.status})`);
+
+  // 6. Strict validation: Publishing article with < 500 characters must fail with 400
+  const shortArticleText = 'هذا نص تجريبي قصير جداً ولا يبلغ الحد الأدنى المطلوب للمقال في المنصة.';
+  const shortArticleRes = await fetch(`${BASE_URL}/api/articles`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenA}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title: 'مقال قصير مرفوض لا يتجاوز الحد الأدنى',
+      content: shortArticleText,
+      category: 'تقنية'
+    })
+  });
+  const shortArticleData = await shortArticleRes.json();
+  assert(
+    shortArticleRes.status === 400 && shortArticleData.message.includes('500'),
+    `Article creation rejected when content is under 500 characters (${shortArticleText.length} chars, got 400)`
+  );
+
+  // 7. Publishing article with >= 500 characters succeeds with 201
+  const validArticleText = `
+    عند بناء واجهات برمجة التطبيقات (APIs) لتطبيقات الويب الحديثة، نواجه تحديات حقيقية تتعلق بزمن الاستجابة وإدارة اتصالات قواعد البيانات المتزامنة. في هذا الدليل العملي، نستعرض الاستراتيجيات المعمارية التي اعتمدناها لتقليل زمن معالجة الطلبات إلى أقل من 20 ميلي ثانية.
+
+    أولاً، تفعيل نمط WAL (Write-Ahead Logging) في SQLite سمح لنا بإجراء عمليات القراءة بالتوازي دون إغلاق قاعدة البيانات، مما رفع قدرة الخادم على استقبال الطلبات المتزامنة بنسبة 300%. ثانياً، استخدام الاستعلامات المجهزة مسبقاً (Prepared Statements) خفض استهلاك المعالج وتكلفة تفسير استعلامات SQL في كل طلب. هذه التحسينات أحدثت فرقاً ملموساً في تجربة المستخدم وسرعة استجابة المنصة واستقرارها تحت الضغط العالي.
+  `.trim();
+
+  const validArticleRes = await fetch(`${BASE_URL}/api/articles`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenA}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title: 'تجربة عملية في بناء واجهات برمجة التطبيقات عالية الأداء',
+      content: validArticleText,
+      category: 'برمجة وتطوير',
+      tags: ['برمجة', 'أداء', 'واجهات-برمجية', 'قواعد-بيانات']
+    })
+  });
+  const validArticleData = await validArticleRes.json();
+  assert(
+    validArticleRes.status === 201 && validArticleData.success === true && validArticleData.article?.id,
+    `Article with >= 500 characters created successfully (Length: ${validArticleText.length} chars, status 201)`
+  );
+  const createdArticleId = validArticleData.article?.id;
+
+  // 8. Authenticated user like & bookmark toggle
+  const authLikeRes = await fetch(`${BASE_URL}/api/articles/${createdArticleId}/like`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${tokenB}` }
+  });
+  const authLikeData = await authLikeRes.json();
+  assert(authLikeRes.status === 200 && authLikeData.isLiked === true, `Authenticated user B can like article`);
+
+  const authBookmarkRes = await fetch(`${BASE_URL}/api/articles/${createdArticleId}/bookmark`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${tokenB}` }
+  });
+  const authBookmarkData = await authBookmarkRes.json();
+  assert(authBookmarkRes.status === 200 && authBookmarkData.isBookmarked === true, `Authenticated user B can bookmark article`);
+
+  // 9. Authenticated comments and threaded replies
+  const addCommentRes = await fetch(`${BASE_URL}/api/articles/${createdArticleId}/comments`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenB}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ content: 'مقال متميز ورؤية عملية واضحة في تحسين الأداء.' })
+  });
+  const addCommentData = await addCommentRes.json();
+  assert(
+    addCommentRes.status === 201 && addCommentData.comment?.id,
+    `Authenticated user B can comment on article`
+  );
+  const rootCommentId = addCommentData.comment?.id;
+
+  // Threaded reply to root comment
+  const addReplyRes = await fetch(`${BASE_URL}/api/articles/${createdArticleId}/comments`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenA}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      content: 'شكراً لك، سننشر لاحقاً تفاصيل مقاييس الأداء بعد التحديث الأخير.',
+      parentId: rootCommentId
+    })
+  });
+  const addReplyData = await addReplyRes.json();
+  assert(
+    addReplyRes.status === 201 && addReplyData.comment?.parentId === rootCommentId,
+    `Threaded reply linked correctly to parent comment ID in article discussion`
+  );
+
+  // 10. Clean up test article via DELETE endpoint
+  const deleteRes = await fetch(`${BASE_URL}/api/articles/${createdArticleId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${tokenA}` }
+  });
+  const deleteData = await deleteRes.json();
+  assert(
+    deleteRes.status === 200 && deleteData.success === true,
+    `Author can delete test article cleanly (status 200)`
+  );
 
   console.log('\n═══════════════════════════════════════════════════════════');
   console.log(`  Suite Finished: ${passed} Passed, ${failed} Failed`);

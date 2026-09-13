@@ -43,7 +43,11 @@ export const SYNC_TABLES = [
   'direct_messages',
   'course_chat_settings',
   'course_chat_messages',
-  'petra_audit_logs'
+  'petra_audit_logs',
+  'articles',
+  'article_comments',
+  'article_likes',
+  'article_bookmarks'
 ];
 
 // Supabase PostgreSQL DDL for tables if they don't already exist

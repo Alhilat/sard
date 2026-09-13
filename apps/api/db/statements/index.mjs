@@ -9,6 +9,7 @@ import { createMessagesStatements } from './messages.mjs';
 import { createOrgStatements } from './org.mjs';
 import { createReportsStatements } from './reports.mjs';
 import { createPetraStatements } from './petra.mjs';
+import { createArticlesStatements } from './articles.mjs';
 
 let statementsInstance = null;
 
@@ -27,6 +28,7 @@ export function initStatements(db) {
     ...createOrgStatements(db),
     ...createReportsStatements(db),
     ...createPetraStatements(db),
+    ...createArticlesStatements(db),
   };
 
   return statementsInstance;

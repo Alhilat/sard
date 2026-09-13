@@ -19,6 +19,8 @@ import AppMessages from '@/pages/app/Messages';
 import AppNotifications from '@/pages/app/Notifications';
 import AppSettings from '@/pages/app/Settings';
 import AppSearch from '@/pages/app/Search';
+import AppArticles from '@/pages/app/Articles';
+import ArticleDetail from '@/pages/app/ArticleDetail';
 
 import OrgLayout from '@/layouts/OrgLayout';
 import OrgDashboard from '@/pages/org/Dashboard';
@@ -110,6 +112,12 @@ function Router() {
       <Route path="/landing" component={Landing} />
       <Route path="/auth/login" component={Login} />
       <Route path="/auth/register" component={Register} />
+
+      {/* Publicly Accessible Long-form Articles (SEO & Guest Readers - No Login Required) */}
+      <Route path="/articles" component={() => <AppLayout><AppArticles /></AppLayout>} />
+      <Route path="/app/articles" component={() => <AppLayout><AppArticles /></AppLayout>} />
+      <Route path="/articles/:slug" component={(props: any) => <ArticleDetail slug={props.params?.slug} />} />
+      <Route path="/app/articles/:slug" component={(props: any) => <ArticleDetail slug={props.params?.slug} />} />
 
       {/* Individual User Routes (Protected - Login Required) */}
       <Route path="/app" component={() => <ProtectedRoute><AppLayout><AppDashboard /></AppLayout></ProtectedRoute>} />

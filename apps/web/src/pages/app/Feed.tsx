@@ -1,96 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Image as ImageIcon,
-  Smile, Send, Sparkles, CheckCircle2, TrendingUp, Users, Hash,
-  BarChart2, X, Globe, Pin, CornerDownLeft, Repeat2, Flame, Award
-} from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { postsService, Post, Comment } from '@/services/postsService';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import ShareModal from '@/components/share/ShareModal';
 import { tokenStorage, api } from '@/lib/api';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { Flag, Trash2, Copy } from 'lucide-react';
 import UserProfileModal, { UserProfileData } from '@/components/profile/UserProfileModal';
-import { formatArabicRelativeTime } from '@/lib/utils';
 
-const MAX_CHARS = 280;
-
-const TRENDS = [
-  { id: 't1', tag: 'سرد_رقمي', category: 'المجتمع والتقنية' },
-  { id: 't2', tag: 'الذكاء_الاصطناعي', category: 'تقنيات المستقبل' },
-  { id: 't3', tag: 'تطوير_البرمجيات', category: 'علوم الحاسب والبرمجة' },
-  { id: 't4', tag: 'رؤية_السعودية', category: 'اقتصاد ومبادرات' },
-  { id: 't5', tag: 'عمل_تطوعي', category: 'مبادرات مجتمعية' },
-];
-
-interface SuggestedUser {
-  id: string;
-  name: string;
-  username: string;
-  avatar?: string;
-  verified?: boolean;
-  role?: string;
-  isFollowing?: boolean;
-}
-
-interface ThreadedComment extends Comment {
-  replies?: ThreadedComment[];
-}
-
-function buildCommentTree(comments: Comment[]): ThreadedComment[] {
-  const commentMap = new Map<string, ThreadedComment>();
-  const rootComments: ThreadedComment[] = [];
-
-  // Pass 1: Clone with empty replies
-  comments.forEach((c) => {
-    commentMap.set(c.id, { ...c, replies: [] });
-  });
-
-  // Pass 2: Connect children to parent or add to roots
-  comments.forEach((c) => {
-    const item = commentMap.get(c.id)!;
-    if (c.parentId && commentMap.has(c.parentId)) {
-      commentMap.get(c.parentId)!.replies!.push(item);
-    } else {
-      rootComments.push(item);
-    }
-  });
-
-  return rootComments;
-}
+// Modular Feed Components
+import { TRENDS, SuggestedUser } from '@/components/feed/types';
+import FeedBanner from '@/components/feed/FeedBanner';
+import FeedComposer from '@/components/feed/FeedComposer';
+import FeedTabs from '@/components/feed/FeedTabs';
+import PostCard from '@/components/feed/PostCard';
+import FeedSidebar from '@/components/feed/FeedSidebar';
 
 export default function Feed() {
   const { toast } = useToast();
   const { user } = useAuth();
   const currentAuthorName = user?.name || 'مستخدم سرد';
+
+  // Feed & Tab states
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState<'forYou' | 'following' | 'trending'>('forYou');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
 
-  // Tweet composer state
-  const [content, setContent] = useState('');
-  const [isPosting, setIsPosting] = useState(false);
-  const [showPoll, setShowPoll] = useState(false);
-  const [pollOption1, setPollOption1] = useState('');
-  const [pollOption2, setPollOption2] = useState('');
-
-  // Repost modal
+  // Modals state
   const [activeSharePost, setActiveSharePost] = useState<Post | null>(null);
-
-  // User profile modal
   const [profileModalUser, setProfileModalUser] = useState<{
     id?: string;
     username?: string;
     initialUser?: Partial<UserProfileData>;
   } | null>(null);
+
+  // Active replies drawer & comments map
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>({});
+
+  // Followed & suggested users state
+  const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
+  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
+
+  // Bookmarks & Highlighting
+  const [bookmarkedMap, setBookmarkedMap] = useState<Record<string, boolean>>({});
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
 
   const handleOpenUserProfile = (target: {
     id?: string;
@@ -113,23 +67,6 @@ export default function Feed() {
       },
     });
   };
-
-  // Active replies drawer
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
-  const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>({});
-  const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
-  const [replyingToCommentMap, setReplyingToCommentMap] = useState<
-    Record<string, { id: string; authorName: string; username: string } | null>
-  >({});
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
-
-  // Real Followed users and dynamic suggestions state
-  const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
-  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
-
-  // Bookmarks
-  const [bookmarkedMap, setBookmarkedMap] = useState<Record<string, boolean>>({});
-  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
 
   // Fetch real suggestions from SQLite
   useEffect(() => {
@@ -154,7 +91,7 @@ export default function Feed() {
       .catch(() => {});
   }, []);
 
-  // Load and continuously sync posts across all connected devices in real time
+  // Load and continuously sync posts across devices
   useEffect(() => {
     const fetchLatestFeed = () => {
       postsService.getFeed().then((data) => {
@@ -175,20 +112,16 @@ export default function Feed() {
     const targetPostId = params.get('post');
     if (!targetPostId) return;
 
-    // Reset filter and switch to forYou to ensure post is visible
     setSelectedTagFilter(null);
     setActiveTab('forYou');
-
-    // Automatically expand comments for this post
     setExpandedPostId(targetPostId);
+
     postsService.getComments(targetPostId).then((fetched) => {
       setCommentsMap((prev) => ({ ...prev, [targetPostId]: fetched }));
     });
 
-    // Set highlight
     setHighlightedPostId(targetPostId);
 
-    // Smoothly scroll to the target post after render
     const timer = setTimeout(() => {
       const el = document.getElementById(`post-${targetPostId}`);
       if (el) {
@@ -196,7 +129,6 @@ export default function Feed() {
       }
     }, 350);
 
-    // Remove highlight after 4.5 seconds
     const unhighlightTimer = setTimeout(() => {
       setHighlightedPostId(null);
     }, 4500);
@@ -207,7 +139,7 @@ export default function Feed() {
     };
   }, [posts.length]);
 
-  // When expanding comments for a post
+  // Comments toggle
   const handleToggleComments = async (postId: string) => {
     if (expandedPostId === postId) {
       setExpandedPostId(null);
@@ -219,49 +151,30 @@ export default function Feed() {
     setCommentsMap((prev) => ({ ...prev, [postId]: fetched }));
   };
 
-  // Submit new tweet / sard
-  const handlePublishSard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = content.trim();
-    if (!trimmed) return;
-
-    setIsPosting(true);
+  // Publish new sard
+  const handlePublishSard = async (content: string): Promise<boolean> => {
     try {
-      const newPost = await postsService.createPost({
-        content: trimmed,
-      });
-
+      const newPost = await postsService.createPost({ content });
       setPosts((prev) => [newPost, ...prev]);
-      setContent('');
-      setShowPoll(false);
-      setPollOption1('');
-      setPollOption2('');
-
       toast({
         title: 'تم نشر السردة في المجتمع العام! 🚀',
         description: 'سردتك متاحة الآن في ساحة النقاش للجميع.',
       });
+      return true;
     } catch {
       toast({
         variant: 'destructive',
         title: 'خطأ',
         description: 'تعذر نشر السردة، يرجى المحاولة ثانية.',
       });
-    } finally {
-      setIsPosting(false);
+      return false;
     }
   };
 
-  // Submit a reply to a post or comment
-  const handleSendReply = async (postId: string, parentCommentId?: string) => {
-    const text = (replyInputMap[postId] || '').trim();
-    if (!text) return;
-
-    const targetParentId = parentCommentId || replyingToCommentMap[postId]?.id;
-
-    setIsSubmittingReply(true);
+  // Submit reply to a post or comment
+  const handleSendReply = async (postId: string, text: string, parentCommentId?: string) => {
     try {
-      const comment = await postsService.addComment(postId, text, targetParentId);
+      const comment = await postsService.addComment(postId, text, parentCommentId);
       setCommentsMap((prev) => ({
         ...prev,
         [postId]: [...(prev[postId] || []), comment],
@@ -269,11 +182,8 @@ export default function Feed() {
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, comments: p.comments + 1 } : p))
       );
-      setReplyInputMap((prev) => ({ ...prev, [postId]: '' }));
-      setReplyingToCommentMap((prev) => ({ ...prev, [postId]: null }));
-
       toast({
-        title: targetParentId ? 'تم إرسال الرد على التعليق بنجاح' : 'تم إرسال الرد بنجاح',
+        title: parentCommentId ? 'تم إرسال الرد على التعليق بنجاح' : 'تم إرسال الرد بنجاح',
         description: 'ردك مضاف الآن إلى سلسلة الحوار.',
       });
     } catch {
@@ -282,14 +192,11 @@ export default function Feed() {
         title: 'خطأ',
         description: 'تعذر إرسال الرد.',
       });
-    } finally {
-      setIsSubmittingReply(false);
     }
   };
 
-  // Toggle Like on post
+  // Toggle Like with optimistic update
   const handleToggleLike = async (postId: string) => {
-    // Optimistic toggle
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
@@ -326,7 +233,7 @@ export default function Feed() {
     });
   };
 
-  // Toggle Follow (persisted in SQLite)
+  // Toggle Follow
   const handleToggleFollow = async (userId: string, name: string) => {
     try {
       const token = tokenStorage.get() || localStorage.getItem('sard_token') || '';
@@ -350,6 +257,7 @@ export default function Feed() {
     }
   };
 
+  // Report post
   const handleReportPost = async (postId: string) => {
     try {
       await api.post('/reports', {
@@ -370,6 +278,7 @@ export default function Feed() {
     }
   };
 
+  // Delete post
   const handleDeletePost = async (postId: string) => {
     if (!confirm('هل أنت متأكد من رغبتك في حذف هذا المنشور؟')) return;
     const res = await postsService.deletePost(postId);
@@ -388,11 +297,7 @@ export default function Feed() {
     }
   };
 
-  // Character calculation
-  const charsLeft = MAX_CHARS - content.length;
-  const charPercent = Math.min(100, (content.length / MAX_CHARS) * 100);
-
-  // Filter posts
+  // Filter posts based on active tab and selected tag
   let displayPosts = posts;
   if (selectedTagFilter) {
     displayPosts = displayPosts.filter((p) => p.tags && p.tags.includes(selectedTagFilter));
@@ -404,242 +309,27 @@ export default function Feed() {
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 pb-24 lg:pb-6 w-full min-w-0 overflow-x-hidden" dir="rtl">
-      {/* Top Banner: Introducing Sard */}
-      <div className="bg-gradient-to-r from-[#6B1B1B] via-[#8C2424] to-[#3B0E0E] text-white p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-15"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 1.5px, transparent 1.5px)',
-            backgroundSize: '20px 20px',
-          }}
-        />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Badge className="bg-white/20 text-white border-0 text-xs font-bold gap-1 px-2.5">
-                <Sparkles className="w-3 h-3 text-amber-300" />
-                المجتمع العام المفتوح
-              </Badge>
-              <span className="text-xs text-white/80">· شبكة السرد الرقمي الكبرى</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black font-display tracking-tight">
-              ساحة «سرد»
-            </h1>
-            <p className="text-xs sm:text-sm text-white/90 max-w-2xl leading-relaxed">
-              الفضاء العام لجميع رواد المنصة: اسرد أفكارك، شارك في النقاشات الحية، تابع أبرز المؤثرين والمواضيع الرائجة لحظة بلحظة.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 self-start sm:self-center bg-black/25 backdrop-blur-xs p-3 rounded-xl border border-white/15 text-xs">
-            <Flame className="w-5 h-5 text-amber-400" />
-            <div>
-              <p className="font-bold text-white">النقاشات الحية</p>
-              <p className="text-[11px] text-white/70">مفتوحة للجميع دون قيود</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Top Banner */}
+      <FeedBanner />
 
       <div className="grid lg:grid-cols-3 gap-6 w-full min-w-0">
-        {/* Main Feed Column (Twitter Style) */}
+        {/* Main Feed Column */}
         <div className="lg:col-span-2 space-y-4 w-full min-w-0">
-          {/* Twitter Composer (صندوق السرد) */}
-          <Card className="border-card-border shadow-xs bg-card w-full min-w-0 overflow-hidden">
-            <CardContent className="p-3.5 sm:p-5 w-full min-w-0">
-              <form onSubmit={handlePublishSard} className="space-y-3 w-full min-w-0">
-                <div className="flex items-start gap-2.5 sm:gap-3 w-full min-w-0">
-                  {/* Current user monogram avatar */}
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
-                    {currentAuthorName.slice(0, 1) || 'س'}
-                  </div>
+          {/* Twitter Composer */}
+          <FeedComposer
+            currentAuthorName={currentAuthorName}
+            onPublishPost={handlePublishSard}
+          />
 
-                  <div className="flex-1 min-w-0">
-                    <Textarea
-                      placeholder="ماذا يدور في ذهنك؟ اسرد فكرتك للعالم..."
-                      value={content}
-                      onChange={(e) => {
-                        if (e.target.value.length <= MAX_CHARS) {
-                          setContent(e.target.value);
-                        }
-                      }}
-                      className="resize-none border-0 bg-transparent text-sm sm:text-base focus-visible:ring-0 min-h-[90px] p-0 placeholder:text-muted-foreground/70 leading-relaxed w-full"
-                    />
+          {/* Navigation Tabs & Filter */}
+          <FeedTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            selectedTagFilter={selectedTagFilter}
+            onClearTagFilter={() => setSelectedTagFilter(null)}
+          />
 
-                    {/* Quick hashtag suggestions */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none w-full max-w-full">
-                      <span className="text-muted-foreground shrink-0 font-medium">وسوم مقترحة:</span>
-                      {['#سرد_رقمي', '#الذكاء_الاصطناعي', '#ريادة_الأعمال', '#تطوير_البرمجيات'].map((tag) => (
-                        <button
-                          type="button"
-                          key={tag}
-                          onClick={() => setContent((prev) => (prev ? `${prev} ${tag}` : tag))}
-                          className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground whitespace-nowrap shrink-0 cursor-pointer"
-                        >
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Poll Simulator */}
-                    {showPoll && (
-                      <div className="mt-2.5 p-3 rounded-xl bg-muted/40 border border-border/80 space-y-2 animate-in fade-in-50 duration-150 w-full min-w-0">
-                        <div className="flex items-center justify-between text-xs font-bold text-foreground">
-                          <span className="flex items-center gap-1.5">
-                            <BarChart2 className="w-3.5 h-3.5 text-primary" />
-                            استطلاع رأي
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setShowPoll(false)}
-                            className="text-muted-foreground hover:text-destructive cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <Input
-                          placeholder="الخيار الأول (مثال: نعم)"
-                          value={pollOption1}
-                          onChange={(e) => setPollOption1(e.target.value)}
-                          className="h-8 text-xs bg-background"
-                        />
-                        <Input
-                          placeholder="الخيار الثاني (مثال: لا)"
-                          value={pollOption2}
-                          onChange={(e) => setPollOption2(e.target.value)}
-                          className="h-8 text-xs bg-background"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Composer Toolbar & Action Row */}
-                <div className="flex items-center justify-between gap-1.5 pt-3 border-t border-border/60 w-full min-w-0">
-                  <div className="flex items-center gap-1 text-primary shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowPoll(!showPoll)}
-                      title="إضافة استطلاع رأي"
-                      className="p-1.5 sm:p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
-                    >
-                      <BarChart2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContent((prev) => `${prev} ✨`)}
-                      title="إضافة رموز تعبيرية"
-                      className="p-1.5 sm:p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
-                    >
-                      <Smile className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-                    {/* Character Countdown Progress Ring */}
-                    {content.length > 0 && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span
-                          className={`text-[11px] sm:text-xs font-bold ${
-                            charsLeft < 20 ? 'text-destructive' : 'text-muted-foreground'
-                          }`}
-                        >
-                          {charsLeft}
-                        </span>
-                        <div className="w-4 h-4 rounded-full border-2 border-border relative flex items-center justify-center">
-                          <div
-                            className={`w-2 h-2 rounded-full ${
-                              charPercent > 90
-                                ? 'bg-destructive'
-                                : charPercent > 70
-                                ? 'bg-amber-500'
-                                : 'bg-primary'
-                            }`}
-                            style={{ opacity: charPercent / 100 }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      type="submit"
-                      disabled={isPosting || !content.trim()}
-                      title={isPosting ? 'جاري السرد...' : 'اسرد الآن'}
-                      aria-label="اسرد الآن"
-                      className="w-9 h-9 p-0 rounded-xl font-bold shrink-0 shadow-xs flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                    >
-                      <Send className={`w-4 h-4 rtl:rotate-180 shrink-0 ${isPosting ? 'animate-pulse' : ''}`} />
-                    </Button>
-                  </div>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Active Tag Filter Indicator */}
-          {selectedTagFilter && (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs w-full min-w-0">
-              <span className="flex items-center gap-1.5 font-bold text-primary truncate">
-                <Hash className="w-4 h-4 shrink-0" />
-                تصفية حسب الوسم: #{selectedTagFilter}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedTagFilter(null)}
-                className="text-xs text-muted-foreground hover:text-foreground font-semibold flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <X className="w-3.5 h-3.5" />
-                عرض جميع السردات
-              </button>
-            </div>
-          )}
-
-          {/* Twitter Style Sticky Navigation Tabs */}
-          <div className="grid grid-cols-3 border-b border-border/80 bg-card/60 backdrop-blur-xs rounded-xl overflow-hidden p-1 gap-1 w-full min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('forYou');
-                setSelectedTagFilter(null);
-              }}
-              className={`py-2 px-1 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer text-center truncate ${
-                activeTab === 'forYou' && !selectedTagFilter
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <span>لك<span className="hidden sm:inline"> (المقترحة)</span></span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('following');
-                setSelectedTagFilter(null);
-              }}
-              className={`py-2 px-1 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer text-center truncate ${
-                activeTab === 'following' && !selectedTagFilter
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <span>المتابعون</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('trending');
-                setSelectedTagFilter(null);
-              }}
-              className={`py-2 px-1 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer text-center truncate ${
-                activeTab === 'trending' && !selectedTagFilter
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <span>الرائجة<span className="hidden sm:inline"> والأكثر تفاعلاً</span></span>
-            </button>
-          </div>
-
-          {/* Posts Feed (Twitter Cards) */}
+          {/* Posts Feed */}
           <div className="space-y-3.5">
             {displayPosts.length === 0 ? (
               <Card className="border-card-border text-center py-16 text-muted-foreground p-6 space-y-3 bg-card">
@@ -650,556 +340,41 @@ export default function Feed() {
                 </p>
               </Card>
             ) : (
-              displayPosts.map((post) => {
-                const isBookmarked = bookmarkedMap[post.id];
-                const isCommentsOpen = expandedPostId === post.id;
-                const postComments = commentsMap[post.id] || [];
-
-                return (
-                  <Card
-                    key={post.id}
-                    id={`post-${post.id}`}
-                    className={`border-card-border/80 shadow-xs hover:border-primary/40 transition-all bg-card/90 overflow-hidden ${
-                      highlightedPostId === post.id
-                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg shadow-primary/15 border-primary/80 animate-in fade-in duration-300'
-                        : ''
-                    }`}
-                  >
-                    <CardContent className="p-4 sm:p-5">
-                      {/* Post Header */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenUserProfile(post.author)}
-                            className="w-10 h-10 rounded-xl bg-primary/15 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shrink-0 hover:scale-105 hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer shadow-2xs"
-                            title={`عرض الملف الشخصي لـ ${post.author.name}`}
-                          >
-                            {post.author.name.slice(0, 1)}
-                          </button>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenUserProfile(post.author)}
-                                className="font-bold text-sm text-foreground hover:text-primary transition-colors cursor-pointer text-start"
-                              >
-                                {post.author.name}
-                              </button>
-                              {post.author.verified && (
-                                <Badge className="h-4 px-1 text-[10px] bg-sky-500 hover:bg-sky-600 text-white border-0 gap-0.5">
-                                  <CheckCircle2 className="w-2.5 h-2.5" />
-                                  <span>موثق</span>
-                                </Badge>
-                              )}
-                              {post.author.role && (
-                                <span className="text-[11px] text-muted-foreground font-medium">
-                                  · {post.author.role}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>@{post.author.username}</span>
-                              <span>•</span>
-                              <span>{formatArabicRelativeTime(post.createdAt || post.timestamp, post.timestamp)}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-xs"
-                              onClick={() => {
-                                navigator.clipboard?.writeText(window.location.origin + '/app/feed');
-                                toast({ title: 'تم نسخ الرابط! 📋', description: 'تم نسخ رابط المنشور إلى الحافظة.' });
-                              }}
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                              نسخ رابط المنشور
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-xs text-amber-600 dark:text-amber-400"
-                              onClick={() => handleReportPost(post.id)}
-                            >
-                              <Flag className="w-3.5 h-3.5" />
-                              إبلاغ عن محتوى
-                            </DropdownMenuItem>
-                            {(user?.id === post.author?.id || user?.role === 'admin' || user?.role === 'org') && (
-                              <DropdownMenuItem
-                                className="gap-2 cursor-pointer text-xs text-destructive"
-                                onClick={() => handleDeletePost(post.id)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                حذف المنشور
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* Content with hashtag highlighting */}
-                      <p className="text-sm sm:text-base text-foreground/90 leading-relaxed mb-3.5 whitespace-pre-wrap font-normal">
-                        {post.content.split(' ').map((word, i) => {
-                          if (word.startsWith('#')) {
-                            const rawTag = word.replace('#', '');
-                            return (
-                              <button
-                                type="button"
-                                key={i}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTagFilter(rawTag);
-                                }}
-                                className="text-primary font-bold hover:underline cursor-pointer inline mx-0.5"
-                              >
-                                {word}{' '}
-                              </button>
-                            );
-                          }
-                          return word + ' ';
-                        })}
-                      </p>
-
-                      {/* Action Bar */}
-                      <div className="flex items-center justify-between pt-3 border-t border-border/60 text-muted-foreground w-full gap-2">
-                        <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
-                          {/* Reply Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleComments(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer py-1 px-1.5 rounded-lg hover:bg-muted ${
-                              isCommentsOpen ? 'text-primary bg-primary/10' : 'hover:text-primary'
-                            }`}
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            <span>{post.comments > 0 ? `${post.comments} ردود` : 'رد'}</span>
-                          </button>
-
-                          {/* Like Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleLike(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer py-1 px-1.5 rounded-lg hover:bg-muted ${
-                              post.isLiked
-                                ? 'text-red-600 bg-red-500/10'
-                                : 'hover:text-red-500'
-                            }`}
-                          >
-                            <Heart
-                              className={`w-4 h-4 transition-transform ${
-                                post.isLiked ? 'fill-current text-red-600 scale-110' : ''
-                              }`}
-                            />
-                            <span>{post.likes > 0 ? `${post.likes} إعجاب` : 'إعجاب'}</span>
-                          </button>
-
-                          {/* Share Button (Prominent with Share2 icon) */}
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (navigator.share) {
-                                try {
-                                  await navigator.share({
-                                    title: `سرد من ${post.author.name}`,
-                                    text: post.content.length > 80 ? post.content.slice(0, 80) + '...' : post.content,
-                                    url: `${window.location.origin}/app/feed?post=${post.id}`,
-                                  });
-                                  return;
-                                } catch {}
-                              }
-                              setActiveSharePost(post);
-                            }}
-                            className="flex items-center gap-1.5 text-xs font-bold text-foreground/80 hover:text-primary transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-primary/10"
-                            title="مشاركة المنشور"
-                          >
-                            <Share2 className="w-4 h-4 text-emerald-600" />
-                            <span>{post.shares > 0 ? `${post.shares} مشاركة` : 'مشاركة'}</span>
-                          </button>
-                        </div>
-
-                        {/* Bookmark Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleBookmark(post.id)}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
-                            isBookmarked ? 'text-primary bg-primary/10' : 'hover:bg-muted hover:text-foreground'
-                          }`}
-                          title={isBookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-                        >
-                          <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current text-primary' : ''}`} />
-                        </button>
-                      </div>
-
-                      {/* Interactive Thread Replies (Modern Twitter/Threads Conversation Style) */}
-                      {isCommentsOpen && (
-                        <div className="mt-4 pt-4 border-t border-border/70 space-y-4 animate-in fade-in-50 duration-200">
-                          {/* Replies Header */}
-                          <div className="flex items-center justify-between text-xs font-bold text-foreground px-1">
-                            <span className="flex items-center gap-2">
-                              <MessageCircle className="w-4 h-4 text-primary" />
-                              <span>الردود والمناقشات</span>
-                              <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                                {postComments.length}
-                              </span>
-                            </span>
-                            {postComments.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleComments(post.id)}
-                                className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                              >
-                                إخفاء
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Sleek Reply Composer (Rounded Floating Pill Style) */}
-                          <div className="rounded-2xl bg-muted/40 border border-border/70 p-2.5 sm:p-3 space-y-2 transition-all focus-within:border-primary/50 focus-within:bg-card focus-within:shadow-xs">
-                            {/* Active Replying Target Chip (No Edit Confusion) */}
-                            {replyingToCommentMap[post.id] && (
-                              <div className="flex items-center justify-between px-3 py-1 rounded-full bg-primary/15 border border-primary/25 text-xs text-primary w-fit max-w-full animate-in fade-in-50 duration-150">
-                                <span className="flex items-center gap-1.5 truncate text-[11px] font-medium">
-                                  <CornerDownLeft className="w-3 h-3 text-primary shrink-0" />
-                                  <span>الرد على <b>{replyingToCommentMap[post.id]?.authorName}</b> (@{replyingToCommentMap[post.id]?.username})</span>
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setReplyingToCommentMap((prev) => ({ ...prev, [post.id]: null }))}
-                                  className="ms-2 text-primary/80 hover:text-destructive p-0.5 rounded-full hover:bg-primary/20 cursor-pointer transition-colors"
-                                  title="إلغاء توجيه الرد"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Input Form with User Avatar */}
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-primary/15 text-primary border border-primary/25 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                                {user?.name ? user.name.slice(0, 1) : 'س'}
-                              </div>
-                              <div className="flex-1 relative min-w-0">
-                                <Input
-                                  placeholder={
-                                    replyingToCommentMap[post.id]
-                                      ? `اكتب ردك على @${replyingToCommentMap[post.id]?.username}...`
-                                      : `أضف رداً على ${post.author.name}...`
-                                  }
-                                  value={replyInputMap[post.id] || ''}
-                                  onChange={(e) =>
-                                    setReplyInputMap((prev) => ({ ...prev, [post.id]: e.target.value }))
-                                  }
-                                  className="text-xs sm:text-sm h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 px-1 placeholder:text-muted-foreground/70"
-                                  disabled={isSubmittingReply}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      handleSendReply(post.id);
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                disabled={isSubmittingReply || !(replyInputMap[post.id] || '').trim()}
-                                onClick={() => handleSendReply(post.id)}
-                                className="h-8 px-3.5 text-xs font-bold shrink-0 gap-1.5 rounded-xl shadow-xs transition-all"
-                              >
-                                <span>رد</span>
-                                <Send className="w-3 h-3 rtl:-scale-x-100" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* Threaded Comments List */}
-                          <div className="space-y-4 pt-1">
-                            {(() => {
-                              const threadedComments = buildCommentTree(postComments);
-                              if (threadedComments.length === 0) {
-                                return (
-                                  <div className="text-center py-6 text-muted-foreground space-y-1">
-                                    <MessageCircle className="w-6 h-6 mx-auto opacity-30 mb-1" />
-                                    <p className="text-xs font-medium">لا توجد ردود بعد</p>
-                                    <p className="text-[11px] text-muted-foreground/70">كن أول من يشارك في هذا النقاش!</p>
-                                  </div>
-                                );
-                              }
-
-                              return threadedComments.map((comment) => {
-                                const replies = comment.replies || [];
-                                const hasReplies = replies.length > 0;
-                                return (
-                                  <div key={comment.id} className="relative group/thread">
-                                    {/* Parent Comment Item */}
-                                    <div className="flex items-start gap-3 relative">
-                                      {/* Avatar Column with Thread Line */}
-                                      <div className="flex flex-col items-center shrink-0 relative">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleOpenUserProfile(comment.author)}
-                                          className="w-8 h-8 rounded-full bg-primary/10 text-primary border border-primary/20 hover:border-primary flex items-center justify-center font-bold text-xs shrink-0 transition-all cursor-pointer shadow-2xs hover:scale-105"
-                                          title={comment.author.name}
-                                        >
-                                          {comment.author.name.slice(0, 1)}
-                                        </button>
-
-                                        {/* Continuous vertical line to child replies */}
-                                        {hasReplies && (
-                                          <div className="w-0.5 bg-border/80 flex-1 my-1.5 rounded-full min-h-[16px]" />
-                                        )}
-                                      </div>
-
-                                      {/* Comment Content Area */}
-                                      <div className="flex-1 min-w-0 space-y-1 pt-0.5">
-                                        {/* Header */}
-                                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                            <button
-                                              type="button"
-                                              onClick={() => handleOpenUserProfile(comment.author)}
-                                              className="font-bold text-xs sm:text-[13px] text-foreground hover:text-primary transition-colors cursor-pointer truncate"
-                                            >
-                                              {comment.author.name}
-                                            </button>
-                                            {comment.author.verified && (
-                                              <Badge className="h-3.5 px-1 text-[9px] bg-sky-500 hover:bg-sky-600 text-white border-0">
-                                                موثق
-                                              </Badge>
-                                            )}
-                                            <span className="text-[11px] text-muted-foreground font-mono">
-                                              @{comment.author.username}
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground">·</span>
-                                            <span className="text-[11px] text-muted-foreground">
-                                              {formatArabicRelativeTime(comment.created_at, comment.created_at)}
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        {/* Comment Content */}
-                                        <p className="text-xs sm:text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap">
-                                          {comment.content}
-                                        </p>
-
-                                        {/* Action Bar */}
-                                        <div className="flex items-center gap-3 pt-1 text-muted-foreground">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setReplyingToCommentMap((prev) => ({
-                                                ...prev,
-                                                [post.id]: {
-                                                  id: comment.id,
-                                                  authorName: comment.author.name,
-                                                  username: comment.author.username,
-                                                },
-                                              }));
-                                            }}
-                                            className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors cursor-pointer py-0.5 px-2 rounded-md hover:bg-primary/10"
-                                          >
-                                            <CornerDownLeft className="w-3 h-3" />
-                                            <span>رد</span>
-                                          </button>
-
-                                          {hasReplies && (
-                                            <span className="text-[11px] text-muted-foreground/80 font-medium">
-                                              {replies.length} {replies.length === 1 ? 'رد' : 'ردود'}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Sub-Replies (Nested & Indented with curved branch) */}
-                                    {hasReplies && (
-                                      <div className="ms-4 sm:ms-5 ps-3.5 sm:ps-4 border-s-2 border-border/80 space-y-3 pt-2">
-                                        {replies.map((reply) => (
-                                          <div key={reply.id} className="flex items-start gap-2.5 relative group/reply">
-                                            {/* Sub-reply Avatar */}
-                                            <button
-                                              type="button"
-                                              onClick={() => handleOpenUserProfile(reply.author)}
-                                              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-muted border border-border/80 text-foreground/80 hover:border-primary flex items-center justify-center font-bold text-[10px] sm:text-xs shrink-0 transition-all cursor-pointer mt-0.5"
-                                              title={reply.author.name}
-                                            >
-                                              {reply.author.name.slice(0, 1)}
-                                            </button>
-
-                                            {/* Sub-reply Content */}
-                                            <div className="flex-1 min-w-0 space-y-0.5">
-                                              <div className="flex items-center gap-1.5 flex-wrap">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleOpenUserProfile(reply.author)}
-                                                  className="font-bold text-xs text-foreground hover:text-primary transition-colors cursor-pointer truncate"
-                                                >
-                                                  {reply.author.name}
-                                                </button>
-                                                {reply.author.verified && (
-                                                  <Badge className="h-3 px-1 text-[8px] bg-sky-500 text-white border-0">
-                                                    موثق
-                                                  </Badge>
-                                                )}
-                                                <span className="text-[10px] text-muted-foreground font-mono">
-                                                  @{reply.author.username}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground">·</span>
-                                                <span className="text-[10px] text-muted-foreground">
-                                                  {formatArabicRelativeTime(reply.created_at, reply.created_at)}
-                                                </span>
-                                              </div>
-
-                                              <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">
-                                                {reply.content}
-                                              </p>
-
-                                              <div className="flex items-center gap-2 pt-0.5">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setReplyingToCommentMap((prev) => ({
-                                                      ...prev,
-                                                      [post.id]: {
-                                                        id: comment.id,
-                                                        authorName: reply.author.name,
-                                                        username: reply.author.username,
-                                                      },
-                                                    }));
-                                                  }}
-                                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors cursor-pointer py-0.5 px-1.5 rounded-md hover:bg-primary/10"
-                                                >
-                                                  <CornerDownLeft className="w-2.5 h-2.5" />
-                                                  <span>رد</span>
-                                                </button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              });
-                            })()}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })
+              displayPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  isHighlighted={highlightedPostId === post.id}
+                  isBookmarked={Boolean(bookmarkedMap[post.id])}
+                  isCommentsOpen={expandedPostId === post.id}
+                  comments={commentsMap[post.id] || []}
+                  currentUserId={user?.id}
+                  currentUserRole={user?.role}
+                  currentUserName={user?.name}
+                  onToggleLike={handleToggleLike}
+                  onToggleBookmark={handleToggleBookmark}
+                  onToggleComments={handleToggleComments}
+                  onShare={(p) => setActiveSharePost(p)}
+                  onReport={handleReportPost}
+                  onDelete={handleDeletePost}
+                  onOpenUserProfile={handleOpenUserProfile}
+                  onTagClick={setSelectedTagFilter}
+                  onSendReply={handleSendReply}
+                />
+              ))
             )}
           </div>
         </div>
 
-        {/* Twitter Sidebar Column */}
-        <div className="space-y-5">
-          {/* Trending in Sard (ترند سرد - ما يحدث الآن) */}
-          <Card className="border-card-border p-5 bg-card space-y-4 shadow-2xs">
-            <div className="flex items-center justify-between pb-2 border-b border-border/60">
-              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span>المتداول في سرد (الترند)</span>
-              </h3>
-            </div>
-
-            <div className="space-y-2.5">
-              {TRENDS.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => setSelectedTagFilter(t.tag)}
-                  className="group cursor-pointer flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-muted/40 transition-colors"
-                >
-                  <div className="space-y-0.5 min-w-0">
-                    <p className="text-[11px] text-muted-foreground truncate">{t.category}</p>
-                    <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
-                      #{t.tag}
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="text-[10px] h-5 font-normal">
-                    متداول
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Who to Follow (من نتابع في سرد) */}
-          <Card className="border-card-border p-5 bg-card space-y-4 shadow-2xs">
-            <h3 className="font-bold text-sm text-foreground pb-2 border-b border-border/60 flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              <span>اقتراحات المتابعة</span>
-            </h3>
-
-            <div className="space-y-3">
-              {suggestedUsers.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4 leading-relaxed">
-                  لا توجد اقتراحات حالياً. عند انضمام أعضاء جدد ستظهر حساباتهم هنا تلقائياً.
-                </p>
-              ) : (
-                suggestedUsers.map((u) => {
-                  const isFollowing = !!followingMap[u.id];
-                  return (
-                    <div key={u.id} className="flex items-center justify-between gap-3">
-                      <div
-                        onClick={() => handleOpenUserProfile(u)}
-                        className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
-                        title={`عرض الملف الشخصي لـ ${u.name}`}
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                          {u.name.slice(0, 1)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1">
-                            <p className="font-bold text-xs text-foreground truncate group-hover:text-primary transition-colors">{u.name}</p>
-                            {u.verified && (
-                              <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground truncate font-mono">@{u.username}</p>
-                        </div>
-                      </div>
-
-                      <Button
-                        size="sm"
-                        variant={isFollowing ? 'outline' : 'default'}
-                        onClick={() => handleToggleFollow(u.id, u.name)}
-                        className={`h-7 px-3 text-xs font-bold shadow-2xs ${
-                          isFollowing
-                            ? 'border-border text-muted-foreground hover:text-destructive hover:border-destructive/40'
-                            : ''
-                        }`}
-                      >
-                        {isFollowing ? 'تتابع' : 'متابعة'}
-                      </Button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </Card>
-
-          {/* Community Notice */}
-          <div className="p-4 rounded-2xl bg-muted/40 border border-border/70 text-xs text-muted-foreground space-y-2">
-            <p className="font-bold text-foreground flex items-center gap-1.5">
-              <Globe className="w-4 h-4 text-primary" />
-              <span>فضاء سرد المفتوح</span>
-            </p>
-            <p className="leading-relaxed text-[11px]">
-              ساحة سرد مصممة كشبكة محتوى عامة تجمع جميع رواد المنصة. احرص على نشر المعرفة، ومشاركة الأفكار البنّاءة، واحترام التنوع الفكري.
-            </p>
-          </div>
-        </div>
+        {/* Sidebar Column */}
+        <FeedSidebar
+          trends={TRENDS}
+          suggestedUsers={suggestedUsers}
+          followingMap={followingMap}
+          onSelectTag={setSelectedTagFilter}
+          onToggleFollow={handleToggleFollow}
+          onOpenUserProfile={handleOpenUserProfile}
+        />
       </div>
 
       {/* Share / Repost Modal */}

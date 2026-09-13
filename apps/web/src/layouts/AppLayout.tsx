@@ -19,6 +19,7 @@ import {
 const navItems = [
   { href: '/app', icon: Home, label: 'الرئيسية', exact: true },
   { href: '/app/feed', icon: Sparkles, label: 'سرد' },
+  { href: '/app/articles', icon: Newspaper, label: 'المقالات' },
   { href: '/app/activities', icon: Calendar, label: 'الأنشطة' },
   { href: '/app/courses', icon: BookOpen, label: 'الدورات' },
   { href: '/app/groups', icon: Users, label: 'المجموعات' },
@@ -183,42 +184,57 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* User & Role Switcher */}
         <div className="p-3 border-t border-sidebar-border space-y-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground text-xs font-semibold transition-colors cursor-pointer">
-                <Building2 className="w-4 h-4 text-primary" />
-                <span className="flex-1 text-start">الواجهات والحساب</span>
-                <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 text-xs">
-              <DropdownMenuItem asChild>
-                <Link href="/app/profile" className="cursor-pointer">👤 الملف الشخصي</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/app/settings" className="cursor-pointer">⚙️ إعدادات الحساب</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/app" className="cursor-pointer">📱 واجهة المستخدم (سرد)</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/org" className="cursor-pointer">🏢 واجهة المنظمات</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/" className="cursor-pointer">🏠 الصفحة العامة للمنصة</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-destructive focus:text-destructive cursor-pointer font-bold"
-              >
-                <LogOut className="w-3.5 h-3.5 ms-1" />
-                تسجيل الخروج
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground text-xs font-semibold transition-colors cursor-pointer">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  <span className="flex-1 text-start">الواجهات والحساب</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 text-xs">
+                <DropdownMenuItem asChild>
+                  <Link href="/app/profile" className="cursor-pointer">👤 الملف الشخصي</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/app/settings" className="cursor-pointer">⚙️ إعدادات الحساب</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/app" className="cursor-pointer">📱 واجهة المستخدم (سرد)</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/org" className="cursor-pointer">🏢 واجهة المنظمات</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/" className="cursor-pointer">🏠 الصفحة العامة للمنصة</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:text-destructive cursor-pointer font-bold"
+                >
+                  <LogOut className="w-3.5 h-3.5 ms-1" />
+                  تسجيل الخروج
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="space-y-2">
+              <Link href="/auth/login">
+                <Button variant="outline" size="sm" className="w-full text-xs font-bold cursor-pointer">
+                  تسجيل الدخول
+                </Button>
+              </Link>
+              <Link href="/auth/register">
+                <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold cursor-pointer">
+                  انضم إلى سرد
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -244,30 +260,47 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 ms-auto shrink-0">
-            <Link href="/app/notifications">
-              <button
-                className="relative p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
-                title="الإشعارات"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 end-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
-            </Link>
-            <Link href="/app/messages">
-              <button
-                className="p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
-                title="الرسائل"
-              >
-                <MessageSquare className="w-5 h-5" />
-              </button>
-            </Link>
-            <Link href="/app/profile" title={displayName}>
-              <UserAvatar name={displayName} size="sm" />
-            </Link>
+            {user ? (
+              <>
+                <Link href="/app/notifications">
+                  <button
+                    className="relative p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
+                    title="الإشعارات"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 end-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </Link>
+                <Link href="/app/messages">
+                  <button
+                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
+                    title="الرسائل"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                  </button>
+                </Link>
+                <Link href="/app/profile" title={displayName}>
+                  <UserAvatar name={displayName} size="sm" />
+                </Link>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="sm" className="font-semibold text-xs cursor-pointer">
+                    تسجيل الدخول
+                  </Button>
+                </Link>
+                <Link href="/auth/register">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs cursor-pointer shadow-xs">
+                    انضم لسرد
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </header>
 

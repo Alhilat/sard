@@ -3,10 +3,10 @@ import {
   Shield, Zap, Users, MessageSquare, Trash2, Ban, CheckCircle,
   AlertTriangle, RefreshCw, LogOut, Search, Activity, Layers, Lock,
   FileText, CornerDownLeft, Eye, EyeOff, Clock, ShieldAlert, Cpu,
-  ShieldCheck, KeyRound, X, Sparkles, Check, Server
+  ShieldCheck, KeyRound, X, Sparkles, Check, Server, BookOpen, ExternalLink, Heart
 } from 'lucide-react';
 import {
-  petraService, PetraStats, PetraUser, PetraPost, PetraComment, PetraGroup, PetraAuditLog
+  petraService, PetraStats, PetraUser, PetraPost, PetraComment, PetraGroup, PetraAuditLog, PetraArticle
 } from '@/services/petraService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -45,11 +45,12 @@ export default function Petra() {
   };
 
   // Dashboard state
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'posts' | 'groups' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'posts' | 'articles' | 'groups' | 'logs'>('overview');
   const [stats, setStats] = useState<PetraStats | null>(null);
   const [users, setUsers] = useState<PetraUser[]>([]);
   const [posts, setPosts] = useState<PetraPost[]>([]);
   const [comments, setComments] = useState<PetraComment[]>([]);
+  const [articles, setArticles] = useState<PetraArticle[]>([]);
   const [groups, setGroups] = useState<PetraGroup[]>([]);
   const [logs, setLogs] = useState<PetraAuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,6 +59,8 @@ export default function Petra() {
   const [userSearch, setUserSearch] = useState('');
   const [userFilterRole, setUserFilterRole] = useState<'all' | 'active' | 'banned' | 'verified' | 'org'>('all');
   const [postSearch, setPostSearch] = useState('');
+  const [articleSearch, setArticleSearch] = useState('');
+  const [articleCategoryFilter, setArticleCategoryFilter] = useState('all');
   const [contentSubTab, setContentSubTab] = useState<'posts' | 'comments'>('posts');
 
   // Ban dialog state
@@ -136,13 +139,14 @@ export default function Petra() {
   const loadAllData = async () => {
     setIsLoading(true);
     try {
-      const [newStats, newUsers, newPosts, newComments, newGroups, newLogs] = await Promise.all([
+      const [newStats, newUsers, newPosts, newComments, newGroups, newLogs, newArticles] = await Promise.all([
         petraService.getStats(),
         petraService.getUsers(),
         petraService.getPosts(),
         petraService.getComments(),
         petraService.getGroups(),
         petraService.getLogs(),
+        petraService.getArticles(),
       ]);
 
       if (!petraService.isLoggedIn()) {
@@ -156,6 +160,7 @@ export default function Petra() {
       setComments(newComments || []);
       setGroups(newGroups || []);
       setLogs(newLogs || []);
+      setArticles(newArticles || []);
     } catch {
       toast({
         title: 'خطأ في المزامنة',
@@ -366,6 +371,34 @@ export default function Petra() {
     });
   };
 
+  const handleDeleteArticle = (art: PetraArticle) => {
+    setConfirmModal({
+      isOpen: true,
+      title: `تأكيد حذف مقال "${art.title}"`,
+      description: `سيتم حذف هذا المقال وجميع ردوده وتفاعلاته نهائياً من المنصة لكاتبه (${art.author_name}). هذا الإجراء لا يمكن التراجع عنه.`,
+      confirmText: 'تأكيد حذف المقال',
+      isDestructive: true,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        const res = await petraService.deleteArticle(art.id);
+        if (res.success) {
+          toast({
+            title: 'تم حذف المقال بنجاح',
+            description: res.message || `أزيل مقال "${art.title}" من المنصة.`,
+          });
+          setArticles((prev) => prev.filter((a) => a.id !== art.id));
+          loadAllData();
+        } else {
+          toast({
+            title: 'تعذر حذف المقال',
+            description: res.message || 'حدث خطأ أثناء محاولة الحذف.',
+            variant: 'destructive',
+          });
+        }
+      },
+    });
+  };
+
   // ── RENDER LOGIN GATE IF NOT AUTHENTICATED ────────────────────────────────
   if (!isAuthenticated) {
     return (
@@ -561,6 +594,19 @@ export default function Petra() {
     );
   });
 
+  const filteredArticles = articles.filter((a) => {
+    const q = (articleSearch || '').trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      (a?.title || '').toLowerCase().includes(q) ||
+      (a?.author_name || '').toLowerCase().includes(q) ||
+      (a?.author_username || '').toLowerCase().includes(q) ||
+      (a?.summary || '').toLowerCase().includes(q);
+    const matchesCategory =
+      articleCategoryFilter === 'all' || a.category === articleCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   // User filter pill counters
   const activeCount = users.filter((u) => !u.is_banned).length;
   const bannedCount = users.filter((u) => u.is_banned).length;
@@ -677,6 +723,21 @@ export default function Petra() {
           </button>
 
           <button
+            onClick={() => setActiveTab('articles')}
+            className={`flex items-center gap-2 py-3 px-4 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'articles'
+                ? 'border-[#9E2A2B] text-white bg-[#1F1726]/70'
+                : 'border-transparent text-[#9D8EAA] hover:text-white'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <span>إدارة المقالات</span>
+            <Badge className="bg-[#241A2D] text-[#D8B4FE] text-[10px] px-1.5 py-0">
+              {articles.length}
+            </Badge>
+          </button>
+
+          <button
             onClick={() => setActiveTab('groups')}
             className={`flex items-center gap-2 py-3 px-4 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'groups'
@@ -714,7 +775,7 @@ export default function Petra() {
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Top Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="bg-[#15111A] border-[#2E2437] text-white hover:border-[#4B375B] transition-colors">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
@@ -769,6 +830,25 @@ export default function Petra() {
                   </div>
                   <p className="text-[11px] text-[#A898B5] mt-3">
                     {posts.length} منشور • {comments.length} رد
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#15111A] border-[#2E2437] text-white hover:border-[#4B375B] transition-colors">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-[#A898B5] font-medium">المقالات والتحليلات</p>
+                      <h3 className="text-2xl font-black text-amber-400 mt-1">
+                        {stats ? (stats.totalArticles ?? articles.length) : articles.length}
+                      </h3>
+                    </div>
+                    <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#A898B5] mt-3">
+                    {stats?.totalArticleComments ?? 0} تعليق ومناقشة
                   </p>
                 </CardContent>
               </Card>
@@ -1060,6 +1140,7 @@ export default function Petra() {
                       <th className="p-3.5">التوثيق والصلاحيات</th>
                       <th className="p-3.5">تاريخ الانضمام</th>
                       <th className="p-3.5">المنشورات</th>
+                      <th className="p-3.5">المقالات</th>
                       <th className="p-3.5">الردود</th>
                       <th className="p-3.5">الحالة</th>
                       <th className="p-3.5 text-center">الإجراءات والتحكم</th>
@@ -1068,7 +1149,7 @@ export default function Petra() {
                   <tbody className="divide-y divide-[#241A2D]">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="text-center py-12 text-[#9A8AA7] text-xs">
+                        <td colSpan={10} className="text-center py-12 text-[#9A8AA7] text-xs">
                           لا يوجد مستخدمين مطابقين للفلاتر المحددة
                         </td>
                       </tr>
@@ -1108,6 +1189,7 @@ export default function Petra() {
                             </td>
                             <td className="p-3.5 text-[#A898B5]">{u.join_date || 'غير محدد'}</td>
                             <td className="p-3.5 font-mono text-white">{u.posts_count || 0}</td>
+                            <td className="p-3.5 font-mono text-amber-300 font-bold">{u.articles_count || 0}</td>
                             <td className="p-3.5 font-mono text-white">{u.comments_count || 0}</td>
                             <td className="p-3.5">
                               {u.is_banned ? (
@@ -1337,7 +1419,155 @@ export default function Petra() {
           </div>
         )}
 
-        {/* ── TAB 4: GROUPS CONTROL ── */}
+        {/* ── TAB 4: ARTICLES MANAGEMENT ── */}
+        {activeTab === 'articles' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-[#15111A] p-4 rounded-2xl border border-[#2E2437]">
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                {[
+                  { id: 'all', label: 'الكل' },
+                  { id: 'برمجة وتطوير', label: 'برمجة وتطوير' },
+                  { id: 'تصميم وتجربة المستخدم', label: 'تصميم' },
+                  { id: 'قواعد بيانات', label: 'قواعد بيانات' },
+                  { id: 'ثقافة وفكر', label: 'ثقافة وفكر' },
+                  { id: 'تقنية وذكاء اصطناعي', label: 'تقنية' },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setArticleCategoryFilter(cat.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      articleCategoryFilter === cat.id
+                        ? 'bg-[#9E2A2B] text-white font-bold'
+                        : 'bg-[#1C1623] border border-[#35273F] text-[#A898B5] hover:text-white'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Input */}
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8A7999]" />
+                <Input
+                  type="text"
+                  placeholder="بحث في عنوان المقال، الكاتب، أو المحتوى..."
+                  value={articleSearch}
+                  onChange={(e) => setArticleSearch(e.target.value)}
+                  className="bg-[#1C1623] border-[#35273F] text-white pr-10 pl-9 text-xs h-10 rounded-xl"
+                />
+                {articleSearch && (
+                  <button
+                    onClick={() => setArticleSearch('')}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7999] hover:text-white p-1 cursor-pointer"
+                    title="مسح البحث"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Articles List */}
+            <div className="space-y-3">
+              {filteredArticles.length === 0 ? (
+                <div className="text-center py-16 bg-[#15111A] rounded-2xl border border-[#2E2437] text-[#9A8AA7] text-xs">
+                  لا توجد مقالات مطابقة للبحث
+                </div>
+              ) : (
+                filteredArticles.map((art) => (
+                  <div
+                    key={art.id}
+                    className="bg-[#15111A] border border-[#2E2437] hover:border-[#473655] rounded-2xl p-4 sm:p-5 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm"
+                  >
+                    <div className="space-y-2 flex-1 min-w-0">
+                      {/* Meta Top Line */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#6B1B1B] to-[#9E2A2B] flex items-center justify-center text-white font-bold text-xs shrink-0">
+                          {(art.author_name || 'ك')[0]}
+                        </div>
+                        <span className="font-bold text-white text-sm">{art.author_name}</span>
+                        <span className="text-xs text-[#9A8AA7] font-mono">@{art.author_username}</span>
+                        <span className="text-[#7A6A87]">•</span>
+                        <Badge className="bg-[#241A2D] text-[#D8B4FE] text-[10px] px-2 py-0.5 border border-[#3E2E4E]">
+                          {art.category}
+                        </Badge>
+                        <span className="text-xs text-[#7A6A87]">• {art.timestamp_text}</span>
+                      </div>
+
+                      {/* Title & Summary */}
+                      <div>
+                        <h4 className="text-base font-bold text-white leading-snug">
+                          {art.title}
+                        </h4>
+                        {art.summary && (
+                          <p className="text-xs text-[#C5B7CF] line-clamp-2 mt-1 leading-relaxed">
+                            {art.summary}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Metrics Pill Row */}
+                      <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-[#A898B5]">
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3.5 h-3.5 text-blue-400" />
+                          {art.views_count || 0} قراءة
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3.5 h-3.5 text-red-400" />
+                          {art.likes_count || 0} إعجاب
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                          {art.comments_count || 0} رد
+                        </span>
+                        <span className="text-[#7A6A87]">•</span>
+                        <span className="font-mono text-amber-300/90">
+                          {art.char_count.toLocaleString('ar-EG')} حرف
+                        </span>
+                        <span className="text-[#7A6A87]">•</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          {art.read_time_minutes || 1} دقيقة
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                      <a
+                        href={`/articles/${art.slug || art.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-[#1C1623] hover:bg-[#2A2033] border-[#3E3048] text-white text-xs h-9 gap-1.5 cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                          <span>معاينة المقال</span>
+                        </Button>
+                      </a>
+
+                      <Button
+                        size="sm"
+                        onClick={() => handleDeleteArticle(art)}
+                        className="bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 text-xs h-9 gap-1.5 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>حذف المقال</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 5: GROUPS CONTROL ── */}
         {activeTab === 'groups' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             <div className="bg-[#15111A] p-4 rounded-2xl border border-[#2E2437] flex justify-between items-center">

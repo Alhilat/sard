@@ -5,6 +5,8 @@ export interface PetraStats {
   totalPosts: number;
   totalComments: number;
   totalGroups: number;
+  totalArticles?: number;
+  totalArticleComments?: number;
   totalRequests: number;
   uptimeSeconds: number;
   nodeVersion?: string;
@@ -28,6 +30,7 @@ export interface PetraUser {
   created_at: number;
   posts_count: number;
   comments_count: number;
+  articles_count?: number;
 }
 
 export interface PetraPost {
@@ -80,6 +83,27 @@ export interface PetraAuditLog {
   target_id: string;
   details: string;
   created_at: number;
+}
+
+export interface PetraArticle {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  category: string;
+  cover_image: string;
+  read_time_minutes: number;
+  char_count: number;
+  word_count: number;
+  views_count: number;
+  likes_count: number;
+  comments_count: number;
+  created_at: number;
+  timestamp_text: string;
+  author_id: string;
+  author_name: string;
+  author_username: string;
+  author_email: string;
 }
 
 const PETRA_TOKEN_KEY = 'petra_auth_session_token';
@@ -389,6 +413,38 @@ export const petraService = {
       return data.logs || [];
     } catch {
       return [];
+    }
+  },
+
+  getArticles: async (): Promise<PetraArticle[]> => {
+    try {
+      const res = await fetch('/api/petra/articles', { headers: getPetraAuthHeaders() });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return [];
+      }
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.articles || [];
+    } catch {
+      return [];
+    }
+  },
+
+  deleteArticle: async (articleId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await fetch(`/api/petra/articles/${articleId}`, {
+        method: 'DELETE',
+        headers: getPetraAuthHeaders(),
+      });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
+      const data = await res.json();
+      return { success: res.ok && data.success, message: data.message };
+    } catch {
+      return { success: false, message: 'تعذر حذف المقال' };
     }
   },
 };

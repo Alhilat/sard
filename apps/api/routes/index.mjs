@@ -3,6 +3,7 @@ import healthRouter from './health.mjs';
 import authRouter from './auth.mjs';
 import usersRouter from './users.mjs';
 import postsRouter from './posts.mjs';
+import articlesRouter from './articles.mjs';
 import groupsRouter from './groups.mjs';
 import coursesRouter from './courses.mjs';
 import courseChatRouter from './course-chat.mjs';
@@ -28,6 +29,9 @@ apiRouter.use('/users', usersRouter);
 
 // Posts, likes, comments, shares
 apiRouter.use('/posts', postsRouter);
+
+// Long-form articles & discussions
+apiRouter.use('/articles', articlesRouter);
 
 // Communities & groups
 apiRouter.use('/groups', groupsRouter);
