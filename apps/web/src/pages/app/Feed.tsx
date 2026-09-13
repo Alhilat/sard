@@ -441,8 +441,8 @@ export default function Feed() {
                 </div>
 
                 {/* Composer Toolbar & Action Row */}
-                <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                  <div className="flex items-center gap-1 text-primary">
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/60 flex-wrap">
+                  <div className="flex items-center gap-1 text-primary shrink-0">
                     <button
                       type="button"
                       onClick={() => setShowPoll(!showPoll)}
@@ -461,10 +461,10 @@ export default function Feed() {
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0 mr-auto">
                     {/* Character Countdown Progress Ring */}
                     {content.length > 0 && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span
                           className={`text-xs font-bold ${
                             charsLeft < 20 ? 'text-destructive' : 'text-muted-foreground'
@@ -472,9 +472,9 @@ export default function Feed() {
                         >
                           {charsLeft}
                         </span>
-                        <div className="w-5 h-5 rounded-full border-2 border-border relative flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full border-2 border-border relative flex items-center justify-center">
                           <div
-                            className={`w-3.5 h-3.5 rounded-full ${
+                            className={`w-2.5 h-2.5 rounded-full ${
                               charPercent > 90
                                 ? 'bg-destructive'
                                 : charPercent > 70
@@ -490,7 +490,7 @@ export default function Feed() {
                     <Button
                       type="submit"
                       disabled={isPosting || !content.trim()}
-                      className="gap-2 font-bold px-5 h-9 shadow-xs rounded-xl"
+                      className="gap-1.5 font-bold px-4 sm:px-5 h-9 shrink-0 shadow-xs rounded-xl"
                     >
                       <Send className="w-3.5 h-3.5 rtl:rotate-180" />
                       <span>{isPosting ? 'جاري السرد...' : 'اسرد الآن'}</span>
@@ -690,38 +690,28 @@ export default function Feed() {
                         })}
                       </p>
 
-                      {/* Twitter Action Bar */}
-                      <div className="flex items-center justify-between pt-3 border-t border-border/60 text-muted-foreground gap-1">
-                        <div className="flex items-center gap-2.5 sm:gap-6 flex-wrap">
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-3 border-t border-border/60 text-muted-foreground w-full gap-2">
+                        <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
                           {/* Reply Button */}
                           <button
                             type="button"
                             onClick={() => handleToggleComments(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer ${
-                              isCommentsOpen ? 'text-primary' : 'hover:text-primary'
+                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer py-1 px-1.5 rounded-lg hover:bg-muted ${
+                              isCommentsOpen ? 'text-primary bg-primary/10' : 'hover:text-primary'
                             }`}
                           >
                             <MessageCircle className="w-4 h-4" />
                             <span>{post.comments > 0 ? `${post.comments} ردود` : 'رد'}</span>
                           </button>
 
-                          {/* Repost / Share Button */}
-                          <button
-                            type="button"
-                            onClick={() => setActiveSharePost(post)}
-                            className="flex items-center gap-1.5 text-xs font-bold hover:text-emerald-600 transition-colors cursor-pointer"
-                          >
-                            <Repeat2 className="w-4 h-4" />
-                            <span>{post.shares > 0 ? `${post.shares} مشاركة` : 'مشاركة'}</span>
-                          </button>
-
                           {/* Like Button */}
                           <button
                             type="button"
                             onClick={() => handleToggleLike(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                            className={`flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer py-1 px-1.5 rounded-lg hover:bg-muted ${
                               post.isLiked
-                                ? 'text-red-600'
+                                ? 'text-red-600 bg-red-500/10'
                                 : 'hover:text-red-500'
                             }`}
                           >
@@ -732,31 +722,42 @@ export default function Feed() {
                             />
                             <span>{post.likes > 0 ? `${post.likes} إعجاب` : 'إعجاب'}</span>
                           </button>
-                        </div>
 
-                        <div className="flex items-center gap-2">
-                          {/* Bookmark */}
+                          {/* Share Button (Prominent with Share2 icon) */}
                           <button
                             type="button"
-                            onClick={() => handleToggleBookmark(post.id)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              isBookmarked ? 'text-primary bg-primary/10' : 'hover:bg-muted hover:text-foreground'
-                            }`}
-                            title={isBookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+                            onClick={async () => {
+                              if (navigator.share) {
+                                try {
+                                  await navigator.share({
+                                    title: `سرد من ${post.author.name}`,
+                                    text: post.content.length > 80 ? post.content.slice(0, 80) + '...' : post.content,
+                                    url: `${window.location.origin}/app/feed?post=${post.id}`,
+                                  });
+                                  return;
+                                } catch {}
+                              }
+                              setActiveSharePost(post);
+                            }}
+                            className="flex items-center gap-1.5 text-xs font-bold text-foreground/80 hover:text-primary transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-primary/10"
+                            title="مشاركة المنشور"
                           >
-                            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current text-primary' : ''}`} />
-                          </button>
-
-                          {/* Share Modal Trigger */}
-                          <button
-                            type="button"
-                            onClick={() => setActiveSharePost(post)}
-                            className="p-1.5 rounded-lg hover:bg-muted hover:text-primary transition-colors cursor-pointer"
-                            title="مشاركة الرابط"
-                          >
-                            <Share2 className="w-4 h-4" />
+                            <Share2 className="w-4 h-4 text-emerald-600" />
+                            <span>{post.shares > 0 ? `${post.shares} مشاركة` : 'مشاركة'}</span>
                           </button>
                         </div>
+
+                        {/* Bookmark Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleBookmark(post.id)}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                            isBookmarked ? 'text-primary bg-primary/10' : 'hover:bg-muted hover:text-foreground'
+                          }`}
+                          title={isBookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+                        >
+                          <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current text-primary' : ''}`} />
+                        </button>
                       </div>
 
                       {/* Interactive Thread Replies Drawer (Twitter Style) */}

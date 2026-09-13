@@ -103,19 +103,17 @@ export default function Courses() {
 
   const enrolled = courses.filter((c) => c.enrolled);
 
-  // If chat is open for a course, show CourseGroupChat
+  // If chat is open for a course, show CourseGroupChat in full screen
   if (activeChatCourse) {
     return (
-      <div className="p-4 sm:p-6" dir="rtl">
-        <CourseGroupChat
-          course={activeChatCourse}
-          onBack={() => {
-            // Return to course details
-            setSelectedCourse(activeChatCourse);
-            setActiveChatCourse(null);
-          }}
-        />
-      </div>
+      <CourseGroupChat
+        course={activeChatCourse}
+        onBack={() => {
+          // Return to course details
+          setSelectedCourse(activeChatCourse);
+          setActiveChatCourse(null);
+        }}
+      />
     );
   }
 

@@ -125,20 +125,18 @@ export default function Activities() {
     }
   };
 
-  // If chat view is active, render ActivityGroupChat
+  // If chat view is active, render ActivityGroupChat in full screen
   if (activeChatActivity) {
     return (
-      <div className="p-4 sm:p-6" dir="rtl">
-        <ActivityGroupChat
-          activity={activeChatActivity}
-          onBack={() => {
-            setActiveChatActivity(null);
-            if (window.location.search) {
-              window.history.replaceState(null, '', window.location.pathname);
-            }
-          }}
-        />
-      </div>
+      <ActivityGroupChat
+        activity={activeChatActivity}
+        onBack={() => {
+          setActiveChatActivity(null);
+          if (window.location.search) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }}
+      />
     );
   }
 
