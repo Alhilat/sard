@@ -330,7 +330,7 @@ export default function Feed() {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 pb-24 lg:pb-6" dir="rtl">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 pb-24 lg:pb-6 w-full min-w-0 overflow-x-hidden" dir="rtl">
       {/* Top Banner: Introducing Sard */}
       <div className="bg-gradient-to-r from-[#6B1B1B] via-[#8C2424] to-[#3B0E0E] text-white p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden">
         <div
@@ -367,16 +367,16 @@ export default function Feed() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6 w-full min-w-0">
         {/* Main Feed Column (Twitter Style) */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 w-full min-w-0">
           {/* Twitter Composer (صندوق السرد) */}
-          <Card className="border-card-border shadow-xs bg-card overflow-hidden">
-            <CardContent className="p-4 sm:p-5">
-              <form onSubmit={handlePublishSard} className="space-y-3">
-                <div className="flex items-start gap-3">
+          <Card className="border-card-border shadow-xs bg-card w-full min-w-0 overflow-hidden">
+            <CardContent className="p-3.5 sm:p-5 w-full min-w-0">
+              <form onSubmit={handlePublishSard} className="space-y-3 w-full min-w-0">
+                <div className="flex items-start gap-2.5 sm:gap-3 w-full min-w-0">
                   {/* Current user monogram avatar */}
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shadow-2xs shrink-0">
                     {currentAuthorName.slice(0, 1) || 'س'}
                   </div>
 
@@ -389,18 +389,18 @@ export default function Feed() {
                           setContent(e.target.value);
                         }
                       }}
-                      className="resize-none border-0 bg-transparent text-sm sm:text-base focus-visible:ring-0 min-h-[95px] p-0 placeholder:text-muted-foreground/70 leading-relaxed"
+                      className="resize-none border-0 bg-transparent text-sm sm:text-base focus-visible:ring-0 min-h-[90px] p-0 placeholder:text-muted-foreground/70 leading-relaxed w-full"
                     />
 
                     {/* Quick hashtag suggestions */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none w-full max-w-full">
                       <span className="text-muted-foreground shrink-0 font-medium">وسوم مقترحة:</span>
                       {['#سرد_رقمي', '#الذكاء_الاصطناعي', '#ريادة_الأعمال', '#تطوير_البرمجيات'].map((tag) => (
                         <button
                           type="button"
                           key={tag}
                           onClick={() => setContent((prev) => (prev ? `${prev} ${tag}` : tag))}
-                          className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground whitespace-nowrap"
+                          className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           {tag}
                         </button>
@@ -409,7 +409,7 @@ export default function Feed() {
 
                     {/* Poll Simulator */}
                     {showPoll && (
-                      <div className="mt-2.5 p-3 rounded-xl bg-muted/40 border border-border/80 space-y-2 animate-in fade-in-50 duration-150">
+                      <div className="mt-2.5 p-3 rounded-xl bg-muted/40 border border-border/80 space-y-2 animate-in fade-in-50 duration-150 w-full min-w-0">
                         <div className="flex items-center justify-between text-xs font-bold text-foreground">
                           <span className="flex items-center gap-1.5">
                             <BarChart2 className="w-3.5 h-3.5 text-primary" />
@@ -418,7 +418,7 @@ export default function Feed() {
                           <button
                             type="button"
                             onClick={() => setShowPoll(false)}
-                            className="text-muted-foreground hover:text-destructive"
+                            className="text-muted-foreground hover:text-destructive cursor-pointer"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -441,13 +441,13 @@ export default function Feed() {
                 </div>
 
                 {/* Composer Toolbar & Action Row */}
-                <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/60 flex-wrap">
+                <div className="flex items-center justify-between gap-1.5 pt-3 border-t border-border/60 w-full min-w-0">
                   <div className="flex items-center gap-1 text-primary shrink-0">
                     <button
                       type="button"
                       onClick={() => setShowPoll(!showPoll)}
                       title="إضافة استطلاع رأي"
-                      className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+                      className="p-1.5 sm:p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
                     >
                       <BarChart2 className="w-4 h-4" />
                     </button>
@@ -455,18 +455,18 @@ export default function Feed() {
                       type="button"
                       onClick={() => setContent((prev) => `${prev} ✨`)}
                       title="إضافة رموز تعبيرية"
-                      className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+                      className="p-1.5 sm:p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
                     >
                       <Smile className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2 sm:gap-3 shrink-0 mr-auto">
+                  <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                     {/* Character Countdown Progress Ring */}
                     {content.length > 0 && (
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <span
-                          className={`text-xs font-bold ${
+                          className={`text-[11px] sm:text-xs font-bold ${
                             charsLeft < 20 ? 'text-destructive' : 'text-muted-foreground'
                           }`}
                         >
@@ -474,7 +474,7 @@ export default function Feed() {
                         </span>
                         <div className="w-4 h-4 rounded-full border-2 border-border relative flex items-center justify-center">
                           <div
-                            className={`w-2.5 h-2.5 rounded-full ${
+                            className={`w-2 h-2 rounded-full ${
                               charPercent > 90
                                 ? 'bg-destructive'
                                 : charPercent > 70
@@ -490,9 +490,9 @@ export default function Feed() {
                     <Button
                       type="submit"
                       disabled={isPosting || !content.trim()}
-                      className="gap-1.5 font-bold px-4 sm:px-5 h-9 shrink-0 shadow-xs rounded-xl"
+                      className="gap-1.5 font-bold px-3 sm:px-5 h-9 shrink-0 shadow-xs rounded-xl text-xs sm:text-sm cursor-pointer"
                     >
-                      <Send className="w-3.5 h-3.5 rtl:rotate-180" />
+                      <Send className="w-3.5 h-3.5 rtl:rotate-180 shrink-0" />
                       <span>{isPosting ? 'جاري السرد...' : 'اسرد الآن'}</span>
                     </Button>
                   </div>
@@ -503,15 +503,15 @@ export default function Feed() {
 
           {/* Active Tag Filter Indicator */}
           {selectedTagFilter && (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-primary">
-                <Hash className="w-4 h-4" />
+            <div className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs w-full min-w-0">
+              <span className="flex items-center gap-1.5 font-bold text-primary truncate">
+                <Hash className="w-4 h-4 shrink-0" />
                 تصفية حسب الوسم: #{selectedTagFilter}
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedTagFilter(null)}
-                className="text-xs text-muted-foreground hover:text-foreground font-semibold flex items-center gap-1 cursor-pointer"
+                className="text-xs text-muted-foreground hover:text-foreground font-semibold flex items-center gap-1 cursor-pointer shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
                 عرض جميع السردات
@@ -520,20 +520,20 @@ export default function Feed() {
           )}
 
           {/* Twitter Style Sticky Navigation Tabs */}
-          <div className="flex border-b border-border/80 bg-card/60 backdrop-blur-xs rounded-xl overflow-hidden p-1 gap-1">
+          <div className="grid grid-cols-3 border-b border-border/80 bg-card/60 backdrop-blur-xs rounded-xl overflow-hidden p-1 gap-1 w-full min-w-0">
             <button
               type="button"
               onClick={() => {
                 setActiveTab('forYou');
                 setSelectedTagFilter(null);
               }}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer ${
+              className={`py-2 px-1 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer text-center truncate ${
                 activeTab === 'forYou' && !selectedTagFilter
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
-              لك (المقترحة)
+              <span>لك<span className="hidden sm:inline"> (المقترحة)</span></span>
             </button>
             <button
               type="button"
@@ -541,13 +541,13 @@ export default function Feed() {
                 setActiveTab('following');
                 setSelectedTagFilter(null);
               }}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer ${
+              className={`py-2 px-1 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer text-center truncate ${
                 activeTab === 'following' && !selectedTagFilter
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
-              المتابعون
+              <span>المتابعون</span>
             </button>
             <button
               type="button"
@@ -555,13 +555,13 @@ export default function Feed() {
                 setActiveTab('trending');
                 setSelectedTagFilter(null);
               }}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer ${
+              className={`py-2 px-1 text-xs sm:text-sm font-bold transition-all rounded-lg cursor-pointer text-center truncate ${
                 activeTab === 'trending' && !selectedTagFilter
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
-              الرائجة والأكثر تفاعلاً
+              <span>الرائجة<span className="hidden sm:inline"> والأكثر تفاعلاً</span></span>
             </button>
           </div>
 

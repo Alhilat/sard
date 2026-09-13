@@ -200,27 +200,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border h-16 flex items-center px-4 gap-3">
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border h-16 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 w-full min-w-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-lg hover:bg-accent text-muted-foreground"
+            className="lg:hidden p-2 rounded-lg hover:bg-accent text-muted-foreground shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
 
           {/* Search */}
-          <div className="flex-1 max-w-md">
+          <div className="flex-1 max-w-md min-w-0">
             <Link href="/app/search">
-              <div className="flex items-center gap-2 bg-muted/60 border border-border/60 rounded-xl px-4 py-2 text-muted-foreground text-xs cursor-pointer hover:bg-muted transition-colors">
-                <Search className="w-4 h-4" />
-                <span>ابحث عن أشخاص، أنشطة، دورات، وسردات...</span>
+              <div className="flex items-center gap-2 bg-muted/60 border border-border/60 rounded-xl px-3 sm:px-4 py-2 text-muted-foreground text-xs cursor-pointer hover:bg-muted transition-colors truncate">
+                <Search className="w-4 h-4 shrink-0" />
+                <span className="truncate">ابحث عن أشخاص، أنشطة، دورات، وسردات...</span>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 ms-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 ms-auto shrink-0">
             <Link href="/app/notifications">
               <button
                 className="relative p-2 rounded-xl hover:bg-accent text-muted-foreground transition-colors cursor-pointer"
@@ -249,7 +249,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 page-enter pb-20 lg:pb-6 overflow-x-hidden">{children}</main>
+        <main className="flex-1 page-enter pb-20 lg:pb-6 overflow-x-hidden w-full min-w-0">{children}</main>
 
         {/* Mobile Sticky Bottom Navigation Bar */}
         <nav
