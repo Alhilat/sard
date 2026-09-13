@@ -224,8 +224,41 @@ async function runWebSocketTestSuite() {
   const receivedNotif = await notifPromise;
   assert(receivedNotif && receivedNotif.userId === userB.id, 'Beta received instant notification push over WebSocket');
 
-  // Test 7: Clean Disconnect & Presence Offline Transition
-  console.log('\n[Test 7] Testing clean disconnection & presence offline transition...');
+  // Test 7: Prevent Duplicate Message Ingestion (Rapid concurrent sends)
+  console.log('\n[Test 7] Testing rapid duplicate message prevention (idempotency guard)...');
+  const dupContent = 'رسالة فحص منع التكرار المتزامن';
+  const [res1, res2] = await Promise.all([
+    fetch(`${BASE_HTTP}/api/conversations/${convId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenA}`,
+      },
+      body: JSON.stringify({ content: dupContent }),
+    }).then((r) => r.json()),
+    fetch(`${BASE_HTTP}/api/conversations/${convId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${tokenA}`,
+      },
+      body: JSON.stringify({ content: dupContent }),
+    }).then((r) => r.json()),
+  ]);
+
+  assert(res1.success && res2.success, 'Both concurrent send requests returned success');
+  assert(res1.message.id === res2.message.id, 'Idempotency guard returned identical message ID without creating duplicate');
+
+  // Verify direct messages table contains only 1 entry for this content
+  const allMsgsRes = await fetch(`${BASE_HTTP}/api/conversations/${convId}/messages`, {
+    headers: { Authorization: `Bearer ${tokenA}` },
+  });
+  const allMsgsData = await allMsgsRes.json();
+  const matchingMsgs = allMsgsData.messages.filter((m) => m.content === dupContent);
+  assert(matchingMsgs.length === 1, `SQLite store contains precisely 1 message instance (found ${matchingMsgs.length})`);
+
+  // Test 8: Clean Disconnect & Presence Offline Transition
+  console.log('\n[Test 8] Testing clean disconnection & presence offline transition...');
   const presenceOfflinePromise = new Promise((resolve) => {
     const handler = (data) => {
       const msg = JSON.parse(data.toString());

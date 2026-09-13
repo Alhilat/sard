@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Search, Send, Maximize2, Minimize2, CheckCheck,
+  Search, Send, Maximize2, Minimize2, Check, CheckCheck, Clock,
   Smile, ArrowRight, Circle, X,
   UserPlus, Users, Sparkles, Loader2, MessageSquare
 } from 'lucide-react';
@@ -17,6 +17,43 @@ import {
   messagesService, ConversationItem, MessageItem, UserSearchResult
 } from '@/services/messagesService';
 import { websocketService } from '@/services/websocketService';
+
+function isSameDay(d1?: number | string, d2?: number | string): boolean {
+  if (!d1 || !d2) return false;
+  const num1 = Number(d1);
+  const num2 = Number(d2);
+  if (isNaN(num1) || isNaN(num2)) return false;
+  const date1 = new Date(num1 < 1e11 ? num1 * 1000 : num1);
+  const date2 = new Date(num2 < 1e11 ? num2 * 1000 : num2);
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+}
+
+function formatMessageDateHeader(timestamp?: number | string): string {
+  if (!timestamp) return 'اليوم';
+  const num = Number(timestamp);
+  const timeMs = num < 1e11 ? num * 1000 : num;
+  const date = new Date(timeMs);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (isSameDay(date.getTime(), today.getTime())) {
+    return 'اليوم';
+  }
+  if (isSameDay(date.getTime(), yesterday.getTime())) {
+    return 'أمس';
+  }
+
+  return date.toLocaleDateString('ar-SA', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
 
 const DEFAULT_FALLBACK_CONVERSATIONS: ConversationItem[] = [
   {
@@ -183,7 +220,7 @@ export default function Messages() {
       });
     });
 
-    // 2. Listen for messages sent from this user on other tabs/devices
+    // 2. Listen for messages sent from this user on other tabs/devices or WebSocket echo
     const unsubSentMsg = websocketService.on('message:sent', (payload: any) => {
       const { conversationId, message } = payload;
       if (!conversationId || !message) return;
@@ -191,6 +228,21 @@ export default function Messages() {
       setMessagesStore((prev) => {
         const existing = prev[conversationId] || [];
         if (existing.some((m) => m.id === message.id)) return prev;
+
+        // If this tab already has a matching optimistic message (temp- with same content), replace it cleanly
+        const matchingTempIndex = existing.findIndex(
+          (m) => m.id.startsWith('temp-') && m.content === message.content && m.sender === 'me'
+        );
+
+        if (matchingTempIndex !== -1) {
+          const next = [...existing];
+          next[matchingTempIndex] = { ...message, sender: 'me' };
+          return {
+            ...prev,
+            [conversationId]: next,
+          };
+        }
+
         return {
           ...prev,
           [conversationId]: [...existing, { ...message, sender: 'me' }],
@@ -259,14 +311,26 @@ export default function Messages() {
     };
   }, [activeConvId]);
 
-  // Scroll to bottom on message updates
+  // Active conversation & strictly deduplicated message stream
   const activeConv =
     conversationsList.find((c) => c.id === activeConvId) || conversationsList[0] || null;
-  const activeMessages = activeConv ? messagesStore[activeConv.id] || [] : [];
+  const rawActiveMessages = activeConv ? messagesStore[activeConv.id] || [] : [];
+
+  const activeMessages = useMemo(() => {
+    const seenIds = new Set<string>();
+    return rawActiveMessages.filter((msg) => {
+      if (!msg || !msg.id) return false;
+      if (seenIds.has(msg.id)) return false;
+      seenIds.add(msg.id);
+      return true;
+    });
+  }, [rawActiveMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeMessages]);
+
+  const isSendingRef = useRef(false);
 
   // Debounced search by name in the sidebar
   useEffect(() => {
@@ -311,19 +375,23 @@ export default function Messages() {
     return () => clearTimeout(timer);
   }, [modalSearchQuery, currentUser?.id]);
 
-  // Send message
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  // Send message (guarded against rapid duplicate clicks)
+  const handleSendMessage = async (e?: React.FormEvent, customContent?: string) => {
     if (e) e.preventDefault();
-    const content = inputText.trim();
-    if (!content || !activeConv) return;
+    const content = (customContent || inputText).trim();
+    if (!content || !activeConv || isSendingRef.current) return;
 
+    isSendingRef.current = true;
     setInputText('');
 
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: MessageItem = {
       id: tempId,
+      conversation_id: activeConv.id,
       sender: 'me',
+      sender_id: currentUser?.id,
       content,
+      created_at: Date.now(),
       time: 'الآن',
       status: 'read',
     };
@@ -334,14 +402,17 @@ export default function Messages() {
       [activeConv.id]: [...(prev[activeConv.id] || []), optimisticMsg],
     }));
 
-    // Update conversation preview
-    setConversationsList((prev) =>
-      prev.map((c) =>
-        c.id === activeConv.id
-          ? { ...c, lastMessage: content, time: 'الآن' }
-          : c
-      )
-    );
+    // Update conversation preview and bump to top
+    setConversationsList((prev) => {
+      const found = prev.find((c) => c.id === activeConv.id);
+      if (found) {
+        return [
+          { ...found, lastMessage: content, time: 'الآن' },
+          ...prev.filter((c) => c.id !== activeConv.id),
+        ];
+      }
+      return prev;
+    });
 
     // Clear typing state upon sending message
     if (activeConv && activeConv.user.id) {
@@ -349,20 +420,36 @@ export default function Messages() {
       websocketService.sendTyping(activeConv.id, activeConv.user.id, false);
     }
 
-    // Save message via backend API
-    const realMsg = await messagesService.sendMessage(activeConv.id, content);
-    if (realMsg) {
-      setMessagesStore((prev) => ({
-        ...prev,
-        [activeConv.id]: (prev[activeConv.id] || []).map((m) =>
-          m.id === tempId ? { ...realMsg, sender: 'me' } : m
-        ),
-      }));
+    try {
+      // Save message via backend API
+      const realMsg = await messagesService.sendMessage(activeConv.id, content);
+      if (realMsg) {
+        setMessagesStore((prev) => {
+          const current = prev[activeConv.id] || [];
+          // If realMsg.id is already in list (delivered first by WebSocket echo), remove tempId without duplicating!
+          const alreadyHasReal = current.some((m) => m.id === realMsg.id);
+          if (alreadyHasReal) {
+            return {
+              ...prev,
+              [activeConv.id]: current.filter((m) => m.id !== tempId),
+            };
+          }
+          // Otherwise replace tempId with realMsg
+          return {
+            ...prev,
+            [activeConv.id]: current.map((m) =>
+              m.id === tempId ? { ...realMsg, sender: 'me' } : m
+            ),
+          };
+        });
+      }
+    } finally {
+      isSendingRef.current = false;
     }
   };
 
   // Handle typing in chat input
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const text = e.target.value;
     setInputText(text);
 
@@ -517,7 +604,7 @@ export default function Messages() {
 
           {/* B. Conversations List */}
           {searchQuery.trim() !== '' && (
-            <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground bg-muted/30">
+            <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground bg-muted/30">
               المحادثات السابقة المطابقة:
             </div>
           )}
@@ -531,63 +618,73 @@ export default function Messages() {
                 size="sm"
                 variant="outline"
                 onClick={() => setIsNewChatModalOpen(true)}
-                className="mt-2 text-xs font-bold gap-1.5"
+                className="mt-2 text-xs font-bold gap-1.5 rounded-xl"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>البحث عن مستخدمين بالاسم</span>
               </Button>
             </div>
           ) : (
-            filteredConversations.map((conv) => {
-              const isSelected = activeConv?.id === conv.id;
-              return (
-                <div
-                  key={conv.id}
-                  onClick={() => {
-                    setActiveConvId(conv.id);
-                    setShowMobileChat(true);
-                  }}
-                  className={`flex items-start gap-3 p-3.5 cursor-pointer transition-colors select-none ${
-                    isSelected
-                      ? 'bg-primary/10 border-s-4 border-primary text-foreground'
-                      : 'hover:bg-muted/50 text-foreground/90'
-                  }`}
-                >
-                  <div className="relative flex-shrink-0 mt-0.5">
-                    <UserAvatar name={conv.user.name} size="md" />
-                    {conv.user.online && (
-                      <span
-                        className="absolute bottom-0 end-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card ring-1 ring-emerald-500/30"
-                        title="نشط الآن"
-                      />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1 gap-2">
-                      <p className="text-xs font-bold text-foreground truncate">
-                        {conv.user.name}
-                      </p>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {conv.time}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground truncate leading-relaxed">
-                        {conv.lastMessage || 'محادثة جديدة...'}
-                      </p>
+            <div className="px-2 py-1.5 space-y-1">
+              {filteredConversations.map((conv) => {
+                const isSelected = activeConv?.id === conv.id;
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => {
+                      setActiveConvId(conv.id);
+                      setShowMobileChat(true);
+                    }}
+                    className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all duration-150 select-none ${
+                      isSelected
+                        ? 'bg-primary/10 text-foreground shadow-2xs border border-primary/25 ring-1 ring-primary/20'
+                        : 'hover:bg-muted/60 text-foreground/85 border border-transparent'
+                    }`}
+                  >
+                    <div className="relative shrink-0">
+                      <UserAvatar name={conv.user.name} size="md" />
                       {conv.user.online && (
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                          نشط
-                        </span>
+                        <span
+                          className="absolute bottom-0 end-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background ring-2 ring-emerald-500/20"
+                          title="نشط الآن"
+                        />
                       )}
                     </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <p className="text-xs font-bold text-foreground truncate">
+                          {conv.user.name}
+                        </p>
+                        <span className="text-[10px] text-muted-foreground shrink-0 font-medium">
+                          {conv.time}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        {isPartnerTyping[conv.id] ? (
+                          <p className="text-xs text-primary font-bold truncate flex items-center gap-1.5 animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            يكتب الآن...
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground truncate leading-relaxed">
+                            {conv.lastMessage || 'محادثة جديدة...'}
+                          </p>
+                        )}
+
+                        {conv.user.online && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0 flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                            نشط
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
       </aside>
@@ -694,92 +791,168 @@ export default function Messages() {
               </div>
             </div>
 
-            {/* Messages Stream */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 bg-muted/15">
+            {/* Messages Stream with Ambient Gradient & Date Divider Pills */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-muted/30 via-background to-muted/15">
               {activeMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground min-h-[300px]">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-primary">
-                    <Send className="w-6 h-6 rtl:rotate-180" />
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 text-primary shadow-xs">
+                    <Send className="w-7 h-7 rtl:rotate-180" />
                   </div>
                   <p className="font-bold text-sm text-foreground mb-1">لا توجد رسائل سابقة</p>
-                  <p className="text-xs max-w-xs">ابدأ المحادثة الآن بتبادل التحية أو طرح استفسارك.</p>
+                  <p className="text-xs max-w-xs text-muted-foreground mb-4">ابدأ المحادثة الآن بتبادل التحية أو طرح استفسارك.</p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 max-w-sm">
+                    {['👋 مرحباً بك!', 'صباح الخير', 'شكراً على التواصل'].map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => handleSendMessage(undefined, prompt)}
+                        className="px-3 py-1.5 rounded-full bg-card border border-border/80 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground transition-all shadow-2xs cursor-pointer"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
-                activeMessages.map((msg) => {
+                activeMessages.map((msg, index) => {
                   const isMe = msg.sender === 'me';
+                  const showDateDivider =
+                    index === 0 ||
+                    !isSameDay(msg.created_at, activeMessages[index - 1].created_at);
+                  const isConsecutive =
+                    index > 0 &&
+                    activeMessages[index - 1].sender === msg.sender &&
+                    isSameDay(msg.created_at, activeMessages[index - 1].created_at);
+
                   return (
-                    <div
-                      key={msg.id}
-                      className={`flex items-end gap-2.5 max-w-lg sm:max-w-xl ${
-                        isMe ? 'ms-auto flex-row-reverse' : 'me-auto'
-                      }`}
-                    >
-                      {/* Avatar for Incoming Messages */}
-                      {!isMe && (
-                        <div className="shrink-0 mb-1">
-                          <UserAvatar name={activeConv.user.name} size="sm" />
+                    <React.Fragment key={msg.id}>
+                      {/* Date Divider Pill */}
+                      {showDateDivider && (
+                        <div className="flex items-center justify-center my-3.5 select-none">
+                          <span className="px-3.5 py-1 rounded-full bg-muted/70 dark:bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-2xs backdrop-blur-xs">
+                            {formatMessageDateHeader(msg.created_at)}
+                          </span>
                         </div>
                       )}
 
-                      {/* Message Box */}
-                      <div className={`space-y-1 ${isMe ? 'text-start' : 'text-start'}`}>
-                        <div
-                          className={`p-3 sm:p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-2xs whitespace-pre-wrap ${
-                            isMe
-                              ? 'bg-primary text-primary-foreground rounded-ee-xs'
-                              : 'bg-card border border-border/80 text-foreground rounded-es-xs'
-                          }`}
-                        >
-                          {msg.content}
-                        </div>
+                      {/* Message Bubble Container */}
+                      <div className={`flex items-end gap-2.5 ${isMe ? 'ms-auto flex-row-reverse' : 'me-auto'}`}>
+                        {/* Avatar for Incoming Messages */}
+                        {!isMe && (
+                          <div className="shrink-0 mb-3.5">
+                            {!isConsecutive ? (
+                              <UserAvatar name={activeConv.user.name} size="sm" />
+                            ) : (
+                              <div className="w-8" />
+                            )}
+                          </div>
+                        )}
 
-                        {/* Message Meta */}
-                        <div
-                          className={`flex items-center gap-1.5 text-[10px] text-muted-foreground px-1 ${
-                            isMe ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <span>{msg.time}</span>
-                          {isMe && (
-                            <CheckCheck className="w-3.5 h-3.5 text-primary inline" />
-                          )}
+                        {/* Bubble */}
+                        <div className={`flex flex-col max-w-[85%] sm:max-w-md md:max-w-lg ${isMe ? 'items-end' : 'items-start'}`}>
+                          <div
+                            className={`px-4 py-2.5 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                              isMe
+                                ? 'bg-gradient-to-br from-primary via-primary/95 to-primary/90 text-primary-foreground rounded-2xl rounded-ee-xs shadow-xs selection:bg-primary-foreground selection:text-primary'
+                                : 'bg-card/95 dark:bg-card/85 border border-border/80 text-foreground rounded-2xl rounded-es-xs shadow-2xs backdrop-blur-xs'
+                            }`}
+                          >
+                            {msg.content}
+                          </div>
+
+                          {/* Time & Delivery Status */}
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5 px-1 select-none">
+                            <span>{msg.time || 'الآن'}</span>
+                            {isMe && (
+                              msg.id.startsWith('temp-') ? (
+                                <span title="جارٍ الإرسال...">
+                                  <Clock className="w-3 h-3 animate-spin text-muted-foreground/60 ms-0.5" />
+                                </span>
+                              ) : (
+                                <span title="تم التسليم">
+                                  <CheckCheck className="w-3.5 h-3.5 text-primary ms-0.5 inline" />
+                                </span>
+                              )
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </React.Fragment>
                   );
                 })
               )}
+
+              {/* Floating Live Typing Indicator Bubble in Stream */}
+              {isPartnerTyping[activeConv.id] && (
+                <div className="flex items-end gap-2.5 max-w-xs animate-in fade-in slide-in-from-bottom-2 duration-200 ps-1 pt-1">
+                  <UserAvatar name={activeConv.user.name} size="sm" />
+                  <div className="bg-card/95 border border-border/80 rounded-2xl rounded-es-xs px-3.5 py-2.5 shadow-2xs flex items-center gap-2 backdrop-blur-xs">
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+                    </div>
+                    <span className="text-[11px] text-muted-foreground font-semibold">
+                      {activeConv.user.name.split(' ')[0]} يكتب...
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input Footer */}
-            <div className="p-3.5 sm:p-4 border-t border-border/70 bg-card">
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5 text-muted-foreground">
+            {/* Message Input Footer with Quick Emoji Reactions & Glassmorphic Container */}
+            <div className="p-3 sm:p-4 border-t border-border/70 bg-card/80 backdrop-blur-md">
+              {/* Quick reaction chips */}
+              <div className="flex items-center gap-1.5 px-1 pb-2 overflow-x-auto select-none">
+                <span className="text-[11px] text-muted-foreground font-medium me-1">تفاعل سريع:</span>
+                {['👍', '❤️', '😊', '🎉', '🙏', '🔥'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleSendMessage(undefined, emoji)}
+                    className="w-7 h-7 rounded-full bg-muted/60 hover:bg-primary/10 hover:scale-115 active:scale-95 text-xs flex items-center justify-center transition-all cursor-pointer border border-border/40"
+                    title={`إرسال ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
+              <form onSubmit={handleSendMessage} className="relative flex items-end gap-2 bg-muted/30 dark:bg-card/60 border border-border/80 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 rounded-2xl p-2 transition-all shadow-xs">
+                <div className="flex items-center gap-0.5 text-muted-foreground pb-1">
                   <button
                     type="button"
-                    onClick={() => setInputText((prev) => `${prev} 👍`)}
-                    className="p-2 rounded-xl hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-                    title="إضافة رمز تعبيري"
+                    onClick={() => setInputText((prev) => `${prev} 😊`)}
+                    className="p-1.5 rounded-xl hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                    title="رمز تعبيري"
                   >
                     <Smile className="w-4 h-4" />
                   </button>
                 </div>
 
-                <Input
-                  placeholder="اكتب رسالتك هنا..."
+                <textarea
+                  rows={1}
+                  placeholder="اكتب رسالتك هنا... (Enter للإرسال، Shift+Enter لسطر جديد)"
                   value={inputText}
                   onChange={handleInputChange}
-                  className="text-xs sm:text-sm h-11 bg-background border-border/80 focus-visible:ring-primary rounded-xl flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="w-full bg-transparent resize-none border-0 focus:outline-hidden text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/60 py-1.5 px-1 max-h-32 leading-relaxed"
                 />
 
                 <Button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="rounded-xl h-11 px-3.5 sm:px-5 font-bold gap-1.5 shrink-0 shadow-xs cursor-pointer"
+                  className="rounded-xl h-9 px-3.5 sm:px-4 font-bold gap-1.5 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:hover:scale-100 mb-0.5"
                 >
-                  <Send className="w-4 h-4 rtl:rotate-180" />
-                  <span className="text-xs sm:text-sm">إرسال</span>
+                  <Send className="w-3.5 h-3.5 rtl:rotate-180" />
+                  <span className="text-xs hidden sm:inline">إرسال</span>
                 </Button>
               </form>
             </div>

@@ -31,6 +31,11 @@ export function createMessagesStatements(db) {
     stmtInsertDirectMessage: db.prepare(`
       INSERT INTO direct_messages (id, conversation_id, sender_id, content, created_at)
       VALUES (?, ?, ?, ?, ?)
-    `)
+    `),
+    stmtFindRecentDuplicateMessage: db.prepare(`
+      SELECT * FROM direct_messages
+      WHERE conversation_id = ? AND sender_id = ? AND content = ? AND created_at > ?
+      LIMIT 1
+    `),
   };
 }

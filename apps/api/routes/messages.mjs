@@ -151,7 +151,12 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, message: 'نص الرسالة فارغ' });
     }
 
-    const { stmtGetConversationById, stmtInsertDirectMessage, stmtUpdateConversationLastMessage } = getStatements();
+    const {
+      stmtGetConversationById,
+      stmtInsertDirectMessage,
+      stmtUpdateConversationLastMessage,
+      stmtFindRecentDuplicateMessage,
+    } = getStatements();
     const conv = stmtGetConversationById.get(convId);
     if (!conv) {
       return res.status(404).json({ success: false, message: 'المحادثة غير موجودة' });
@@ -160,6 +165,26 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
     // Verify user is a legitimate participant of this conversation
     if (conv.user1_id !== req.user.id && conv.user2_id !== req.user.id) {
       return res.status(403).json({ success: false, message: 'غير مصرح لك بإرسال رسائل في هذه المحادثة' });
+    }
+
+    // Backend Idempotency Guard: prevent rapid duplicate messages within 2000ms
+    if (stmtFindRecentDuplicateMessage) {
+      const recentDup = stmtFindRecentDuplicateMessage.get(convId, req.user.id, content.trim(), Date.now() - 2000);
+      if (recentDup) {
+        return res.status(200).json({
+          success: true,
+          message: {
+            id: recentDup.id,
+            conversation_id: convId,
+            sender: 'me',
+            sender_id: req.user.id,
+            content: recentDup.content,
+            created_at: recentDup.created_at,
+            time: 'الآن',
+            status: 'read',
+          },
+        });
+      }
     }
 
     const otherUserId = conv.user1_id === req.user.id ? conv.user2_id : conv.user1_id;
