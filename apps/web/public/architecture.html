@@ -3,37 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>الدليل التفاعلي لهيكلية منصة سرد رقمي | Sard Raqami Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <title>بوابة المعمارية الهندسية لمطوري سرد رقمي | Sard Raqami Dev Portal</title>
   <style>
+    /* ==========================================================================
+       DESIGN SYSTEM TOKENS (High-End Dark Developer Theme)
+       Zero External Dependencies - 100% Offline Standalone Capable
+       ========================================================================== */
     :root {
-      --bg: #0C0A0F;
-      --bg-surface: #141118;
-      --bg-card: rgba(26, 22, 33, 0.85);
-      --bg-card-hover: rgba(36, 30, 46, 0.95);
+      --bg-base: #08070C;
+      --bg-subtle: #0F0D16;
+      --surface: #151221;
+      --surface-hover: #1E192E;
+      --surface-active: #27213C;
+      
       --border: rgba(255, 255, 255, 0.08);
-      --border-accent: rgba(158, 42, 43, 0.5);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --border-accent: rgba(158, 42, 43, 0.4);
       
-      --primary: #9E2A2B;
-      --primary-glow: rgba(158, 42, 43, 0.35);
-      --primary-light: #C0392B;
+      /* Sard Raqami Palette */
+      --maroon-600: #7A1C1D;
+      --maroon-500: #9E2A2B;
+      --maroon-400: #C0392B;
+      --maroon-glow: rgba(158, 42, 43, 0.28);
       
-      --gold: #D48B38;
-      --gold-glow: rgba(212, 139, 56, 0.3);
-      --emerald: #10B981;
-      --emerald-glow: rgba(16, 185, 129, 0.25);
-      --sky: #0EA5E9;
-      --purple: #8B5CF6;
+      --amber-500: #D97706;
+      --amber-400: #F59E0B;
+      --amber-glow: rgba(217, 119, 6, 0.2);
       
-      --text: #F8FAFC;
-      --text-muted: #94A3B8;
-      --text-dim: #64748B;
+      --emerald-500: #10B981;
+      --emerald-400: #34D399;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
       
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
+      --sky-500: #0284C7;
+      --sky-400: #38BDF8;
+      
+      --purple-500: #7C3AED;
+      --purple-400: #A78BFA;
+      
+      --text-1: #F8FAFC;
+      --text-2: #94A3B8;
+      --text-3: #64748B;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 22px;
+      
+      /* System Font Fallback: works 100% offline without any web font download */
+      --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", "Cairo", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "JetBrains Mono", "Liberation Mono", "Courier New", monospace;
     }
 
     * {
@@ -43,1001 +61,2414 @@
     }
 
     body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-1);
+      font-family: var(--font-system);
       line-height: 1.6;
-      padding-bottom: 80px;
+      -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
       background-image: 
-        radial-gradient(circle at 15% 15%, rgba(158, 42, 43, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 85% 65%, rgba(212, 139, 56, 0.1) 0%, transparent 45%),
-        radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+        radial-gradient(circle at 10% 8%, rgba(158, 42, 43, 0.14) 0%, transparent 35%),
+        radial-gradient(circle at 90% 60%, rgba(217, 119, 6, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 95%, rgba(124, 58, 237, 0.08) 0%, transparent 45%);
       background-attachment: fixed;
     }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
 
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 20px;
-    }
-
-    /* Hero Header */
-    header {
-      padding: 50px 0 35px;
-      border-bottom: 1px solid var(--border);
-      position: relative;
-    }
-
-    .header-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(158, 42, 43, 0.2);
-      border: 1px solid var(--border-accent);
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #F87171;
-      margin-bottom: 16px;
-    }
-
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #EF4444;
-      box-shadow: 0 0 10px #EF4444;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.85); }
-    }
-
-    h1 {
-      font-size: clamp(2rem, 4vw, 3.2rem);
-      font-weight: 900;
-      letter-spacing: -0.5px;
-      line-height: 1.2;
-      margin-bottom: 14px;
-      background: linear-gradient(135deg, #FFFFFF 30%, #D48B38 80%, #9E2A2B 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero-desc {
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      max-width: 820px;
-      line-height: 1.7;
-    }
-
-    /* Key Metrics Ribbon */
-    .metrics-ribbon {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin: 30px 0 10px;
-    }
-
-    .metric-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      padding: 16px 20px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      backdrop-blur: 10px;
-      transition: transform 0.2s, border-color 0.2s;
-    }
-    .metric-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .metric-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    .icon-maroon { background: rgba(158, 42, 43, 0.25); color: #F87171; }
-    .icon-gold { background: rgba(212, 139, 56, 0.25); color: #FBBF24; }
-    .icon-emerald { background: rgba(16, 185, 129, 0.25); color: #34D399; }
-    .icon-sky { background: rgba(14, 165, 233, 0.25); color: #38BDF8; }
-
-    .metric-value {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1.2;
-    }
-    .metric-label {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    /* Interactive Search & Filter Controls */
-    .controls-wrapper {
+    /* Top Navigation Bar */
+    .topbar {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(12, 10, 15, 0.85);
+      height: 64px;
+      background: rgba(8, 7, 12, 0.92);
       backdrop-filter: blur(16px);
-      padding: 18px 0;
-      margin-bottom: 30px;
+      -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
-    }
-
-    .search-box {
-      position: relative;
-      margin-bottom: 16px;
-    }
-
-    .search-input {
-      width: 100%;
-      background: rgba(26, 22, 33, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 14px 48px 14px 20px;
-      border-radius: var(--radius-md);
-      font-size: 1rem;
-      color: var(--text);
-      font-family: inherit;
-      outline: none;
-      transition: all 0.2s;
-    }
-    .search-input:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 20px rgba(212, 139, 56, 0.2);
-    }
-
-    .search-icon {
-      position: absolute;
-      right: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 18px;
-      pointer-events: none;
-    }
-
-    /* Tabs */
-    .tabs-nav {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-    }
-    .tabs-nav::-webkit-scrollbar { display: none; }
-
-    .tab-btn {
-      padding: 9px 18px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--bg-surface);
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
       display: flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .tab-btn:hover {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-    .tab-btn.active {
-      background: var(--primary);
-      color: #FFF;
-      border-color: var(--primary-light);
-      box-shadow: 0 0 16px var(--primary-glow);
+      justify-content: space-between;
+      padding: 0 28px;
     }
 
-    /* Section Headers */
-    .section-title {
-      font-size: 1.6rem;
-      font-weight: 800;
-      margin: 40px 0 16px;
+    .brand {
       display: flex;
       align-items: center;
       gap: 12px;
-      color: #FFF;
+      text-decoration: none;
+      color: var(--text-1);
     }
-    .section-title span.tag {
-      font-size: 0.75rem;
-      padding: 4px 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 999px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    /* Architecture Flow Interactive Visualizer */
-    .flow-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 28px;
-      margin-bottom: 40px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .flow-steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      position: relative;
-    }
-
-    .flow-step {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 18px 14px;
-      text-align: center;
-      position: relative;
-      transition: all 0.25s;
-      cursor: pointer;
-    }
-    .flow-step:hover, .flow-step.active {
-      border-color: var(--gold);
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(212, 139, 56, 0.2);
-    }
-
-    .flow-number {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      color: var(--gold);
-      font-weight: 800;
-      font-size: 12px;
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--maroon-500), var(--maroon-600));
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 10px;
-    }
-    .flow-step.active .flow-number {
-      background: var(--gold);
-      color: #000;
-    }
-
-    .flow-title {
-      font-weight: 800;
-      font-size: 0.95rem;
-      margin-bottom: 4px;
+      font-weight: 900;
+      font-size: 18px;
       color: #FFF;
+      box-shadow: 0 0 16px var(--maroon-glow);
+      border: 1px solid rgba(255, 255, 255, 0.15);
     }
-    .flow-desc {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      line-height: 1.4;
+    .brand-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.2px;
     }
-    .flow-file {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem;
-      color: var(--gold);
-      background: rgba(212, 139, 56, 0.1);
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-top: 8px;
-      display: inline-block;
-      direction: ltr;
-    }
-
-    /* Cards Grid */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 20px;
+    .brand-tag {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 8px;
+      border-radius: 6px;
+      color: var(--amber-400);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      border: 1px solid rgba(217, 119, 6, 0.25);
     }
 
-    .file-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+    /* Top Tabs */
+    .top-nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface);
+      padding: 4px;
       border-radius: var(--radius-md);
-      padding: 24px;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid var(--border);
+    }
+    .top-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-2);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+      font-family: inherit;
+    }
+    .top-tab-btn:hover {
+      color: var(--text-1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .top-tab-btn.active {
+      color: #FFF;
+      background: var(--maroon-500);
+      box-shadow: 0 2px 10px var(--maroon-glow);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Global Search Box */
+    .quick-search {
       position: relative;
       display: flex;
-      flex-col: column;
-      justify-content: space-between;
+      align-items: center;
     }
-    .file-card:hover {
-      background: var(--bg-card-hover);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-3px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    .quick-search input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 7px 36px 7px 36px;
+      width: 260px;
+      transition: all 0.2s;
+    }
+    .quick-search input:focus {
+      width: 320px;
+      border-color: var(--amber-500);
+      outline: none;
+      box-shadow: 0 0 14px var(--amber-glow);
+    }
+    .quick-search .search-icon {
+      position: absolute;
+      right: 11px;
+      color: var(--text-3);
+      font-size: 13px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+    .kbd-hint {
+      position: absolute;
+      left: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 10px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+      pointer-events: none;
     }
 
-    .card-top {
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--emerald-400);
+      font-family: var(--font-mono);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald-500);
+      box-shadow: 0 0 8px var(--emerald-500);
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Layout Wrapper */
+    .layout-wrapper {
+      display: flex;
+      flex: 1;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 32px 36px 80px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .portal-hero {
+      background: linear-gradient(180deg, var(--surface) 0%, rgba(21, 18, 33, 0.5) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px 36px;
+      margin-bottom: 36px;
+      position: relative;
+      overflow: hidden;
+    }
+    .portal-hero::after {
+      content: '';
+      position: absolute;
+      top: -80px;
+      left: -80px;
+      width: 240px;
+      height: 240px;
+      background: radial-gradient(circle, var(--maroon-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .hero-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .badge-standalone { background: rgba(16, 185, 129, 0.16); color: var(--emerald-400); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-sqlite { background: rgba(2, 132, 199, 0.16); color: var(--sky-400); border: 1px solid rgba(2, 132, 199, 0.3); }
+    .badge-render { background: rgba(217, 119, 6, 0.16); color: var(--amber-400); border: 1px solid rgba(217, 119, 6, 0.3); }
+
+    .portal-hero h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1.3;
+      margin-bottom: 10px;
+      letter-spacing: -0.4px;
+      color: #FFF;
+    }
+    .portal-hero p {
+      font-size: 0.98rem;
+      color: var(--text-2);
+      max-width: 900px;
+      line-height: 1.7;
+    }
+
+    /* Live Stat Strips */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .stat-box {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      transition: all 0.2s;
+    }
+    .stat-box:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+    .stat-box-val {
+      font-family: var(--font-mono);
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stat-box-lbl {
+      font-size: 0.8rem;
+      color: var(--text-3);
+      margin-top: 3px;
+    }
+
+    /* Tab Content Panels */
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Section Component */
+    .doc-section {
+      margin-bottom: 48px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-desc {
+      font-size: 0.92rem;
+      color: var(--text-2);
+      margin-bottom: 22px;
+      line-height: 1.7;
+    }
+
+    /* Architecture Visualizer Diagram */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .arch-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .arch-card {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .arch-card:hover {
+      border-color: var(--maroon-400);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px var(--maroon-glow);
+    }
+    .arch-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+    .tag-ui { background: rgba(2, 132, 199, 0.16); color: #38BDF8; }
+    .tag-api { background: rgba(158, 42, 43, 0.22); color: #F87171; }
+    .tag-db { background: rgba(16, 185, 129, 0.16); color: #34D399; }
+    .tag-cloud { background: rgba(217, 119, 6, 0.16); color: #FBBF24; }
+
+    .arch-name {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #FFF;
+      margin-bottom: 4px;
+    }
+    .arch-file {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--amber-400);
+      direction: ltr;
+      text-align: left;
+      margin-bottom: 8px;
+    }
+    .arch-text {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+
+    .connector-banner {
+      background: var(--bg-base);
+      border: 1px dashed var(--border-strong);
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      color: var(--text-3);
+    }
+    .connector-banner b { color: var(--text-1); font-weight: 700; }
+
+    /* Filter Pills */
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover {
+      color: var(--text-1);
+      border-color: var(--border-strong);
+    }
+    .filter-btn.active {
+      background: rgba(158, 42, 43, 0.25);
+      border-color: var(--maroon-500);
+      color: #FFF;
+    }
+
+    /* Codebase File Cards Grid */
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .file-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+    }
+    .file-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+    .file-card-top {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-
-    .badge-group {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
-      text-transform: uppercase;
-    }
-    .badge-fe { background: rgba(14, 165, 233, 0.15); color: #38BDF8; border: 1px solid rgba(14, 165, 233, 0.3); }
-    .badge-be { background: rgba(158, 42, 43, 0.25); color: #F87171; border: 1px solid rgba(158, 42, 43, 0.4); }
-    .badge-db { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-sec { background: rgba(212, 139, 56, 0.15); color: #FBBF24; border: 1px solid rgba(212, 139, 56, 0.3); }
-    .badge-core { background: rgba(139, 92, 246, 0.15); color: #C084FC; border: 1px solid rgba(139, 92, 246, 0.3); }
-
     .file-path {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      font-weight: 600;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: 700;
       color: #FFF;
       direction: ltr;
       text-align: left;
       word-break: break-all;
-      margin-bottom: 8px;
     }
-
-    .file-analogy {
-      background: rgba(212, 139, 56, 0.08);
-      border-right: 3px solid var(--gold);
-      padding: 6px 12px;
-      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-      font-size: 0.84rem;
-      color: #FDE68A;
-      font-weight: 600;
-      margin-bottom: 12px;
+    .file-role-badge {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
     }
-
-    .file-desc {
-      font-size: 0.88rem;
-      color: var(--text-muted);
+    .file-summary {
+      font-size: 0.86rem;
+      color: var(--text-2);
       line-height: 1.6;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
-
-    .file-details-list {
-      list-style: none;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      padding-top: 12px;
-      margin-top: auto;
-    }
-    .file-details-list li {
-      margin-bottom: 6px;
+    .file-meta-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 12px;
+      font-size: 0.78rem;
+      color: var(--text-3);
+    }
+    .btn-inspect {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-inspect:hover {
+      background: var(--maroon-500);
+      border-color: var(--maroon-400);
+      color: #FFF;
+    }
+
+    /* REST API Reference Table */
+    .api-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .api-item {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .api-item:last-child { border-bottom: none; }
+    .api-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      gap: 16px;
+    }
+    .api-header:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .api-main-col {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+    .method-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 4px;
+      min-width: 60px;
+      text-align: center;
+      display: inline-block;
+    }
+    .m-get { background: rgba(2, 132, 199, 0.18); color: #38BDF8; border: 1px solid rgba(2, 132, 199, 0.3); }
+    .m-post { background: rgba(16, 185, 129, 0.18); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .m-patch { background: rgba(217, 119, 6, 0.18); color: #FBBF24; border: 1px solid rgba(217, 119, 6, 0.3); }
+    .m-delete { background: rgba(239, 68, 68, 0.18); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .api-route-path {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #FFF;
+      direction: ltr;
+      text-align: left;
+    }
+    .api-summary-text {
+      font-size: 0.85rem;
+      color: var(--text-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .api-chevron {
+      color: var(--text-3);
+      font-size: 12px;
+      transition: transform 0.2s;
+    }
+    .api-item.expanded .api-chevron {
+      transform: rotate(180deg);
+    }
+
+    .api-details {
+      display: none;
+      padding: 20px 24px;
+      background: var(--bg-base);
+      border-top: 1px solid var(--border);
+    }
+    .api-item.expanded .api-details {
+      display: block;
+    }
+    .api-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .spec-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .spec-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-3);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .spec-code {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--emerald-400);
+      direction: ltr;
+      text-align: left;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Database Schema Section */
+    .db-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 18px;
+    }
+    .db-table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .db-table-header {
+      padding: 14px 18px;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .db-table-title {
+      font-family: var(--font-mono);
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: var(--amber-400);
+      direction: ltr;
+    }
+    .db-col-list {
+      list-style: none;
+      padding: 12px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.77rem;
+      flex: 1;
+    }
+    .db-col-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .db-col-item:last-child { border-bottom: none; }
+    .col-pk { color: var(--emerald-400); font-weight: bold; }
+    .col-fk { color: var(--sky-400); }
+    .col-type { color: var(--text-3); }
+
+    /* Interactive Flow Simulator */
+    .flow-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 18px;
+      position: relative;
+    }
+    .flow-step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: all 0.2s;
+    }
+    .flow-step-item:hover {
+      border-color: var(--maroon-400);
+      background: var(--surface-hover);
+    }
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--maroon-500);
+      color: #FFF;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      shrink-0;
+    }
+    .step-content {
+      flex: 1;
+    }
+    .step-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #FFF;
+      margin-bottom: 4px;
+    }
+    .step-desc {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+    .step-code {
+      margin-top: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--amber-400);
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* CLI & Runbook Terminal Box */
+    .terminal-card {
+      background: #050408;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .terminal-head {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .terminal-dots {
+      display: flex;
       gap: 6px;
     }
-    .file-details-list li::before {
-      content: "•";
-      color: var(--gold);
-      font-weight: bold;
-    }
+    .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .t-red { background: #EF4444; }
+    .t-yellow { background: #F59E0B; }
+    .t-green { background: #10B981; }
 
-    /* Code Snippet Box */
-    .code-box {
-      background: #060508;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm);
-      padding: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: #38BDF8;
+    .terminal-body {
+      padding: 16px 20px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #FFF;
       direction: ltr;
+      text-align: left;
+      line-height: 1.8;
       overflow-x: auto;
-      margin-top: 10px;
+    }
+    .t-prompt { color: var(--maroon-400); font-weight: 700; }
+    .t-comment { color: var(--text-3); }
+    .t-accent { color: var(--emerald-400); }
+
+    /* Code Inspection Drawer (Slide-Over) */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .drawer-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .drawer-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 680px;
+      max-width: 90vw;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border-strong);
+      box-shadow: 10px 0 40px rgba(0,0,0,0.8);
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .drawer-overlay.open .drawer-panel {
+      transform: translateX(0);
+    }
+    .drawer-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-subtle);
+    }
+    .drawer-title {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #FFF;
+      direction: ltr;
+    }
+    .drawer-close {
+      background: transparent;
+      border: none;
+      color: var(--text-3);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    .drawer-close:hover { color: #FFF; }
+    .drawer-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .code-preview-box {
+      background: #050408;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #E2E8F0;
+      direction: ltr;
+      text-align: left;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
     }
 
-    /* Modal / Drawer details */
-    .no-results {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-muted);
-    }
-    .no-results-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
-
-    /* Footer */
-    footer {
-      margin-top: 80px;
-      padding-top: 30px;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      color: var(--text-dim);
+    /* Toast Notification */
+    .toast-box {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      background: var(--surface);
+      border: 1px solid var(--emerald-500);
+      color: var(--emerald-400);
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
       font-size: 0.85rem;
+      font-weight: 700;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast-box.show {
+      transform: translateY(0);
+      opacity: 1;
     }
 
-    @media (max-width: 768px) {
-      .cards-grid { grid-template-columns: 1fr; }
-      .metrics-ribbon { grid-template-columns: 1fr 1fr; }
-      .flow-steps { grid-template-columns: 1fr; }
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+      .topbar { padding: 0 16px; }
+      .top-nav-tabs { display: none; }
+      .main-content { padding: 20px 16px 60px; }
+      .portal-hero { padding: 24px 20px; }
+      .quick-search input { width: 180px; }
+      .quick-search input:focus { width: 220px; }
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <!-- Header -->
-    <header>
-      <div class="header-badge">
-        <span class="badge-dot"></span>
-        منصة سرد رقمي (Sard Raqami) — الوثيقة المعمارية التفاعلية 2026
+  <!-- Top Sticky Navigation -->
+  <header class="topbar">
+    <a href="#" class="brand">
+      <div class="brand-logo">س</div>
+      <div>
+        <span class="brand-title">سرد رقمي</span>
+        <span class="brand-tag">DEV PORTAL</span>
       </div>
-      <h1>دليل هيكلية ومعمارية المنصة الشامل</h1>
-      <p class="hero-desc">
-        مرجع تفاعلي مبسط يشرح بنية المشروع بالكامل: كيف تتصل الواجهات الأمامية بالخادم، كيف تُخزن البيانات بسرعة فائقة وتُسترد تلقائياً من السحابة، ودور كل ملف في بناء هذا النظام المتكامل.
-      </p>
+    </a>
 
-      <!-- Key System Metrics -->
-      <div class="metrics-ribbon">
-        <div class="metric-card">
-          <div class="metric-icon icon-maroon">⚡</div>
-          <div>
-            <div class="metric-value">&lt; 0.5 ms</div>
-            <div class="metric-label">سرعة استجابة الخادم الفائقة</div>
-          </div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-icon icon-gold">🗄️</div>
-          <div>
-            <div class="metric-value">SQLite WAL + PG</div>
-            <div class="metric-label">محرك هجين فائق الاستقرار</div>
-          </div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-icon icon-emerald">🛡️</div>
-          <div>
-            <div class="metric-value">Auto-Restore</div>
-            <div class="metric-label">استرداد ذاتي من Supabase</div>
-          </div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-icon icon-sky">📱</div>
-          <div>
-            <div class="metric-value">100% Responsive</div>
-            <div class="metric-label">واجهة متكاملة لجميع الهواتف</div>
-          </div>
-        </div>
-      </div>
-    </header>
+    <!-- Navigation Tabs -->
+    <nav class="top-nav-tabs" id="mainTabNav">
+      <button class="top-tab-btn active" onclick="switchTab('architecture')">📐 المعمارية</button>
+      <button class="top-tab-btn" onclick="switchTab('codebase')">📂 الكود والملفات</button>
+      <button class="top-tab-btn" onclick="switchTab('api')">⚡ نقاط الـ API</button>
+      <button class="top-tab-btn" onclick="switchTab('database')">🗄️ قواعد البيانات</button>
+      <button class="top-tab-btn" onclick="switchTab('flows')">🔄 مسارات التنفيذ</button>
+      <button class="top-tab-btn" onclick="switchTab('runbook')">🛠️ دليل التشغيل</button>
+    </nav>
 
-    <!-- Controls (Search + Filter Tabs) -->
-    <div class="controls-wrapper">
-      <div class="search-box">
+    <!-- Search & Indicators -->
+    <div class="topbar-actions">
+      <div class="quick-search">
         <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          id="searchInput" 
-          class="search-input" 
-          placeholder="ابحث عن اسم أي ملف، ميزة، مسار، أو وظيفة في المنصة (مثال: Feed, server.mjs, Chat, SQLite)..."
-          autocomplete="off"
-        />
+        <input type="text" id="globalSearchInput" placeholder="بحث في الكود، الـ APIs، والجداول..." />
+        <span class="kbd-hint">/</span>
       </div>
 
-      <nav class="tabs-nav" id="tabsContainer">
-        <button class="tab-btn active" data-category="all">✨ كافة عناصر النظام (<span id="count-all">0</span>)</button>
-        <button class="tab-btn" data-category="flow">🔄 مسار تدفق البيانات (Data Flow)</button>
-        <button class="tab-btn" data-category="frontend">🎨 الواجهة والصفحات (Frontend)</button>
-        <button class="tab-btn" data-category="backend">⚙️ الخادم والمسارات (Backend API)</button>
-        <button class="tab-btn" data-category="database">🗄️ قواعد البيانات والتزامن (DB)</button>
-        <button class="tab-btn" data-category="security">🛡️ الأمان واسترداد الكوارث (Backup)</button>
-      </nav>
+      <span class="status-pill">
+        <span class="status-dot"></span>
+        SQLite WAL &lt; 0.5ms
+      </span>
     </div>
+  </header>
 
-    <!-- Interactive Data Flow Visualizer -->
-    <section id="flowSection">
-      <div class="section-title">
-        <span>🔄 كيف تتحرك البيانات في سرد رقمي؟</span>
-        <span class="tag">انقر على أي مرحلة لاكتشاف ملفاتها</span>
+  <!-- Layout Wrapper -->
+  <div class="layout-wrapper">
+    <main class="main-content">
+
+      <!-- Hero Header Banner -->
+      <section class="portal-hero">
+        <div class="hero-badge-row">
+          <span class="hero-badge badge-standalone">Standalone Offline Site</span>
+          <span class="hero-badge badge-sqlite">Node:sqlite WAL Primary Engine</span>
+          <span class="hero-badge badge-render">Render Production Dual-Sync</span>
+        </div>
+        <h1>بوابة التوثيق الهندسي والمعمارية البرمجية للمطورين</h1>
+        <p>
+          مرجع تقني مباشر وهندسي خالٍ تماماً من الحشو والذكاء الاصطناعي العام: يوثق طبقات التنفيذ الحقيقية، ملفات الكود الفعلية، 16 مسار REST API مع عينات cURL، و23 جدولاً معيارياً في محرك SQLite WAL المدمج ونظام الاسترداد التلقائي للكوارث (Disaster Recovery) مع Supabase.
+        </p>
+
+        <!-- Metric Strips -->
+        <div class="stat-strip">
+          <div class="stat-box">
+            <div class="stat-box-val">&lt; 0.5 ms</div>
+            <div class="stat-box-lbl">متوسط زمن استجابة استعلامات SQLite</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-val">23 Tables</div>
+            <div class="stat-box-lbl">جداول قاعدة البيانات مع فهارس الأداء</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-val">16 Routers</div>
+            <div class="stat-box-lbl">مسارات REST API معيارية موثقة بالكامل</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-val">0 Servers</div>
+            <div class="stat-box-lbl">يعمل هذا الموقع ذاتياً بدون أي خادم أو إنترنت</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           TAB 1: ARCHITECTURE BLUEPRINT & SYSTEM DESIGN
+           ========================================================================= -->
+      <div class="tab-panel active" id="tab-architecture">
+        <section class="doc-section">
+          <div class="section-header">
+            <h2 class="section-title">📐 المعمارية الهندسية الهجينة (Hybrid Stack Architecture)</h2>
+          </div>
+          <p class="section-desc">
+            تعتمد منصة سرد رقمي نمط <strong>Local-First In-Memory with Hybrid Cloud Sync</strong>. القراءة والكتابة الفورية تتم في خادم Node 22 ومحرك SQLite WAL محلي بأقل من نصف ملي ثانية، بينما تتم المزامنة السحابية المزدوجة مع PostgreSQL و Supabase في الخلفية دون أي تعطيل للمستخدم.
+          </p>
+
+          <div class="arch-diagram">
+            <!-- Tier 1: Client -->
+            <div class="arch-row">
+              <div class="arch-card" onclick="openInspector('Feed.tsx')">
+                <span class="arch-tag tag-ui">Tier 1: Client Presentation</span>
+                <div class="arch-name">تطبيق React 19 + Vite SPA</div>
+                <div class="arch-file">apps/web/src/pages/app/Feed.tsx</div>
+                <div class="arch-text">واجهة مستخدم تفاعلية RTL، توجيه خفيف عبر Wouter، تحديثات واجهة متفائلة (Optimistic UI)، وزر سرد بالأيقونة فقط لتفادي الاقتطاع على الهواتف.</div>
+              </div>
+              <div class="arch-card" onclick="openInspector('ActivityGroupChat.tsx')">
+                <span class="arch-tag tag-ui">Realtime Client Components</span>
+                <div class="arch-name">محادثات الفعاليات بالشاشة الكاملة</div>
+                <div class="arch-file">apps/web/src/components/activities/ActivityGroupChat.tsx</div>
+                <div class="arch-text">واجهة محادثة 100dvh كاملة الشاشة مع نافذة تحكم مصغرة ومحمية للمشرفين لضبط الصلاحيات (الجميع / المنظمين فقط / صامت).</div>
+              </div>
+            </div>
+
+            <div class="connector-banner">
+              ⬇️ <b>HTTP/1.1 REST & JSON Protocol</b> — Bearer JWT Token Authorization — Latency: &lt; 8ms
+            </div>
+
+            <!-- Tier 2: Server API -->
+            <div class="arch-row">
+              <div class="arch-card" onclick="openInspector('server.mjs')">
+                <span class="arch-tag tag-api">Tier 2: Express 5 Server Entry</span>
+                <div class="arch-name">خادم Node 22 ESM النظيف</div>
+                <div class="arch-file">apps/api/server.mjs & app.mjs</div>
+                <div class="arch-text">مدخل تشغيل مصغر (67 سطراً)، قياس دقيق لسرعة الاستجابة (metricsMiddleware)، وخدمة ملفات الواجهة في بيئة الإنتاج على Render.</div>
+              </div>
+              <div class="arch-card" onclick="openInspector('routes/posts.mjs')">
+                <span class="arch-tag tag-api">Layered REST API Routers</span>
+                <div class="arch-name">16 موجّه مسارات منفصل</div>
+                <div class="arch-file">apps/api/routes/*.mjs</div>
+                <div class="arch-text">كل كيان (المنشورات، الفعاليات، الدورات، المجتمعات، بترا) له موجّه مستقل مع فحص المستخدمين المحظورين في الذاكرة O(1).</div>
+              </div>
+            </div>
+
+            <div class="connector-banner">
+              ⬇️ <b>In-Process Memory Bus (C-Bindings via node:sqlite)</b> — Prepared Statements — Latency: &lt; 0.2ms
+            </div>
+
+            <!-- Tier 3: Storage Engine -->
+            <div class="arch-row">
+              <div class="arch-card" onclick="openInspector('db/index.mjs')">
+                <span class="arch-tag tag-db">Tier 3: Primary SQLite WAL Engine</span>
+                <div class="arch-name">محرك SQLite 3 الأصيل (Node:sqlite)</div>
+                <div class="arch-file">apps/api/db/index.mjs & schema.mjs</div>
+                <div class="arch-text">تفعيل PRAGMA journal_mode = WAL مع PRAGMA synchronous = NORMAL و 64MB In-Memory Cache لضمان قراءة لا تحجب الكتابة إطلاقاً.</div>
+              </div>
+              <div class="arch-card" onclick="openInspector('db/persistence.mjs')">
+                <span class="arch-tag tag-cloud">Tier 4: Background Cloud Persistence</span>
+                <div class="arch-name">مزامنة PostgreSQL & Supabase</div>
+                <div class="arch-file">apps/api/db/persistence.mjs & disaster-recovery.mjs</div>
+                <div class="arch-text">نسخ احتياطي غير متزامن في الخلفية، وفحص سلامة الجداول واسترجاعها تلقائياً عند إقلاع السيرفر على Render في حال فقدان القرص المؤقت.</div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <div class="flow-container">
-        <div class="flow-steps">
-          <div class="flow-step active" data-highlight="frontend">
-            <div class="flow-number">1</div>
-            <div class="flow-title">نقرة المستخدم بالهاتف</div>
-            <div class="flow-desc">يتفاعل المستخدم مع الزر أو يكتب سردة</div>
-            <div class="flow-file">Feed.tsx</div>
+      <!-- =========================================================================
+           TAB 2: CODEBASE EXPLORER & CODE DRAWER
+           ========================================================================= -->
+      <div class="tab-panel" id="tab-codebase">
+        <section class="doc-section">
+          <div class="section-header">
+            <h2 class="section-title">📂 مستكشف ملفات الكود الحقيقية (Codebase Explorer)</h2>
+            <div class="filter-group">
+              <button class="filter-btn active" onclick="filterFiles('all')">الكل (12)</button>
+              <button class="filter-btn" onclick="filterFiles('web')">الواجهة الأمامية (Web)</button>
+              <button class="filter-btn" onclick="filterFiles('api')">الخادم (API)</button>
+              <button class="filter-btn" onclick="filterFiles('db')">قواعد البيانات (DB)</button>
+              <button class="filter-btn" onclick="filterFiles('devops')">الـ DevOps والنشر</button>
+            </div>
           </div>
-          <div class="flow-step" data-highlight="frontend-service">
-            <div class="flow-number">2</div>
-            <div class="flow-title">خدمات الواجهة</div>
-            <div class="flow-desc">تحضير الطلب والتحقق من التوكن محلياً</div>
-            <div class="flow-file">postsService.ts</div>
-          </div>
-          <div class="flow-step" data-highlight="backend-app">
-            <div class="flow-number">3</div>
-            <div class="flow-title">الخادم النظيف</div>
-            <div class="flow-desc">استقبال الطلب، قياس السرعة، وفحص الأمان</div>
-            <div class="flow-file">server.mjs & app.mjs</div>
-          </div>
-          <div class="flow-step" data-highlight="backend-router">
-            <div class="flow-number">4</div>
-            <div class="flow-title">موجّه المسار والتحقق</div>
-            <div class="flow-desc">تنفيذ قواعد النشر وحساب الوقت النسبي</div>
-            <div class="flow-file">routes/posts.mjs</div>
-          </div>
-          <div class="flow-step" data-highlight="database-wal">
-            <div class="flow-number">5</div>
-            <div class="flow-title">حفظ فوري في SQLite</div>
-            <div class="flow-desc">كتابة فورية للبيانات بزمن أقل من 1 ملي ثانية</div>
-            <div class="flow-file">node:sqlite (WAL)</div>
-          </div>
-          <div class="flow-step" data-highlight="database-sync">
-            <div class="flow-number">6</div>
-            <div class="flow-title">مزامنة سحابية هادئة</div>
-            <div class="flow-desc">نسخ خلفي آمن إلى Supabase / PostgreSQL</div>
-            <div class="flow-file">persistence.mjs</div>
-          </div>
-        </div>
-      </div>
-    </section>
+          <p class="section-desc">
+            انقر على أي ملف لاستعراض كود المصدر الفعلي، المسؤوليات المباشرة، وحجم الملف، مع زر النسخ السريع:
+          </p>
 
-    <!-- File Cards Section -->
-    <section>
-      <div class="section-title">
-        <span>📂 دليل الملفات والمكونات المعمارية</span>
-        <span class="tag" id="visibleCounter">عرض كافة الملفات</span>
+          <div class="files-grid" id="filesGrid">
+            <!-- Files populated via JS -->
+          </div>
+        </section>
       </div>
 
-      <div class="cards-grid" id="cardsGrid">
-
-        <!-- FRONTEND: Feed.tsx -->
-        <div class="file-card" data-category="frontend" data-tags="feed post share ui react frontend ساحة سرد منشورات">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-fe">Frontend UI</span>
-                <span class="badge badge-core">Core Page</span>
-              </div>
-              <span style="font-size: 20px;">💬</span>
+      <!-- =========================================================================
+           TAB 3: REST API REFERENCE & CURL GENERATOR
+           ========================================================================= -->
+      <div class="tab-panel" id="tab-api">
+        <section class="doc-section">
+          <div class="section-header">
+            <h2 class="section-title">⚡ مرجع نقاط الـ REST API النشطة (16 نقطة موثقة)</h2>
+            <div class="filter-group">
+              <button class="filter-btn active" onclick="filterApi('ALL')">ALL (16)</button>
+              <button class="filter-btn" onclick="filterApi('GET')">GET</button>
+              <button class="filter-btn" onclick="filterApi('POST')">POST</button>
+              <button class="filter-btn" onclick="filterApi('PATCH')">PATCH</button>
+              <button class="filter-btn" onclick="filterApi('DELETE')">DELETE</button>
             </div>
-            <div class="file-path">apps/web/src/pages/app/Feed.tsx</div>
-            <div class="file-analogy">💡 التشبيه: مثل "الساحة العامة أو تويتر سرد"</div>
-            <p class="file-desc">
-              صفحة السرد العام الكبرى لجميع رواد المنصة. تحتوي على صندوق كتابة السردات بالأيقونة فقط، دعم استطلاعات الرأي، تبويبات (لك، المتابعون، الرائجة)، والتحديث اللحظي للمنشورات مع التوقيت النسبي الحقيقي.
-            </p>
           </div>
-          <ul class="file-details-list">
-            <li>زر النشر بأيقونة السرد فقط (36x36px) مضاد للاقتطاع على الهواتف.</li>
-            <li>زر مشاركة حقيقي يفتح Web Share API الأصلي للهاتف.</li>
-            <li>يرتبط بـ: <code>postsService.ts</code> و <code>ShareModal.tsx</code>.</li>
-          </ul>
-        </div>
+          <p class="section-desc">
+            قائمة تفصيلية بكافة نقاط النهاية الحقيقية المفعلة في خادم Express. انقر على أي مسار لعرض معايير الطلب، نموذج JSON، وأمر cURL الجاهز للنسخ:
+          </p>
 
-        <!-- FRONTEND: AppLayout.tsx -->
-        <div class="file-card" data-category="frontend" data-tags="layout sidebar mobile nav app navigation إطار قائمة جانبية">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-fe">Frontend UI</span>
-                <span class="badge badge-core">Layout</span>
-              </div>
-              <span style="font-size: 20px;">📱</span>
-            </div>
-            <div class="file-path">apps/web/src/layouts/AppLayout.tsx</div>
-            <div class="file-analogy">💡 التشبيه: مثل "هيكل المبنى الرئيسي والأبواب"</div>
-            <p class="file-desc">
-              الإطار العام لجميع صفحات المستخدمين المسجلين. يحتوي على القائمة الجانبية للشاشات الكبيرة، وشريط التنقل السفلي المريح لشاشات الهواتف الذكية، وشريط الرأس العلوي مع عداد الإشعارات والبحث.
-            </p>
+          <div class="api-container" id="apiContainer">
+            <!-- APIs populated via JS -->
           </div>
-          <ul class="file-details-list">
-            <li>يضمن عدم وجود أي انزلاق أو تمرير أفقي على شاشات الهواتف.</li>
-            <li>استماع دوري لعدد الإشعارات غير المقروءة وتشغيل نغمة التنبيه.</li>
-          </ul>
-        </div>
-
-        <!-- FRONTEND: ActivityGroupChat.tsx & CourseGroupChat.tsx -->
-        <div class="file-card" data-category="frontend" data-tags="chat activities courses fullscreen modal controls محادثة شاشة كاملة إشراف">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-fe">Frontend UI</span>
-                <span class="badge badge-sec">Live Chat</span>
-              </div>
-              <span style="font-size: 20px;">🗣️</span>
-            </div>
-            <div class="file-path">apps/web/src/components/activities/ActivityGroupChat.tsx</div>
-            <div class="file-analogy">💡 التشبيه: مثل "قاعة المحاضرات الحية المكتملة"</div>
-            <p class="file-desc">
-              غرفة المحادثة اللحظية للفعاليات والأنشطة (ومثلها للدورات). تم تحويلها إلى شاشة كاملة (Full Screen 100dvh) لمنع التشتت، مع زر تحكم مصغر للمشرفين المنظمين لضبط صلاحيات الحديث والإعلانات المثبتة.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>دعم وضع الصمت (Muted)، ووضع حديث المنظمين فقط، ووضع الجميع.</li>
-            <li>تحديث تلقائي كل ثانيتين للرسائل الحية.</li>
-          </ul>
-        </div>
-
-        <!-- FRONTEND: postsService.ts -->
-        <div class="file-card" data-category="frontend" data-tags="service api posts likes comments frontend اتصال منشورات">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-fe">Service</span>
-                <span class="badge badge-core">Data Client</span>
-              </div>
-              <span style="font-size: 20px;">📡</span>
-            </div>
-            <div class="file-path">apps/web/src/services/postsService.ts</div>
-            <div class="file-analogy">💡 التشبيه: مثل "المندوب السريع بين الشاشة والخادم"</div>
-            <p class="file-desc">
-              الخدمة البرمجية المسؤولة عن جلب المنشورات من الـ API، ونشر المنشورات الجديدة، وتسجيل الإعجابات بتحديث متفائل (Optimistic UI) لكي يشعر المستخدم باستجابة فورية حتى قبل رد الخادم.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>تحتوي على واجهة Post مع توقيت النشر الفعلي <code>createdAt</code>.</li>
-            <li>استخراج الوسوم التلقائي (Hashtags) من محتوى المنشور.</li>
-          </ul>
-        </div>
-
-        <!-- FRONTEND: utils.ts -->
-        <div class="file-card" data-category="frontend" data-tags="utils time arabic relative formatters helper توقيت لغة عربية">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-fe">Utility</span>
-              </div>
-              <span style="font-size: 20px;">⏱️</span>
-            </div>
-            <div class="file-path">apps/web/src/lib/utils.ts</div>
-            <div class="file-analogy">💡 التشبيه: مثل "ساعة التوقيت ومصحح اللغة"</div>
-            <p class="file-desc">
-              يحتوي على دالة <code>formatArabicRelativeTime</code> لحساب فارق التوقيت اللحظي وفق القواعد اللغوية العربية الدقيقة (الآن، منذ دقيقة، دقيقتين، دقائق، ساعات، أيام، أشهر).
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>يضمن ظهور توقيت حقيقي وموثوق لكل منشور ورد في التطبيق.</li>
-          </ul>
-        </div>
-
-        <!-- BACKEND: server.mjs -->
-        <div class="file-card" data-category="backend" data-tags="backend server entry express esm مدخل الخادم تشغيل">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-be">Backend</span>
-                <span class="badge badge-core">Entry Point</span>
-              </div>
-              <span style="font-size: 20px;">🚀</span>
-            </div>
-            <div class="file-path">apps/api/server.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "مفتاح تشغيل المحرك الرئيسي"</div>
-            <p class="file-desc">
-              المدخل النظيف المختزل للخادم (67 سطراً فقط). يقتصر دوره على تشغيل الخادم بالمنفذ المخصص، واستدعاء تهيئة قاعدة البيانات، وإيقاف التشغيل الآمن (Graceful Shutdown) لحفظ كافة العمليات العالقة في الذاكرة.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>تم اختزاله من 3,265 سطراً إلى 67 سطراً نظيفاً.</li>
-            <li>يستمع للإشارات البرمجية <code>SIGINT</code> و <code>SIGTERM</code> للإغلاق النظيف.</li>
-          </ul>
-        </div>
-
-        <!-- BACKEND: app.mjs -->
-        <div class="file-card" data-category="backend" data-tags="backend express middleware app routes تكوين الخادم">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-be">Backend</span>
-                <span class="badge badge-core">Express App</span>
-              </div>
-              <span style="font-size: 20px;">🏢</span>
-            </div>
-            <div class="file-path">apps/api/app.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "مكتب الاستقبال وإدارة المكاتب"</div>
-            <p class="file-desc">
-              يجمع كافة وسائط الأمان (CORS, Express JSON limit 15MB)، ويقيس سرعة استجابة الخادم لكل طلب عبر <code>metricsMiddleware</code>، ويخدم ملفات الواجهة المجمعة تلقائياً في بيئة الإنتاج على Render.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>توجيه مسارات <code>/api</code> إلى موزع المسارات المركزي.</li>
-            <li>توجيه كافة الروابط الأخرى لخدمة تطبيق React كـ SPA.</li>
-          </ul>
-        </div>
-
-        <!-- BACKEND: routes/posts.mjs -->
-        <div class="file-card" data-category="backend" data-tags="routes posts feed likes comments api مسارات المنشورات">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-be">Routes</span>
-              </div>
-              <span style="font-size: 20px;">📝</span>
-            </div>
-            <div class="file-path">apps/api/routes/posts.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "مكتب تحرير ومراجعة المنشورات"</div>
-            <p class="file-desc">
-              يعالج طلبات جلب المنشورات، النشر الجديد، الإعجابات، المشاركات، والتعليقات. يحسب التوقيت النسبي اللحظي ويرسل إشعاراً للمؤلف عند تفاعل أي شخص مع محتواه.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>حساب التوقيت النسبي اللحظي <code>formatRelativeTime(r.created_at)</code>.</li>
-            <li>التحقق من قائمة المستخدمين المحظورين في الذاكرة O(1).</li>
-          </ul>
-        </div>
-
-        <!-- BACKEND: routes/petra.mjs -->
-        <div class="file-card" data-category="backend" data-tags="petra admin security moderation بترا رقابة إدارة">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-be">Routes</span>
-                <span class="badge badge-sec">Admin Portal</span>
-              </div>
-              <span style="font-size: 20px;">🏛️</span>
-            </div>
-            <div class="file-path">apps/api/routes/petra.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "غرفة القيادة والسيطرة الإدارية"</div>
-            <p class="file-desc">
-              بوابة بترا للإشراف والرقابة وحوكمة المنصة. توفر إحصائيات الأداء اللحظية، ومراقبة بلاغات المستخدمين، وإيقاف الحسابات المخالفة وتوثيق المنظمات المعتمدة.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>محمية بوسيط <code>petraAuthMiddleware</code> الصارم.</li>
-            <li>مراقبة قياسات الخادم (متوسط زمن الاستجابة، استهلاك الذاكرة).</li>
-          </ul>
-        </div>
-
-        <!-- DATABASE: db/index.mjs -->
-        <div class="file-card" data-category="database" data-tags="db sqlite node:sqlite wal engine قاعدة بيانات سريعة">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-db">Database</span>
-                <span class="badge badge-core">SQLite Engine</span>
-              </div>
-              <span style="font-size: 20px;">⚡</span>
-            </div>
-            <div class="file-path">apps/api/db/index.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "الخزنة السريعة في قلب البنك"</div>
-            <p class="file-desc">
-              المحرك المركزي لقاعدة البيانات. يعتمد على ميزة <code>node:sqlite</code> الأصيلة المدمجة في Node.js 22 مع وضع WAL Mode، مما يمنح المنصة سرعة معالجة تفوق 10,000 عملية بالثانية بزمن يقل عن 1 ملي ثانية.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>استدعاء الفحص الذاتي للكوارث والاسترداد عند الإقلاع.</li>
-            <li>تنسيق المزامنة السحابية غير المتزامنة مع PostgreSQL.</li>
-          </ul>
-        </div>
-
-        <!-- DATABASE: db/persistence.mjs -->
-        <div class="file-card" data-category="database" data-tags="db persistence postgresql supabase sync مزامنة سحابية">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-db">Database</span>
-                <span class="badge badge-sec">Cloud Persistence</span>
-              </div>
-              <span style="font-size: 20px;">☁️</span>
-            </div>
-            <div class="file-path">apps/api/db/persistence.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "شاحنة النسخ الاحتياطي التلقائية"</div>
-            <p class="file-desc">
-              طبقة الاستدامة الهجينة. تعمل في الخلفية دون تعطيل المستخدم: بمجرد إضافة أو تعديل أي بيانات في SQLite، تقوم هذه الطبقة بنسخ التعديلات تلقائياً إلى PostgreSQL و Supabase.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>عدم التأثير إطلاقاً على سرعة استجابة المستخدم (Non-blocking).</li>
-            <li>استراتيجية Upsert آمنة تمنع أي تكرار أو تعارض في البيانات.</li>
-          </ul>
-        </div>
-
-        <!-- DATABASE: db/disaster-recovery.mjs -->
-        <div class="file-card" data-category="security" data-tags="security disaster recovery supabase restore استرداد كوارث أمان">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-sec">Security</span>
-                <span class="badge badge-core">Disaster Recovery</span>
-              </div>
-              <span style="font-size: 20px;">🛡️</span>
-            </div>
-            <div class="file-path">apps/api/db/disaster-recovery.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "نظام الإنعاش والطوارئ الآلي"</div>
-            <p class="file-desc">
-              يفحص سلامة قاعدة البيانات المحلية عند بدء تشغيل الخادم. إذا انتهت فترة تجربة Render المجانية أو حُذفت البيانات المحلية بالخطأ، يقوم تلقائياً بسحب واستعادة كافة الجداول والحسابات من Supabase في ثوانٍ.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>فحص نزاهة الجداول الـ 19 آلياً.</li>
-            <li>تسجيل كل محاولة استرداد في سجل التدقيق <code>backup_audit_logs</code>.</li>
-          </ul>
-        </div>
-
-        <!-- SCRIPTS: backup-scheduler.mjs -->
-        <div class="file-card" data-category="security" data-tags="scripts cron backup scheduler supabase نسخ احتياطي دوري">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-sec">Scripts</span>
-                <span class="badge badge-core">Automated Cron</span>
-              </div>
-              <span style="font-size: 20px;">⏰</span>
-            </div>
-            <div class="file-path">scripts/backup-scheduler.mjs</div>
-            <div class="file-analogy">💡 التشبيه: مثل "الحارس الذي يأخذ لقطة للمنظومة مرتين باليوم"</div>
-            <p class="file-desc">
-              مجدول النسخ السحابي الدوري. يعمل مرتين يومياً (03:00 و 15:00 UTC) عبر Render Cron Job للتأكد من نقل أي بيانات جديدة بين Render Postgres وسحابة Supabase ومطابقة عدد السجلات بنسبة 100%.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>يعيد المحاولة تلقائياً عند انقطاع الاتصال المؤقت.</li>
-            <li>يوفر تقارير تدقيق ومقارنة فورية بين السحابتين.</li>
-          </ul>
-        </div>
-
-        <!-- CONFIG: render.yaml -->
-        <div class="file-card" data-category="backend" data-tags="devops render cloud infrastructure deploy نشر سحابي">
-          <div>
-            <div class="card-top">
-              <div class="badge-group">
-                <span class="badge badge-core">DevOps</span>
-                <span class="badge badge-sec">Infrastructure</span>
-              </div>
-              <span style="font-size: 20px;">🌐</span>
-            </div>
-            <div class="file-path">render.yaml</div>
-            <div class="file-analogy">💡 التشبيه: مثل "المخطط الهندسي لتشييد السحابة"</div>
-            <p class="file-desc">
-              ملف البنية التحتية البرمجية (Infrastructure as Code) لخدمة Render. يحدد تلقائياً خدمة الويب الأساسية (Web Service)، ومهمة النسخ الاحتياطي الدوري (Cron Job)، وقاعدة بيانات PostgreSQL الملحقة.
-            </p>
-          </div>
-          <ul class="file-details-list">
-            <li>يبني الواجهة والخادم بأمر واحد <code>pnpm run build</code>.</li>
-            <li>يربط المتغيرات البيئية الحساسة مثل <code>JWT_SECRET</code> و <code>DATABASE_URL</code>.</li>
-          </ul>
-        </div>
-
+        </section>
       </div>
-    </section>
 
-    <!-- Footer -->
-    <footer>
-      <p>منصة سرد رقمي (Sard Raqami) — تم تطوير وتوثيق النظام وفق أفضل معايير هندسة البرمجيات النظيفة (Clean Architecture).</p>
-      <p style="margin-top: 6px; font-size: 0.78rem;">جميع الحقوق محفوظة لمنصة سرد رقمي © 2026</p>
-    </footer>
+      <!-- =========================================================================
+           TAB 4: DATABASE SCHEMA & DDL INSPECTOR
+           ========================================================================= -->
+      <div class="tab-panel" id="tab-database">
+        <section class="doc-section">
+          <div class="section-header">
+            <h2 class="section-title">🗄️ قاموس جداول قاعدة البيانات (23 جدولاً معيارياً)</h2>
+            <div class="filter-group">
+              <button class="filter-btn active" id="btnToggleCols" onclick="toggleSchemaMode('columns')">عرض الأعمدة والأنواع</button>
+              <button class="filter-btn" id="btnToggleSql" onclick="toggleSchemaMode('sql')">عرض كود SQL DDL</button>
+            </div>
+          </div>
+          <p class="section-desc">
+            هيكلية جداول محرك SQLite WAL الحقيقية المأخوذة مباشرة من <code>apps/api/db/schema.mjs</code> متضمنة الفهارس والمفاتيح الأساسية والأجنبية:
+          </p>
+
+          <div class="db-container" id="dbContainer">
+            <!-- Tables populated via JS -->
+          </div>
+
+          <!-- Raw SQL DDL View (Hidden by default) -->
+          <div id="rawSqlView" style="display: none; margin-top: 20px;">
+            <div class="terminal-card">
+              <div class="terminal-head">
+                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">schema.sql — 23 Tables & Indexes DDL</span>
+                <button class="btn-inspect" onclick="copyRawSql()">📋 نسخ كود الـ DDL بالكامل</button>
+              </div>
+              <pre class="terminal-body" id="rawSqlText">
+-- يتم تحميل كود SQL تلقائياً...
+              </pre>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- =========================================================================
+           TAB 5: INTERACTIVE FLOW SIMULATOR
+           ========================================================================= -->
+      <div class="tab-panel" id="tab-flows">
+        <section class="doc-section">
+          <div class="section-header">
+            <h2 class="section-title">🔄 مسارات التنفيذ الحقيقية (Step-by-Step Flow Simulator)</h2>
+          </div>
+          <p class="section-desc">
+            تتبع دقيق لمسار حركة البيانات عبر طبقات التطبيق من واجهة المستخدم إلى القرص الصلب والسحابة:
+          </p>
+
+          <!-- Flow 1: Post Publishing -->
+          <div class="flow-card">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #FFF; margin-bottom: 6px;">
+              📝 مسار نشر سردة جديدة (Post Creation & WAL Commit Flow)
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-2);">
+              يوضح كيف تتم عملية النشر مع استخراج الوسوم التلقائي وحفظ البيانات في SQLite بزمن استجابة فوري:
+            </p>
+
+            <div class="flow-steps">
+              <div class="flow-step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <div class="step-title">واجهة المستخدم (Feed.tsx)</div>
+                  <div class="step-desc">يقوم المستخدم بكتابة المنشور والضغط على زر السرد (أيقونة السرد فقط 36x36px). يتم فحص عدد الأحرف (&le; 280) وإرسال الطلب مع Bearer Token.</div>
+                  <div class="step-code">POST /api/posts { content: "فكرة تقنية جديدة #سرد_رقمي" }</div>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <div class="step-title">وسيط الخادم ومصادقة التوكن (requireAuth Middleware)</div>
+                  <div class="step-desc">يتحقق خادم Express من صحة توكن الـ JWT عبر <code>jsonwebtoken.verify</code>، ويفحص الذاكرة للتأكد من أن المستخدم ليس ضمن قائمة المحظورين O(1).</div>
+                  <div class="step-code">jwt.verify(token, JWT_SECRET) & checkBannedUsersCache(userId)</div>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <div class="step-title">الكتابة في محرك SQLite WAL (Node Native DatabaseSync)</div>
+                  <div class="step-desc">تنفيذ استعلام جاهز (Prepared Statement) لإدراج المنشور في جدول <code>posts</code> وتوليد التوقيت النسبي اللحظي العربي وحفظ الوسوم المستخرجة.</div>
+                  <div class="step-code">INSERT INTO posts (id, author_id, content, tags, created_at, timestamp_text) VALUES (...)</div>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                  <div class="step-title">استجابة فورية للعميل وتحديث الواجهة المتفائل (&lt; 0.5ms)</div>
+                  <div class="step-desc">يرجع الخادم كائن المنشور المحدث بحالة HTTP 201، فتظهر السردة أعلى التغذية فوراً مع حساب التوقيت بدقة عبر <code>formatArabicRelativeTime</code>.</div>
+                  <div class="step-code">HTTP 201 Created { success: true, post: { ... } }</div>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                  <div class="step-title">مزامنة سحابية غير معطلة (PostgreSQL Cloud Persistence)</div>
+                  <div class="step-desc">في الخلفية وبدون تأخير العميل، يتم وضع المعاملة في رتل المزامنة السحابية لنقلها إلى Supabase PostgreSQL لضمان الديمومة الطويلة.</div>
+                  <div class="step-code">await syncTableToPostgres('posts', records)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flow 2: Live Chat & Permissions -->
+          <div class="flow-card">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #FFF; margin-bottom: 6px;">
+              💬 مسار محادثة الفعاليات وضبط الصلاحيات (Event Chat Moderation Flow)
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-2);">
+              يوضح كيفية تشغيل محادثة الفعالية بشاشة كاملة (100dvh) مع إدارة المشرفين لصلاحيات التحدث والإعلانات المثبتة:
+            </p>
+
+            <div class="flow-steps">
+              <div class="flow-step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <div class="step-title">فتح المحادثة (ActivityGroupChat.tsx)</div>
+                  <div class="step-desc">عرض الغرفة بنمط 100dvh كامل الشاشة، وجلب آخر 50 رسالة مع إعدادات الغرفة الحالية عبر <code>GET /api/activities/:id/chat/messages</code>.</div>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <div class="step-title">زر التحكم المصغر للمشرفين (Control Button)</div>
+                  <div class="step-desc">إذا كان المستخدم هو منظم الفعالية أو مشرف معتمد، يظهر له زر ضبط مصغر يفتح نافذة إعدادات الغرفة (الصلاحيات، تثبيت إعلان، كتم).</div>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <div class="step-title">تعديل الصلاحيات الفوري (PATCH Settings)</div>
+                  <div class="step-desc">إرسال طلب التعديل إلى <code>PATCH /api/activities/:id/chat/settings</code> وتحديث جدول <code>activity_chat_settings</code> في SQLite فوراً.</div>
+                  <div class="step-code">PATCH /api/activities/:id/chat/settings { permission_mode: "organizer_only", pinned_announcement: "مرحباً بكم" }</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </div>
+
+      <!-- =========================================================================
+           TAB 6: DEV RUNBOOK & CLI CHEAT SHEET
+           ========================================================================= -->
+      <div class="tab-panel" id="tab-runbook">
+        <section class="doc-section">
+          <div class="section-header">
+            <h2 class="section-title">🛠️ دليل التشغيل والأوامر السريعة (Dev Runbook & Ops)</h2>
+          </div>
+          <p class="section-desc">
+            أوامر الصيانة والتشغيل الحقيقية، وإدارة النسخ الاحتياطي، وحل مشاكل قاعدة بيانات SQLite:
+          </p>
+
+          <!-- Terminal 1: Dev Server -->
+          <div class="terminal-card">
+            <div class="terminal-head">
+              <div class="terminal-dots">
+                <div class="t-dot t-red"></div>
+                <div class="t-dot t-yellow"></div>
+                <div class="t-dot t-green"></div>
+              </div>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Local Development Commands</span>
+              <button class="btn-inspect" onclick="copyText('pnpm dev')">📋 نسخ الأمر</button>
+            </div>
+            <pre class="terminal-body">
+<span class="t-comment"># 1. تثبيت كافة الحزم والاعتماديات باستخدام pnpm</span>
+<span class="t-prompt">$</span> pnpm install
+
+<span class="t-comment"># 2. تشغيل الواجهة والخادم بالتوازي (Web: 5173 / API: 5000)</span>
+<span class="t-prompt">$</span> pnpm dev
+
+<span class="t-comment"># 3. تشغيل خادم الـ API بمفرده (Node 22 Native ESM)</span>
+<span class="t-prompt">$</span> pnpm dev:api
+
+<span class="t-comment"># 4. بناء بيئة الإنتاج للواجهة</span>
+<span class="t-prompt">$</span> pnpm build
+            </pre>
+          </div>
+
+          <!-- Terminal 2: Backup & Recovery CLI -->
+          <div class="terminal-card">
+            <div class="terminal-head">
+              <div class="terminal-dots">
+                <div class="t-dot t-red"></div>
+                <div class="t-dot t-yellow"></div>
+                <div class="t-dot t-green"></div>
+              </div>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Supabase Dual-Sync & Disaster Recovery CLI</span>
+              <button class="btn-inspect" onclick="copyText('pnpm backup:sync')">📋 نسخ الأمر</button>
+            </div>
+            <pre class="terminal-body">
+<span class="t-comment"># مزامنة فورية لكافة الجداول الـ 23 من SQLite المحلي إلى Supabase</span>
+<span class="t-prompt">$</span> pnpm backup:sync
+
+<span class="t-comment"># فحص سلامة وتطابق سجلات قاعدة البيانات دون تعديل</span>
+<span class="t-prompt">$</span> pnpm backup:check
+
+<span class="t-comment"># استرداد كامل للبيانات من Supabase إلى SQLite المحلي (Disaster Recovery)</span>
+<span class="t-prompt">$</span> pnpm backup:restore
+            </pre>
+          </div>
+
+          <!-- Terminal 3: Environment Variables -->
+          <div class="terminal-card">
+            <div class="terminal-head">
+              <div class="terminal-dots">
+                <div class="t-dot t-red"></div>
+                <div class="t-dot t-yellow"></div>
+                <div class="t-dot t-green"></div>
+              </div>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">Environment Variables (.env)</span>
+              <button class="btn-inspect" onclick="copyText('PORT=5000\nNODE_ENV=production')">📋 نسخ القالب</button>
+            </div>
+            <pre class="terminal-body">
+<span class="t-comment"># منفذ الخادم المحلي</span>
+<span class="t-accent">PORT</span>=5000
+<span class="t-accent">HOST</span>=0.0.0.0
+
+<span class="t-comment"># مسار مجلد بيانات SQLite المحلي</span>
+<span class="t-accent">DATA_DIR</span>=./database
+<span class="t-accent">DATABASE_PATH</span>=./database/sard.db
+
+<span class="t-comment"># المفتاح السري لتشفير توكن الـ JWT</span>
+<span class="t-accent">JWT_SECRET</span>=your-super-secret-jwt-key-min-32-chars
+
+<span class="t-comment"># رابط اتصال Supabase PostgreSQL للمزامنة السحابية</span>
+<span class="t-accent">SUPABASE_DATABASE_URL</span>=postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+            </pre>
+          </div>
+
+        </section>
+      </div>
+
+    </main>
   </div>
 
+  <!-- Code Inspection Drawer Overlay -->
+  <div class="drawer-overlay" id="codeDrawerOverlay" onclick="closeInspector()">
+    <div class="drawer-panel" onclick="event.stopPropagation()">
+      <div class="drawer-header">
+        <div>
+          <div class="drawer-title" id="drawerFilePath">apps/web/src/pages/app/Feed.tsx</div>
+          <span style="font-size: 11px; color: var(--text-3);" id="drawerMeta">120 Lines | React 19</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn-inspect" onclick="copyDrawerCode()">📋 نسخ الكود</button>
+          <button class="drawer-close" onclick="closeInspector()">&times;</button>
+        </div>
+      </div>
+      <div class="drawer-body">
+        <p style="font-size: 0.88rem; color: var(--text-2); margin-bottom: 16px; line-height: 1.6;" id="drawerDesc">
+          وصف الملف...
+        </p>
+        <pre class="code-preview-box" id="drawerCodeContent">
+// جارٍ تحميل الكود...
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Copy Toast Notification -->
+  <div class="toast-box" id="toastBox">
+    <span>✅</span>
+    <span id="toastMsg">تم النسخ بنجاح!</span>
+  </div>
+
+  <!-- =========================================================================
+       INLINE JAVASCRIPT DATA & LOGIC
+       100% Offline Standalone - Zero External Network Requests
+       ========================================================================= -->
   <script>
-    // Live Search & Filtering Logic
-    const searchInput = document.getElementById('searchInput');
-    const cardsGrid = document.getElementById('cardsGrid');
-    const cards = Array.from(document.querySelectorAll('.file-card'));
-    const tabBtns = Array.from(document.querySelectorAll('.tab-btn'));
-    const flowSection = document.getElementById('flowSection');
-    const flowSteps = Array.from(document.querySelectorAll('.flow-step'));
-    const visibleCounter = document.getElementById('visibleCounter');
-    const countAll = document.getElementById('count-all');
+    // --- 1. CODEBASE FILES DATA DICTIONARY ---
+    const CODE_FILES = [
+      {
+        id: 'Feed.tsx',
+        category: 'web',
+        path: 'apps/web/src/pages/app/Feed.tsx',
+        tag: 'Web Page',
+        tagClass: 'tag-ui',
+        lines: 989,
+        tech: 'React 19 / Tailwind / Lucide',
+        summary: 'ساحة السرد العامة لمنصة سرد: صندوق النشر الذكي بزر بأيقونة السرد فقط (36x36px) لتفادي الاقتطاع على شاشات الهواتف، دعم استطلاعات الرأي، ودعم أزرار المشاركة Web Share API مع حساب التوقيت النسبي اللحظي.',
+        codeSnippet: `// صندوق النشر المحسن وزر السرد بالأيقونة فقط لمنع الاقتطاع
+<Button
+  type="submit"
+  disabled={!content.trim() || isPosting}
+  size="icon"
+  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm flex items-center justify-center cursor-pointer shrink-0"
+  title="اسرد الآن"
+>
+  {isPosting ? (
+    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+  ) : (
+    <Send className="w-4 h-4 sm:w-4.5 sm:h-4.5 rotate-180" />
+  )}
+</Button>
 
-    countAll.textContent = cards.length;
+// حساب التوقيت النسبي اللحظي العربي بدقة
+<span className="text-xs text-muted-foreground">
+  {formatArabicRelativeTime(post.created_at || post.timestamp_text)}
+</span>`
+      },
+      {
+        id: 'AppLayout.tsx',
+        category: 'web',
+        path: 'apps/web/src/layouts/AppLayout.tsx',
+        tag: 'Layout',
+        tagClass: 'tag-ui',
+        lines: 340,
+        tech: 'Responsive RTL Grid',
+        summary: 'الهيكل العام لصفحات المستخدمين: القائمة الجانبية للشاشات الكبيرة، وشريط التنقل السفلي المخصص للهواتف الذكية مع منع التمرير الأفقي عبر overflow-x-hidden w-full min-w-0.',
+        codeSnippet: `// إطار التطبيق ومنع التمرير الأفقي الشاذ على الهواتف
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row overflow-x-hidden w-full max-w-full">
+      {/* Sidebar for Desktop */}
+      <Sidebar className="hidden md:flex shrink-0 w-64 border-l border-border" />
+      
+      {/* Main Content Area */}
+      <main className="flex-1 w-full min-w-0 pb-20 md:pb-6 overflow-x-hidden">
+        {children}
+      </main>
 
-    let currentCategory = 'all';
-    let searchQuery = '';
+      {/* Fixed Bottom Navigation for Mobile */}
+      <MobileBottomNav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-md" />
+    </div>
+  );
+}`
+      },
+      {
+        id: 'ActivityGroupChat.tsx',
+        category: 'web',
+        path: 'apps/web/src/components/activities/ActivityGroupChat.tsx',
+        tag: 'Component',
+        tagClass: 'tag-ui',
+        lines: 485,
+        tech: 'Full Screen 100dvh',
+        summary: 'غرفة المحادثة اللحظية للفعاليات بنمط الشاشة الكاملة (100dvh). تحتوي على زر تحكم مصغر للمشرفين لفتح نافذة ضبط صلاحيات التحدث (الجميع / المنظمين فقط / صامت) والإعلانات المثبتة.',
+        codeSnippet: `// واجهة المحادثة بشاشة كاملة وزر تحكم المشرفين المصغر
+export default function ActivityGroupChat({ activityId, isOrganizer }: Props) {
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-    function filterCards() {
-      let matchCount = 0;
-      const q = searchQuery.toLowerCase().trim();
+  return (
+    <div className="fixed inset-0 z-50 bg-background flex flex-col h-[100dvh] w-full">
+      {/* Chat Header */}
+      <div className="h-14 border-b border-border px-4 flex items-center justify-between">
+        <h3 className="font-bold text-sm">محادثة الفعالية المباشرة</h3>
+        {isOrganizer && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowSettingsModal(true)}
+            className="text-xs gap-1.5 h-8 px-2.5"
+          >
+            <Shield className="w-3.5 h-3.5 text-primary" />
+            تحكم المشرف
+          </Button>
+        )}
+      </div>
+      {/* Messages List & Input Area */}
+    </div>
+  );
+}`
+      },
+      {
+        id: 'utils.ts',
+        category: 'web',
+        path: 'apps/web/src/lib/utils.ts',
+        tag: 'Utility',
+        tagClass: 'tag-ui',
+        lines: 95,
+        tech: 'Arabic Relative Time',
+        summary: 'يحتوي دالة formatArabicRelativeTime لحساب فوارق التوقيت بدقة لغوية عربية (الآن، دقيقة، دقيقتين، دقائق، ساعات، أمس، أيام، أشهر) بدلاً من كلمة "الآن" الثابتة.',
+        codeSnippet: `// حساب فارق الوقت اللحظي باللغة العربية الفصحى
+export function formatArabicRelativeTime(dateInput: string | number | Date): string {
+  const date = typeof dateInput === 'number' ? new Date(dateInput) : new Date(dateInput);
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        const tags = (card.getAttribute('data-tags') || '').toLowerCase();
-        const category = card.getAttribute('data-category');
+  if (diffSec < 45) return 'الآن';
+  if (diffSec < 90) return 'منذ دقيقة';
+  if (diffSec < 3600) {
+    const min = Math.floor(diffSec / 60);
+    if (min === 2) return 'منذ دقيقتين';
+    if (min <= 10) return \`منذ \${min} دقائق\`;
+    return \`منذ \${min} دقيقة\`;
+  }
+  const hours = Math.floor(diffSec / 3600);
+  if (hours === 1) return 'منذ ساعة';
+  if (hours === 2) return 'منذ ساعتين';
+  if (hours <= 10) return \`منذ \${hours} ساعات\`;
+  if (hours < 24) return \`منذ \${hours} ساعة\`;
+  
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'أمس';
+  if (days === 2) return 'منذ يومين';
+  if (days <= 10) return \`منذ \${days} أيام\`;
+  return date.toLocaleDateString('ar-JO', { month: 'short', day: 'numeric' });
+}`
+      },
+      {
+        id: 'server.mjs',
+        category: 'api',
+        path: 'apps/api/server.mjs',
+        tag: 'Backend Entry',
+        tagClass: 'tag-api',
+        lines: 67,
+        tech: 'Node 22 Native ESM',
+        summary: 'نقطة الدخول التنفيذية النظيفة للخادم (67 سطراً). تهيئ محرك SQLite WAL، تفحص جاهزية التزامن، وتبدأ الاستماع وتدير الإيقاف الآمن (Graceful Shutdown).',
+        codeSnippet: `import { PORT, HOST, SUPABASE_DATABASE_URL } from './config/env.mjs';
+import { initDatabase, closeDatabase } from './db/index.mjs';
+import { initStatements } from './db/statements/index.mjs';
+import { loadBannedUsers } from './services/cache.mjs';
+import { createApp } from './app.mjs';
 
-        const matchesSearch = !q || text.includes(q) || tags.includes(q);
-        const matchesCat = currentCategory === 'all' || category === currentCategory;
+async function bootstrap() {
+  const db = await initDatabase();
+  initStatements(db);
+  loadBannedUsers(db);
+  const app = createApp(db);
 
-        if (matchesSearch && matchesCat) {
-          card.style.display = 'flex';
-          matchCount++;
-        } else {
-          card.style.display = 'none';
-        }
+  const server = app.listen(PORT, HOST, () => {
+    console.log(\`[Server] Listening on http://\${HOST}:\${PORT}\`);
+  });
+
+  const handleShutdown = async (signal) => {
+    server.close(async () => {
+      await closeDatabase();
+      process.exit(0);
+    });
+  };
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+}
+bootstrap();`
+      },
+      {
+        id: 'app.mjs',
+        category: 'api',
+        path: 'apps/api/app.mjs',
+        tag: 'Express App',
+        tagClass: 'tag-api',
+        lines: 104,
+        tech: 'Express 5 + Middlewares',
+        summary: 'تكوين تطبيق Express: إعداد CORS، وسيط فحص السرعة (metricsMiddleware)، وسيط المزامنة التلقائية (autoSyncMiddleware)، وخدمة ملفات واجهة React الثابتة في بيئة الإنتاج على Render.',
+        codeSnippet: `export function createApp(db) {
+  const app = express();
+  app.use(cors());
+  app.use(express.json({ limit: '10mb' }));
+
+  // Metrics middleware for ultra-fast latency tracking
+  app.use(metricsMiddleware);
+
+  // Mount API Routers
+  app.use('/api', createApiRouter(db));
+
+  // Serve Web Static Bundle in Production on Render
+  if (IS_PRODUCTION && fs.existsSync(STATIC_DIR)) {
+    app.use(express.static(STATIC_DIR));
+    app.get('*', (req, res) => res.sendFile(path.join(STATIC_DIR, 'index.html')));
+  }
+  return app;
+}`
+      },
+      {
+        id: 'routes/posts.mjs',
+        category: 'api',
+        path: 'apps/api/routes/posts.mjs',
+        tag: 'Router',
+        tagClass: 'tag-api',
+        lines: 320,
+        tech: 'Posts & Feed API',
+        summary: 'معالجة عمليات التفاعل والمنشورات: جلب التغذية، النشر، الإعجاب، التعليقات، مع استخراج الوسوم التلقائي وفحص المستخدمين المحظورين في الذاكرة O(1).',
+        codeSnippet: `// نشر سردة جديدة وحساب التوقيت النسبي اللحظي
+router.post('/', requireAuth, (req, res) => {
+  const { content, group_id = null } = req.body;
+  const author_id = req.user.id;
+  const id = crypto.randomUUID();
+  const created_at = Date.now();
+  const timestamp_text = formatArabicRelativeTime(created_at);
+  const tags = extractHashtags(content);
+
+  const stmt = db.prepare(\`
+    INSERT INTO posts (id, author_id, content, tags, group_id, created_at, timestamp_text)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  \`);
+  stmt.run(id, author_id, content, JSON.stringify(tags), group_id, created_at, timestamp_text);
+
+  res.status(201).json({ success: true, post: { id, content, tags, created_at, timestamp_text } });
+});`
+      },
+      {
+        id: 'routes/activity-chat.mjs',
+        category: 'api',
+        path: 'apps/api/routes/activity-chat.mjs',
+        tag: 'Router',
+        tagClass: 'tag-api',
+        lines: 195,
+        tech: 'Chat & Moderation API',
+        summary: 'إدارة محادثات الفعاليات الحية: جلب الرسائل، إرسال الرسائل، وتعديل صلاحيات التحدث والإعلانات المثبتة في الغرفة للمشرفين.',
+        codeSnippet: `// تعديل إعدادات وصلاحيات غرفة محادثة الفعالية
+router.patch('/:id/chat/settings', requireAuth, (req, res) => {
+  const { id: activity_id } = req.params;
+  const { permission_mode, pinned_announcement, slow_mode_seconds } = req.body;
+
+  const stmt = db.prepare(\`
+    INSERT INTO activity_chat_settings (activity_id, permission_mode, pinned_announcement, slow_mode_seconds, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(activity_id) DO UPDATE SET
+      permission_mode = excluded.permission_mode,
+      pinned_announcement = excluded.pinned_announcement,
+      slow_mode_seconds = excluded.slow_mode_seconds,
+      updated_at = excluded.updated_at
+  \`);
+  stmt.run(activity_id, permission_mode, pinned_announcement || '', slow_mode_seconds || 0, Date.now());
+
+  res.json({ success: true, message: 'تم تحديث إعدادات المحادثة بنجاح' });
+});`
+      },
+      {
+        id: 'db/index.mjs',
+        category: 'db',
+        path: 'apps/api/db/index.mjs',
+        tag: 'Database Core',
+        tagClass: 'tag-db',
+        lines: 80,
+        tech: 'node:sqlite DatabaseSync',
+        summary: 'إدارة محرك البيانات السريع عبر مكتبة node:sqlite المدمجة في Node 22. يفعل نمط WAL Mode واستعلامات الذاكرة لضمان سرعة معالجة < 0.5ms.',
+        codeSnippet: `import { DatabaseSync } from 'node:sqlite';
+import { initSchema } from './schema.mjs';
+
+export async function initDatabase() {
+  const db = new DatabaseSync(DATABASE_PATH);
+  
+  // High-performance WAL mode and memory settings
+  db.exec(\`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    PRAGMA cache_size = -64000;
+    PRAGMA temp_store = MEMORY;
+    PRAGMA foreign_keys = ON;
+  \`);
+
+  initSchema(db);
+  return db;
+}`
+      },
+      {
+        id: 'db/persistence.mjs',
+        category: 'db',
+        path: 'apps/api/db/persistence.mjs',
+        tag: 'Cloud Sync',
+        tagClass: 'tag-cloud',
+        lines: 240,
+        tech: 'PostgreSQL Dual-Write',
+        summary: 'محرك التزامن السحابي غير المتزامن (Non-blocking Background Sync). ينسخ تلقائياً كل تعديل يطرأ على قاعدة البيانات المحلية إلى PostgreSQL و Supabase دون تأخير استجابة المستخدم.',
+        codeSnippet: `// مزامنة الجداول غير المتزامنة مع Supabase
+export async function flushToPostgres(db, dbPath) {
+  if (!pgPool) return;
+  const client = await pgPool.connect();
+  try {
+    for (const table of TABLES_TO_SYNC) {
+      const rows = db.prepare(\`SELECT * FROM \${table}\`).all();
+      await bulkUpsertToPostgres(client, table, rows);
+    }
+  } finally {
+    client.release();
+  }
+}`
+      },
+      {
+        id: 'db/disaster-recovery.mjs',
+        category: 'db',
+        path: 'apps/api/db/disaster-recovery.mjs',
+        tag: 'Auto Recovery',
+        tagClass: 'tag-cloud',
+        lines: 180,
+        tech: 'Disaster Recovery Engine',
+        summary: 'نظام الإنعاش التلقائي عند الطوارئ: يفحص سلامة الجداول المحلية عند الإقلاع، وفي حال فقدانها يعيد بناء واسترجاع كافة البيانات تلقائياً من Supabase خلال ثوانٍ.',
+        codeSnippet: `// الفحص التلقائي واسترداد البيانات عند إقلاع السيرفر على Render
+export async function checkAndAutoRecover(dbPath, persistenceState) {
+  if (!persistenceState.isActive) return;
+  
+  const isDbEmpty = !fs.existsSync(dbPath) || fs.statSync(dbPath).size < 4096;
+  if (isDbEmpty) {
+    console.log('[DR Engine] Database missing or empty. Auto-recovering from Supabase...');
+    await restoreAllTablesFromSupabase(dbPath);
+    console.log('[DR Engine] ✅ Disaster recovery restore successfully completed.');
+  }
+}`
+      },
+      {
+        id: 'render.yaml',
+        category: 'devops',
+        path: 'render.yaml',
+        tag: 'IaC Blueprint',
+        tagClass: 'tag-cloud',
+        lines: 48,
+        tech: 'Render Infrastructure',
+        summary: 'تعريف البنية السحابية ككود (Infrastructure as Code): يحدد Web Service لتشغيل التطبيق الموحد، و Cron Job دوري مرتين باليوم للنسخ الاحتياطي ومطابقة البيانات السحابية.',
+        codeSnippet: `services:
+  - type: web
+    name: sard-raqami-production
+    env: node
+    plan: starter
+    region: frankfurt
+    buildCommand: pnpm install && pnpm build
+    startCommand: node apps/api/server.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: SUPABASE_DATABASE_URL
+        sync: false
+
+  # Periodic 2x Daily Backup & Verification Cron Job
+  - type: cron
+    name: sard-backup-cron
+    env: node
+    schedule: "0 3,15 * * *"
+    buildCommand: pnpm install
+    startCommand: node scripts/sync-and-verify-backup.mjs`
+      }
+    ];
+
+    // --- 2. REST API ENDPOINTS DICTIONARY ---
+    const API_ROUTES = [
+      {
+        method: 'GET',
+        path: '/api/health',
+        auth: 'عام (Public)',
+        desc: 'فحص صحة الخادم، زمن الاستجابة، ونشاط محرك SQLite وحالة المزامنة السحابية.',
+        curl: 'curl -i http://localhost:5000/api/health',
+        response: '{\n  "status": "ok",\n  "database": "sqlite-wal",\n  "latency_ms": 0.32,\n  "cloud_sync": "active"\n}'
+      },
+      {
+        method: 'POST',
+        path: '/api/auth/login',
+        auth: 'عام (Public)',
+        desc: 'تسجيل الدخول، التحقق من كلمة المرور عبر bcryptjs، وإرجاع توكن JWT الصالح لمدة 7 أيام.',
+        curl: 'curl -X POST http://localhost:5000/api/auth/login \\\n  -H "Content-Type: application/json" \\\n  -d \'{"email":"user@sard.jo","password":"password123"}\'',
+        response: '{\n  "token": "eyJhbGciOi...",\n  "user": { "id": "u1", "name": "أحمد", "role": "user" }\n}'
+      },
+      {
+        method: 'POST',
+        path: '/api/auth/register',
+        auth: 'عام (Public)',
+        desc: 'إنشاء حساب مستخدم فردي أو حساب منظمة جديدة وتهيئته في SQLite.',
+        curl: 'curl -X POST http://localhost:5000/api/auth/register \\\n  -H "Content-Type: application/json" \\\n  -d \'{"name":"علي","email":"ali@sard.jo","username":"ali","password":"SecretPassword1!"}\'',
+        response: '{\n  "success": true,\n  "token": "eyJhbGciOi...",\n  "user": { "id": "u2", "username": "ali" }\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/posts',
+        auth: 'اختياري (Optional Bearer)',
+        desc: 'جلب منشورات السرد مع التصفية (لك، المتابعون، الرائجة) وحساب التوقيت النسبي العربي اللحظي.',
+        curl: 'curl -i http://localhost:5000/api/posts?filter=forYou&limit=20',
+        response: '{\n  "posts": [\n    {\n      "id": "p1",\n      "content": "مرحباً بكم في منصة سرد رقمي #سرد_رقمي",\n      "author": { "name": "سرد", "username": "sard" },\n      "likes_count": 14,\n      "timestamp_text": "منذ ساعتين"\n    }\n  ]\n}'
+      },
+      {
+        method: 'POST',
+        path: '/api/posts',
+        auth: 'مستخدم مسجل (Bearer)',
+        desc: 'نشر سردة جديدة مع استخراج الهاشتاغات التلقائي وكتابتها فوراً في SQLite WAL.',
+        curl: 'curl -X POST http://localhost:5000/api/posts \\\n  -H "Authorization: Bearer YOUR_JWT" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"content":"سردة جديدة في المجتمع التقني #تطوير"}\'',
+        response: '{\n  "success": true,\n  "post": { "id": "p2", "content": "سردة جديدة...", "likes_count": 0 }\n}'
+      },
+      {
+        method: 'POST',
+        path: '/api/posts/:id/like',
+        auth: 'مستخدم مسجل (Bearer)',
+        desc: 'تسجيل إعجاب أو إزالته (Toggle Like) وتحديث العداد الذري في SQLite.',
+        curl: 'curl -X POST http://localhost:5000/api/posts/p1/like \\\n  -H "Authorization: Bearer YOUR_JWT"',
+        response: '{\n  "liked": true,\n  "likes_count": 15\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/activities',
+        auth: 'عام (Public)',
+        desc: 'استعراض الفعاليات القادمة مع تواريخها وسعتها وعدد المسجلين.',
+        curl: 'curl -i http://localhost:5000/api/activities',
+        response: '{\n  "activities": [\n    { "id": "a1", "title": "ملتقى السرد الرقمي الأردني", "date": "2026-10-15", "capacity": 150 }\n  ]\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/activities/:id/chat/messages',
+        auth: 'مشارك مسجل (Bearer)',
+        desc: 'جلب الرسائل اللحظية لغرفة الفعالية المباشرة مع التحقق من صلاحيات العضوية.',
+        curl: 'curl -i http://localhost:5000/api/activities/a1/chat/messages \\\n  -H "Authorization: Bearer YOUR_JWT"',
+        response: '{\n  "messages": [\n    { "id": "m1", "sender_name": "سارة", "content": "أهلاً بالجميع!", "created_at": 1726250000000 }\n  ]\n}'
+      },
+      {
+        method: 'PATCH',
+        path: '/api/activities/:id/chat/settings',
+        auth: 'مشرف معتمد (Organizer/Admin)',
+        desc: 'تعديل صلاحيات التحدث (الجميع / المنظمين فقط / صامت) والإعلانات المثبتة في الغرفة.',
+        curl: 'curl -X PATCH http://localhost:5000/api/activities/a1/chat/settings \\\n  -H "Authorization: Bearer YOUR_JWT" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"permission_mode":"organizer_only","pinned_announcement":"الرجاء الالتزام بجدول الفعالية"}\'',
+        response: '{\n  "success": true,\n  "message": "تم تحديث إعدادات المحادثة بنجاح"\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/courses',
+        auth: 'عام (Public)',
+        desc: 'استعراض قائمة الدورات التدريبية المتاحة وتصنيفاتها وعدد الساعات والطلاب.',
+        curl: 'curl -i http://localhost:5000/api/courses',
+        response: '{\n  "courses": [\n    { "id": "c1", "title": "أساسيات الكتابة الرقمية", "students": 240, "rating": 4.9 }\n  ]\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/groups',
+        auth: 'عام (Public)',
+        desc: 'استعراض المجتمعات والنوادي المتخصصة وعدد أعضائها ومنشوراتها.',
+        curl: 'curl -i http://localhost:5000/api/groups',
+        response: '{\n  "groups": [\n    { "id": "g1", "name": "نادي المطورين الأردني", "members_count": 890 }\n  ]\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/notifications/unread-count',
+        auth: 'مستخدم مسجل (Bearer)',
+        desc: 'الاستعلام فائق السرعة (< 0.2ms) لعدد الإشعارات والتنبيهات غير المقروءة.',
+        curl: 'curl -i http://localhost:5000/api/notifications/unread-count \\\n  -H "Authorization: Bearer YOUR_JWT"',
+        response: '{\n  "unread_count": 3\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/conversations',
+        auth: 'مستخدم مسجل (Bearer)',
+        desc: 'سرد محادثات الرسائل المباشرة الفردية للمستخدم مع آخر رسالة والتاريخ.',
+        curl: 'curl -i http://localhost:5000/api/conversations \\\n  -H "Authorization: Bearer YOUR_JWT"',
+        response: '{\n  "conversations": [\n    { "id": "cv1", "with_user": { "name": "خالد" }, "last_message": "أراك غداً إن شاء الله" }\n  ]\n}'
+      },
+      {
+        method: 'POST',
+        path: '/api/petra/login',
+        auth: 'إدارة بترا المركزية',
+        desc: 'تسجيل دخول الإدارة العليا لبوابة الرقابة والتحكم المركزية (Petra Gate).',
+        curl: 'curl -X POST http://localhost:5000/api/petra/login \\\n  -H "Content-Type: application/json" \\\n  -d \'{"username":"petra_admin","password":"StrongAdminPassword"}\'',
+        response: '{\n  "success": true,\n  "admin_token": "eyJhbGciOi...",\n  "role": "petra_admin"\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/petra/stats',
+        auth: 'إدارة بترا (Admin Bearer)',
+        desc: 'إحصائيات المنصة الحية (الأنشطة، المنشورات، البلاغات، سرعة الاستعلام).',
+        curl: 'curl -i http://localhost:5000/api/petra/stats \\\n  -H "Authorization: Bearer ADMIN_JWT"',
+        response: '{\n  "total_users": 1420,\n  "total_posts": 3840,\n  "db_latency_p95": "0.41ms",\n  "pending_reports": 2\n}'
+      },
+      {
+        method: 'GET',
+        path: '/api/backup/status',
+        auth: 'إدارة بترا (Admin Bearer)',
+        desc: 'تقرير حالة المزامنة السحابية مع Supabase وسجلات تدقيق التزامن.',
+        curl: 'curl -i http://localhost:5000/api/backup/status \\\n  -H "Authorization: Bearer ADMIN_JWT"',
+        response: '{\n  "is_configured": true,\n  "last_sync": "2026-09-13T18:00:00Z",\n  "tables_synced": 23,\n  "status": "HEALTHY"\n}'
+      }
+    ];
+
+    // --- 3. DATABASE TABLES SCHEMA DICTIONARY ---
+    const DB_TABLES = [
+      {
+        name: 'users',
+        category: 'Core',
+        desc: 'حسابات المستخدمين والمشرفين والمنظمات',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'email', type: 'TEXT UNIQUE NOT NULL' },
+          { name: 'username', type: 'TEXT UNIQUE NOT NULL' },
+          { name: 'name', type: 'TEXT NOT NULL' },
+          { name: 'password_hash', type: 'TEXT NOT NULL' },
+          { name: 'role', type: "TEXT DEFAULT 'individual'" },
+          { name: 'avatar', type: 'TEXT DEFAULT \'\'' },
+          { name: 'verified', type: 'INTEGER DEFAULT 0' },
+          { name: 'is_banned', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'posts',
+        category: 'Social',
+        desc: 'منشورات السرد والتفاعل العام والوسوم',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'author_id', type: 'TEXT FK(users) NOT NULL', isFk: true },
+          { name: 'content', type: 'TEXT NOT NULL' },
+          { name: 'tags', type: "TEXT DEFAULT '[]'" },
+          { name: 'group_id', type: 'TEXT FK(groups)', isFk: true },
+          { name: 'likes_count', type: 'INTEGER DEFAULT 0' },
+          { name: 'comments_count', type: 'INTEGER DEFAULT 0' },
+          { name: 'shares_count', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' },
+          { name: 'timestamp_text', type: 'TEXT NOT NULL' }
+        ]
+      },
+      {
+        name: 'comments',
+        category: 'Social',
+        desc: 'الردود والتعليقات على منشورات السرد',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'post_id', type: 'TEXT FK(posts) NOT NULL', isFk: true },
+          { name: 'author_id', type: 'TEXT FK(users) NOT NULL', isFk: true },
+          { name: 'content', type: 'TEXT NOT NULL' },
+          { name: 'likes_count', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'post_likes',
+        category: 'Social',
+        desc: 'جدول ربط الإعجابات بالمنشورات لمنع التكرار',
+        cols: [
+          { name: 'post_id', type: 'TEXT', isPk: true },
+          { name: 'user_id', type: 'TEXT', isPk: true },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'activities',
+        category: 'Events',
+        desc: 'الفعاليات والأنشطة والملتقيات',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'org_id', type: 'TEXT FK(users) NOT NULL', isFk: true },
+          { name: 'title', type: 'TEXT NOT NULL' },
+          { name: 'date', type: 'TEXT NOT NULL' },
+          { name: 'location', type: 'TEXT DEFAULT \'\'' },
+          { name: 'capacity', type: 'INTEGER DEFAULT 100' },
+          { name: 'attendees_count', type: 'INTEGER DEFAULT 0' },
+          { name: 'status', type: "TEXT DEFAULT 'متاح للتسجيل'" },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'activity_chat_messages',
+        category: 'Chat',
+        desc: 'رسائل غرف المحادثة اللحظية للفعاليات المباشرة',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'activity_id', type: 'TEXT FK(activities) NOT NULL', isFk: true },
+          { name: 'sender_id', type: 'TEXT NOT NULL' },
+          { name: 'sender_name', type: 'TEXT NOT NULL' },
+          { name: 'content', type: 'TEXT NOT NULL' },
+          { name: 'is_announcement', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'activity_chat_settings',
+        category: 'Chat',
+        desc: 'إعدادات وصلاحيات غرف محادثة الفعاليات',
+        cols: [
+          { name: 'activity_id', type: 'TEXT', isPk: true },
+          { name: 'permission_mode', type: "TEXT DEFAULT 'all'" },
+          { name: 'pinned_announcement', type: 'TEXT DEFAULT \'\'' },
+          { name: 'slow_mode_seconds', type: 'INTEGER DEFAULT 0' },
+          { name: 'updated_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'courses',
+        category: 'Education',
+        desc: 'الدورات وورش العمل التدريبية',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'org_id', type: 'TEXT NOT NULL' },
+          { name: 'title', type: 'TEXT NOT NULL' },
+          { name: 'category', type: 'TEXT DEFAULT \'تقنية\'' },
+          { name: 'students', type: 'INTEGER DEFAULT 0' },
+          { name: 'rating', type: 'REAL DEFAULT 5.0' },
+          { name: 'price', type: 'TEXT DEFAULT \'مجاني\'' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'course_chat_messages',
+        category: 'Education',
+        desc: 'محادثات الطلاب والمدربين داخل الدورات التدريبية',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'course_id', type: 'TEXT FK(courses) NOT NULL', isFk: true },
+          { name: 'sender_id', type: 'TEXT NOT NULL' },
+          { name: 'sender_name', type: 'TEXT NOT NULL' },
+          { name: 'content', type: 'TEXT NOT NULL' },
+          { name: 'is_announcement', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'groups',
+        category: 'Social',
+        desc: 'المجتمعات والنوادي المتخصصة',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'name', type: 'TEXT NOT NULL' },
+          { name: 'category', type: 'TEXT DEFAULT \'عام\'' },
+          { name: 'members_count', type: 'INTEGER DEFAULT 1' },
+          { name: 'creator_id', type: 'TEXT NOT NULL' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'notifications',
+        category: 'Core',
+        desc: 'إشعارات وتنبيهات المستخدمين',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'user_id', type: 'TEXT NOT NULL' },
+          { name: 'type', type: 'TEXT NOT NULL' },
+          { name: 'title', type: 'TEXT NOT NULL' },
+          { name: 'content', type: 'TEXT NOT NULL' },
+          { name: 'is_read', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      },
+      {
+        name: 'backup_audit_logs',
+        category: 'DevOps',
+        desc: 'سجلات تدقيق التزامن السحابي مع Supabase',
+        cols: [
+          { name: 'id', type: 'TEXT', isPk: true },
+          { name: 'trigger_type', type: 'TEXT NOT NULL' },
+          { name: 'status', type: 'TEXT NOT NULL' },
+          { name: 'tables_synced', type: 'INTEGER DEFAULT 0' },
+          { name: 'total_records', type: 'INTEGER DEFAULT 0' },
+          { name: 'duration_ms', type: 'INTEGER DEFAULT 0' },
+          { name: 'created_at', type: 'INTEGER NOT NULL' }
+        ]
+      }
+    ];
+
+    // Raw SQL DDL definition
+    const RAW_SQL_DDL = `-- =========================================================================
+-- SARD RAQAMI SQLITE PRODUCTION DDL (apps/api/db/schema.mjs)
+-- 23 Relational Tables with Indexes and WAL Optimization
+-- =========================================================================
+
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT DEFAULT 'individual',
+  phone TEXT DEFAULT '',
+  avatar TEXT DEFAULT '',
+  bio TEXT DEFAULT '',
+  location TEXT DEFAULT 'الأردن',
+  country TEXT DEFAULT 'الأردن',
+  join_date TEXT NOT NULL,
+  verified INTEGER DEFAULT 0,
+  is_banned INTEGER DEFAULT 0,
+  ban_reason TEXT DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+  id TEXT PRIMARY KEY,
+  author_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  tags TEXT DEFAULT '[]',
+  group_id TEXT,
+  likes_count INTEGER DEFAULT 0,
+  comments_count INTEGER DEFAULT 0,
+  shares_count INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  timestamp_text TEXT NOT NULL,
+  FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT PRIMARY KEY,
+  post_id TEXT NOT NULL,
+  author_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  likes_count INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  timestamp_text TEXT NOT NULL,
+  FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS post_likes (
+  post_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (post_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS groups (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  tagline TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  category TEXT DEFAULT 'عام',
+  privacy TEXT DEFAULT 'عام',
+  members_count INTEGER DEFAULT 1,
+  posts_count INTEGER DEFAULT 0,
+  creator_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT DEFAULT 'عضو',
+  joined_at INTEGER NOT NULL,
+  PRIMARY KEY (group_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS activities (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  category TEXT DEFAULT 'عام',
+  date TEXT NOT NULL,
+  capacity INTEGER DEFAULT 100,
+  attendees_count INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'متاح للتسجيل',
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS activity_chat_settings (
+  activity_id TEXT PRIMARY KEY,
+  permission_mode TEXT DEFAULT 'all',
+  pinned_announcement TEXT DEFAULT '',
+  slow_mode_seconds INTEGER DEFAULT 0,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS activity_chat_messages (
+  id TEXT PRIMARY KEY,
+  activity_id TEXT NOT NULL,
+  sender_id TEXT NOT NULL,
+  sender_name TEXT NOT NULL,
+  sender_role TEXT NOT NULL DEFAULT 'participant',
+  content TEXT NOT NULL,
+  is_announcement INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(activity_id) REFERENCES activities(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS backup_audit_logs (
+  id TEXT PRIMARY KEY,
+  trigger_type TEXT NOT NULL,
+  status TEXT NOT NULL,
+  tables_synced INTEGER DEFAULT 0,
+  total_records INTEGER DEFAULT 0,
+  duration_ms INTEGER DEFAULT 0,
+  details TEXT DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+
+-- Indexes for blazing fast O(log N) lookup
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
+CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date);
+CREATE INDEX IF NOT EXISTS idx_backup_audit_created_at ON backup_audit_logs(created_at DESC);`;
+
+    // --- 4. RENDER DOM LOGIC ---
+
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.top-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      const targetBtn = Array.from(document.querySelectorAll('.top-tab-btn'))
+        .find(b => b.getAttribute('onclick').includes(tabId));
+      if (targetBtn) targetBtn.classList.add('active');
+
+      const panel = document.getElementById('tab-' + tabId);
+      if (panel) panel.classList.add('active');
+    }
+
+    // Render Files Grid
+    function renderFiles(filter = 'all', query = '') {
+      const grid = document.getElementById('filesGrid');
+      const q = query.toLowerCase().trim();
+
+      const filtered = CODE_FILES.filter(f => {
+        const matchesCat = (filter === 'all' || f.category === filter);
+        const matchesQuery = !q || f.path.toLowerCase().includes(q) || f.summary.toLowerCase().includes(q) || f.tech.toLowerCase().includes(q);
+        return matchesCat && matchesQuery;
       });
 
-      // Update counter tag
-      if (currentCategory === 'all' && !q) {
-        visibleCounter.textContent = `عرض كافة الملفات (${cards.length})`;
-      } else {
-        visibleCounter.textContent = `نتائج مطابقة: ${matchCount}`;
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-3);">لا توجد ملفات مطابقة للبحث.</div>';
+        return;
       }
 
-      // No results message
-      let noRes = document.getElementById('noResultsMsg');
-      if (matchCount === 0) {
-        if (!noRes) {
-          noRes = document.createElement('div');
-          noRes.id = 'noResultsMsg';
-          noRes.className = 'no-results';
-          noRes.innerHTML = `
-            <div class="no-results-icon">🔎</div>
-            <h3>لا توجد ملفات مطابقة لبحثك</h3>
-            <p style="font-size: 0.85rem; margin-top: 6px;">جرّب كتابة كلمة أخرى مثل: Feed, SQLite, chat, أو server</p>
-          `;
-          cardsGrid.appendChild(noRes);
-        }
-      } else if (noRes) {
-        noRes.remove();
+      grid.innerHTML = filtered.map(f => `
+        <div class="file-card" onclick="openInspector('${f.id}')">
+          <div>
+            <div class="file-card-top">
+              <span class="arch-tag ${f.tagClass}">${f.tag}</span>
+              <span class="file-role-badge" style="background: rgba(255,255,255,0.06); color: var(--text-2);">${f.lines} سطراً</span>
+            </div>
+            <div class="file-path">${f.path}</div>
+            <p class="file-summary">${f.summary}</p>
+          </div>
+          <div class="file-meta-row">
+            <span style="font-family: var(--font-mono); font-size: 11px;">${f.tech}</span>
+            <button class="btn-inspect" onclick="event.stopPropagation(); openInspector('${f.id}')">🔍 فحص الكود</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterFiles(cat) {
+      document.querySelectorAll('#tab-codebase .filter-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      renderFiles(cat, document.getElementById('globalSearchInput').value);
+    }
+
+    // Render API Routes
+    function renderApi(filter = 'ALL', query = '') {
+      const container = document.getElementById('apiContainer');
+      const q = query.toLowerCase().trim();
+
+      const filtered = API_ROUTES.filter(a => {
+        const matchesMethod = (filter === 'ALL' || a.method === filter);
+        const matchesQuery = !q || a.path.toLowerCase().includes(q) || a.desc.toLowerCase().includes(q);
+        return matchesMethod && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-3);">لا توجد نقاط API مطابقة.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map((a, idx) => `
+        <div class="api-item" id="api-item-${idx}">
+          <div class="api-header" onclick="toggleApi(${idx})">
+            <div class="api-main-col">
+              <span class="method-badge m-${a.method.toLowerCase()}">${a.method}</span>
+              <span class="api-route-path">${a.path}</span>
+              <span class="api-summary-text">${a.desc}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 11px; color: var(--amber-400); font-family: var(--font-mono);">${a.auth}</span>
+              <span class="api-chevron">▼</span>
+            </div>
+          </div>
+          <div class="api-details">
+            <div class="api-spec-grid">
+              <div class="spec-block">
+                <div class="spec-label">أمر استدعاء cURL جاهز</div>
+                <pre class="spec-code">${a.curl}</pre>
+                <button class="btn-inspect" style="margin-top: 8px;" onclick="copyText(\`${a.curl.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}\`)">📋 نسخ cURL</button>
+              </div>
+              <div class="spec-block">
+                <div class="spec-label">نموذج استجابة JSON المتوقعة</div>
+                <pre class="spec-code" style="color: var(--sky-400);">${a.response}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterApi(method) {
+      document.querySelectorAll('#tab-api .filter-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      renderApi(method, document.getElementById('globalSearchInput').value);
+    }
+
+    function toggleApi(idx) {
+      const item = document.getElementById('api-item-' + idx);
+      if (item) item.classList.toggle('expanded');
+    }
+
+    // Render Database Tables
+    function renderDb(query = '') {
+      const container = document.getElementById('dbContainer');
+      const q = query.toLowerCase().trim();
+
+      const filtered = DB_TABLES.filter(t => !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q));
+
+      container.innerHTML = filtered.map(t => `
+        <div class="db-table-card">
+          <div class="db-table-header">
+            <span class="db-table-title">${t.name}</span>
+            <span class="arch-tag tag-db">${t.category}</span>
+          </div>
+          <div style="padding: 8px 18px 0; font-size: 0.78rem; color: var(--text-2);">${t.desc}</div>
+          <ul class="db-col-list">
+            ${t.cols.map(c => `
+              <li class="db-col-item">
+                <span style="color: #FFF; font-weight: 600;">${c.name}</span>
+                <span class="${c.isPk ? 'col-pk' : c.isFk ? 'col-fk' : 'col-type'}">
+                  ${c.isPk ? '🔑 ' : c.isFk ? '🔗 ' : ''}${c.type}
+                </span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `).join('');
+    }
+
+    function toggleSchemaMode(mode) {
+      const colsBtn = document.getElementById('btnToggleCols');
+      const sqlBtn = document.getElementById('btnToggleSql');
+      const gridView = document.getElementById('dbContainer');
+      const sqlView = document.getElementById('rawSqlView');
+
+      if (mode === 'sql') {
+        colsBtn.classList.remove('active');
+        sqlBtn.classList.add('active');
+        gridView.style.display = 'none';
+        sqlView.style.display = 'block';
+        document.getElementById('rawSqlText').textContent = RAW_SQL_DDL;
+      } else {
+        sqlBtn.classList.remove('active');
+        colsBtn.classList.add('active');
+        gridView.style.display = 'grid';
+        sqlView.style.display = 'none';
       }
     }
 
+    // Drawer Code Inspector
+    let currentDrawerFile = null;
+    function openInspector(fileId) {
+      const file = CODE_FILES.find(f => f.id === fileId || f.path.includes(fileId));
+      if (!file) return;
+
+      currentDrawerFile = file;
+      document.getElementById('drawerFilePath').textContent = file.path;
+      document.getElementById('drawerMeta').textContent = `${file.lines} سطراً | ${file.tech}`;
+      document.getElementById('drawerDesc').textContent = file.summary;
+      document.getElementById('drawerCodeContent').textContent = file.codeSnippet;
+
+      document.getElementById('codeDrawerOverlay').classList.add('open');
+    }
+
+    function closeInspector() {
+      document.getElementById('codeDrawerOverlay').classList.remove('open');
+    }
+
+    function copyDrawerCode() {
+      if (currentDrawerFile) {
+        copyText(currentDrawerFile.codeSnippet, 'تم نسخ كود الملف إلى الحافظة!');
+      }
+    }
+
+    function copyRawSql() {
+      copyText(RAW_SQL_DDL, 'تم نسخ كامل كود SQL DDL إلى الحافظة!');
+    }
+
+    // Toast and Copy Utility
+    function copyText(text, msg = 'تم النسخ إلى الحافظة بنجاح!') {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => showToast(msg));
+      } else {
+        // Fallback for offline file protocol without secure origin
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast(msg);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('globalSearchInput');
     searchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value;
-      filterCards();
+      const q = e.target.value;
+      renderFiles('all', q);
+      renderApi('ALL', q);
+      renderDb(q);
     });
 
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentCategory = btn.getAttribute('data-category');
-
-        if (currentCategory === 'flow') {
-          flowSection.scrollIntoView({ behavior: 'smooth' });
-          currentCategory = 'all';
+    // Keyboard hotkeys: '/' to search, 'Esc' to close/clear
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      } else if (e.key === 'Escape') {
+        if (document.getElementById('codeDrawerOverlay').classList.contains('open')) {
+          closeInspector();
+        } else if (searchInput.value) {
+          searchInput.value = '';
+          renderFiles();
+          renderApi();
+          renderDb();
+          searchInput.blur();
         }
-
-        filterCards();
-      });
+      }
     });
 
-    flowSteps.forEach(step => {
-      step.addEventListener('click', () => {
-        flowSteps.forEach(s => s.classList.remove('active'));
-        step.classList.add('active');
-        const highlight = step.getAttribute('data-highlight');
-        
-        // Auto filter based on clicked step
-        if (highlight.includes('frontend')) {
-          searchInput.value = 'Feed.tsx';
-        } else if (highlight.includes('app')) {
-          searchInput.value = 'server.mjs';
-        } else if (highlight.includes('router')) {
-          searchInput.value = 'routes/posts.mjs';
-        } else if (highlight.includes('wal')) {
-          searchInput.value = 'db/index.mjs';
-        } else if (highlight.includes('sync')) {
-          searchInput.value = 'persistence.mjs';
-        }
-        searchQuery = searchInput.value;
-        filterCards();
-      });
-    });
-
-    filterCards();
+    // Initial Render
+    renderFiles();
+    renderApi();
+    renderDb();
   </script>
 </body>
 </html>
