@@ -7,6 +7,7 @@ import { Heart, MessageSquare, Share2, Send, CheckCircle, Sparkles } from 'lucid
 import { postsService, Post, Comment } from '@/services/postsService';
 import ShareModal from '@/components/share/ShareModal';
 import { useToast } from '@/hooks/use-toast';
+import { formatArabicRelativeTime } from '@/lib/utils';
 
 interface GroupPostCardProps {
   post: Post;
@@ -109,7 +110,7 @@ export default function GroupPostCard({ post, groupName }: GroupPostCardProps) {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                   <span>@{post.author.username}</span>
                   <span>•</span>
-                  <span>{post.timestamp}</span>
+                  <span>{formatArabicRelativeTime(post.createdAt || post.timestamp, post.timestamp)}</span>
                 </div>
               </div>
             </div>

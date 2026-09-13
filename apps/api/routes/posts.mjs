@@ -47,7 +47,7 @@ router.get('/', authenticateToken, (req, res) => {
         likes: r.likes_count,
         comments: r.comments_count,
         shares: r.shares_count,
-        timestamp: r.timestamp_text,
+        timestamp: formatRelativeTime(r.created_at) || r.timestamp_text || 'الآن',
         isLiked,
         tags,
         groupId: r.group_id || undefined,

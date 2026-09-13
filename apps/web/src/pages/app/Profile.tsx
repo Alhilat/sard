@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { formatArabicRelativeTime } from '@/lib/utils';
 
 const tabs = ['المنشورات', 'الأنشطة', 'الدورات'];
 
@@ -343,7 +344,7 @@ export default function Profile({ targetUserId }: { targetUserId?: string }) {
                   <Card key={post.id} className="border-border p-4 bg-card">
                     <p className="text-sm text-foreground leading-relaxed mb-2">{post.content}</p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/50">
-                      <span>{post.timestamp || 'مؤخراً'}</span>
+                      <span>{formatArabicRelativeTime(post.createdAt || post.timestamp, post.timestamp || 'مؤخراً')}</span>
                       <div className="flex items-center gap-3">
                         <span>❤️ {post.likes || 0}</span>
                         <span>💬 {post.comments || 0}</span>

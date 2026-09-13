@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { getStatements } from '../db/statements/index.mjs';
 import { authenticateToken } from '../middleware/auth.mjs';
 import { formatUserResponse } from '../services/user-service.mjs';
-import { createNotification } from '../services/notification.mjs';
+import { createNotification, formatRelativeTime } from '../services/notification.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
 
 const router = Router();
@@ -206,7 +206,7 @@ router.get('/:id/posts', authenticateToken, (req, res) => {
         likes: r.likes_count,
         comments: r.comments_count,
         shares: r.shares_count,
-        timestamp: r.timestamp_text,
+        timestamp: formatRelativeTime(r.created_at) || r.timestamp_text || 'الآن',
         isLiked,
         tags,
         groupId: r.group_id || undefined,

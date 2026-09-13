@@ -37,6 +37,7 @@ export interface Post {
   comments: number;
   shares: number;
   timestamp: string;
+  createdAt?: number | string;
   isLiked?: boolean;
   isBookmarked?: boolean;
   tags?: string[];
@@ -140,6 +141,7 @@ export const postsService = {
       comments: 0,
       shares: 0,
       timestamp: 'الآن',
+      createdAt: Date.now(),
       isLiked: false,
       tags: extractedTags,
       groupId: data.groupId,

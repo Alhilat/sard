@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Flag, Trash2, Copy } from 'lucide-react';
 import UserProfileModal, { UserProfileData } from '@/components/profile/UserProfileModal';
+import { formatArabicRelativeTime } from '@/lib/utils';
 
 const MAX_CHARS = 280;
 
@@ -490,10 +491,11 @@ export default function Feed() {
                     <Button
                       type="submit"
                       disabled={isPosting || !content.trim()}
-                      className="gap-1.5 font-bold px-3 sm:px-5 h-9 shrink-0 shadow-xs rounded-xl text-xs sm:text-sm cursor-pointer"
+                      title={isPosting ? 'جاري السرد...' : 'اسرد الآن'}
+                      aria-label="اسرد الآن"
+                      className="w-9 h-9 p-0 rounded-xl font-bold shrink-0 shadow-xs flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                     >
-                      <Send className="w-3.5 h-3.5 rtl:rotate-180 shrink-0" />
-                      <span>{isPosting ? 'جاري السرد...' : 'اسرد الآن'}</span>
+                      <Send className={`w-4 h-4 rtl:rotate-180 shrink-0 ${isPosting ? 'animate-pulse' : ''}`} />
                     </Button>
                   </div>
                 </div>
@@ -622,7 +624,7 @@ export default function Feed() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span>@{post.author.username}</span>
                               <span>•</span>
-                              <span>{post.timestamp}</span>
+                              <span>{formatArabicRelativeTime(post.createdAt || post.timestamp, post.timestamp)}</span>
                             </div>
                           </div>
                         </div>
@@ -833,7 +835,7 @@ export default function Feed() {
                                       </span>
                                     </div>
                                     <span className="text-[10px] text-muted-foreground">
-                                      {comment.created_at}
+                                      {formatArabicRelativeTime(comment.created_at, comment.created_at)}
                                     </span>
                                   </div>
 
