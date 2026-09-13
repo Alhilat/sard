@@ -242,6 +242,43 @@ async function runTests() {
     assert(replyData.success && replyData.comment?.parentId === parentCommentId, `Nested reply linked to parentId correctly`);
   }
 
+  // ──────────────────────────────────────────────────────────
+  // TEST 8: Real-Time Presence & "نشط الآن" Engine
+  // ──────────────────────────────────────────────────────────
+  console.log('\n[Test 8] Testing Real-Time Presence & نشط الآن Engine...');
+  // Send heartbeat for User A
+  const hbRes = await fetch(`${BASE_URL}/api/users/heartbeat`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${tokenA}` }
+  });
+  const hbData = await hbRes.json();
+  assert(hbRes.status === 200 && hbData.online === true && hbData.statusText === 'نشط الآن', `Heartbeat sets status to نشط الآن`);
+
+  // Verify User A presence endpoint
+  const presRes = await fetch(`${BASE_URL}/api/users/${userA.id}/presence`);
+  const presData = await presRes.json();
+  assert(presData.online === true && presData.statusText === 'نشط الآن', `User A presence query confirms نشط الآن`);
+
+  // Verify Conversation object includes real presence
+  const convListRes = await fetch(`${BASE_URL}/api/conversations`, {
+    headers: { Authorization: `Bearer ${tokenB}` }
+  });
+  const convListData = await convListRes.json();
+  const convWithA = convListData.conversations?.find((c) => c.user.id === userA.id);
+  assert(convWithA && convWithA.user.online === true && convWithA.user.statusText === 'نشط الآن', `User B sees User A as نشط الآن in real time`);
+
+  // Mark User A offline (simulating tab close / logout)
+  const offRes = await fetch(`${BASE_URL}/api/users/offline`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${tokenA}` }
+  });
+  assert(offRes.status === 200, `User A offline beacon recorded`);
+
+  // Re-verify presence
+  const presOffRes = await fetch(`${BASE_URL}/api/users/${userA.id}/presence`);
+  const presOffData = await presOffRes.json();
+  assert(presOffData.online === false, `User A presence query reflects offline after disconnect`);
+
   console.log('\n═══════════════════════════════════════════════════════════');
   console.log(`  Suite Finished: ${passed} Passed, ${failed} Failed`);
   console.log('═══════════════════════════════════════════════════════════\n');

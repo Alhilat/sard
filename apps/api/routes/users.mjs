@@ -5,8 +5,52 @@ import { authenticateToken } from '../middleware/auth.mjs';
 import { formatUserResponse } from '../services/user-service.mjs';
 import { createNotification, formatRelativeTime } from '../services/notification.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
+import {
+  touchUserPresence,
+  setUserOffline,
+  isUserOnline,
+  getUserLastSeen,
+  formatPresenceStatus,
+} from '../services/presence.mjs';
 
 const router = Router();
+
+// Heartbeat ping (called periodically by active clients to keep "نشط الآن" real-time)
+router.post('/heartbeat', authenticateToken, (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'غير مسجل الدخول' });
+  }
+  touchUserPresence(req.user.id);
+  res.json({
+    success: true,
+    online: true,
+    statusText: 'نشط الآن',
+    timestamp: Date.now(),
+  });
+});
+
+// Explicit offline notification (e.g. on logout or browser unload)
+router.post('/offline', authenticateToken, (req, res) => {
+  if (req.user) {
+    setUserOffline(req.user.id);
+  }
+  res.json({ success: true, online: false });
+});
+
+// Query user presence state
+router.get('/:id/presence', (req, res) => {
+  const userId = req.params.id;
+  const online = isUserOnline(userId);
+  const lastSeen = getUserLastSeen(userId);
+  const statusText = formatPresenceStatus(userId);
+  res.json({
+    success: true,
+    userId,
+    online,
+    lastSeen,
+    statusText,
+  });
+});
 
 // Current User Profile
 router.get('/me', authenticateToken, (req, res) => {

@@ -283,4 +283,8 @@ export function initSchema(db) {
   try {
     db.exec("CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);");
   } catch {}
+
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN last_seen_at INTEGER DEFAULT 0;");
+  } catch {}
 }

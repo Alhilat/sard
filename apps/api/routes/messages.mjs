@@ -3,6 +3,7 @@ import { getStatements } from '../db/statements/index.mjs';
 import { authenticateToken } from '../middleware/auth.mjs';
 import { formatRelativeTime, createNotification } from '../services/notification.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
+import { isUserOnline, getUserLastSeen, formatPresenceStatus } from '../services/presence.mjs';
 
 const router = Router();
 
@@ -13,21 +14,29 @@ router.get('/', authenticateToken, (req, res) => {
     const { stmtGetConversations } = getStatements();
     const rows = stmtGetConversations.all(req.user.id, req.user.id, req.user.id, req.user.id);
 
-    const conversations = rows.map((r) => ({
-      id: r.id,
-      lastMessage: r.last_message || '',
-      time: formatRelativeTime(r.updated_at),
-      updated_at: r.updated_at,
-      user: {
-        id: r.other_user_id,
-        name: r.other_name || 'مستخدم سرد',
-        username: r.other_username || 'user',
-        avatar: r.other_avatar || '',
-        role: r.other_role || 'عضو',
-        verified: Boolean(r.other_verified),
-        online: true,
-      },
-    }));
+    const conversations = rows.map((r) => {
+      const isOnline = isUserOnline(r.other_user_id);
+      const statusText = formatPresenceStatus(r.other_user_id);
+      const lastSeen = getUserLastSeen(r.other_user_id);
+
+      return {
+        id: r.id,
+        lastMessage: r.last_message || '',
+        time: formatRelativeTime(r.updated_at),
+        updated_at: r.updated_at,
+        user: {
+          id: r.other_user_id,
+          name: r.other_name || 'مستخدم سرد',
+          username: r.other_username || 'user',
+          avatar: r.other_avatar || '',
+          role: r.other_role || 'عضو',
+          verified: Boolean(r.other_verified),
+          online: isOnline,
+          lastSeen,
+          statusText,
+        },
+      };
+    });
 
     res.json({ success: true, conversations, data: conversations });
   } catch (err) {
@@ -65,6 +74,10 @@ router.post('/', authenticateToken, (req, res) => {
       };
     }
 
+    const isOnline = isUserOnline(recipient.id);
+    const statusText = formatPresenceStatus(recipient.id);
+    const lastSeen = getUserLastSeen(recipient.id);
+
     const conversationObj = {
       id: conv.id,
       lastMessage: conv.last_message || '',
@@ -77,7 +90,9 @@ router.post('/', authenticateToken, (req, res) => {
         avatar: recipient.avatar || '',
         role: recipient.role || 'عضو',
         verified: Boolean(recipient.verified),
-        online: true,
+        online: isOnline,
+        lastSeen,
+        statusText,
       },
     };
 

@@ -464,7 +464,10 @@ export default function Messages() {
                   <div className="relative flex-shrink-0 mt-0.5">
                     <UserAvatar name={conv.user.name} size="md" />
                     {conv.user.online && (
-                      <span className="absolute bottom-0 end-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card" />
+                      <span
+                        className="absolute bottom-0 end-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card ring-1 ring-emerald-500/30"
+                        title="نشط الآن"
+                      />
                     )}
                   </div>
 
@@ -478,9 +481,17 @@ export default function Messages() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-muted-foreground truncate leading-relaxed">
-                      {conv.lastMessage || 'محادثة جديدة...'}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground truncate leading-relaxed">
+                        {conv.lastMessage || 'محادثة جديدة...'}
+                      </p>
+                      {conv.user.online && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                          نشط
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -500,23 +511,16 @@ export default function Messages() {
         }`}
       >
         {!activeConv ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+            <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center mb-4 text-primary">
               <MessageSquare className="w-8 h-8" />
             </div>
-            <div className="space-y-1 max-w-sm">
-              <h2 className="text-lg font-black text-foreground font-display">مرحباً بك في المحادثات المباشرة</h2>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                حدد محادثة من القائمة الجانبية أو ابحث عن أي عضو أو صانع محتوى بالاسم للتواصل معه فوراً.
-              </p>
-            </div>
-            <Button
-              onClick={() => setIsNewChatModalOpen(true)}
-              className="gap-2 font-bold text-xs rounded-xl"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>البحث عن مستخدمين بالاسم</span>
-            </Button>
+            <h3 className="font-bold text-foreground text-lg mb-1">
+              مرحباً بك في رسائل ومحادثات سرد
+            </h3>
+            <p className="text-xs max-w-sm text-muted-foreground">
+              اختر محادثة من القائمة للبدء في المراسلة الفورية، أو اضغط "محادثة جديدة" للبحث عن أي عضو في المنصة.
+            </p>
           </div>
         ) : (
           <>
@@ -541,7 +545,10 @@ export default function Messages() {
                 <div className="relative">
                   <UserAvatar name={activeConv.user.name} size="md" />
                   {activeConv.user.online && (
-                    <span className="absolute bottom-0 end-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                    <span
+                      className="absolute bottom-0 end-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background ring-1 ring-emerald-500/30"
+                      title="نشط الآن"
+                    />
                   )}
                 </div>
 
@@ -554,13 +561,17 @@ export default function Messages() {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Circle
                       className={`w-2 h-2 fill-current ${
-                        activeConv.user.online ? 'text-emerald-500' : 'text-muted-foreground/50'
+                        activeConv.user.online
+                          ? 'text-emerald-500 animate-pulse'
+                          : 'text-muted-foreground/40'
                       }`}
                     />
-                    <span>{activeConv.user.online ? 'متصل الآن' : 'غير متصل'}</span>
+                    <span className={activeConv.user.online ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>
+                      {activeConv.user.statusText || (activeConv.user.online ? 'نشط الآن' : 'غير متصل')}
+                    </span>
                   </p>
                 </div>
               </div>

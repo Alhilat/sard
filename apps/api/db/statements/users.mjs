@@ -10,6 +10,7 @@ export function createUsersStatements(db) {
     stmtUpdateUserBan: db.prepare('UPDATE users SET is_banned = ?, ban_reason = ? WHERE id = ?'),
     stmtUpdateUserPassword: db.prepare('UPDATE users SET password_hash = ? WHERE id = ?'),
     stmtUpdateUserVerified: db.prepare('UPDATE users SET verified = ? WHERE id = ?'),
+    stmtUpdateUserLastSeen: db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?'),
     stmtDeleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
 
     // Follows

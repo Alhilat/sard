@@ -3,8 +3,10 @@ import { JWT_SECRET } from '../config/env.mjs';
 import { getStatements } from '../db/statements/index.mjs';
 import { bannedUserIds } from '../services/cache.mjs';
 
+import { touchUserPresence } from '../services/presence.mjs';
+
 /**
- * Auth Middleware (Strict JWT Verification)
+ * Auth Middleware (Strict JWT Verification & Live Presence Tracking)
  */
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -29,6 +31,8 @@ export function authenticateToken(req, res, next) {
         });
       }
       req.user = userRow;
+      // Real presence: update last activity timestamp in O(1) memory
+      touchUserPresence(userRow.id);
     } else {
       req.user = null;
     }

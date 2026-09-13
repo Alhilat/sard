@@ -68,6 +68,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [user, location]);
 
+  // Real-Time User Presence Heartbeat (نشط الآن)
+  useEffect(() => {
+    if (!user) return;
+
+    const sendHeartbeat = () => {
+      if (document.visibilityState === 'visible') {
+        api.post('/users/heartbeat', {}).catch(() => {});
+      }
+    };
+
+    // Initial heartbeat
+    sendHeartbeat();
+    const heartbeatInterval = setInterval(sendHeartbeat, 25000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        sendHeartbeat();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      const token = localStorage.getItem('sard_auth_token') || localStorage.getItem('sard_token');
+      if (token && navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/users/offline', blob);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user]);
+
   const displayName = user?.name || 'مستخدم سرد';
   const displayUsername = user?.username || (user?.email ? user.email.split('@')[0] : 'user');
 

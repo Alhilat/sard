@@ -20,6 +20,8 @@ export interface ConversationItem {
     username?: string;
     avatar?: string;
     online: boolean;
+    lastSeen?: number;
+    statusText?: string;
     role?: string;
     verified?: boolean;
   };
