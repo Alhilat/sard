@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search, Send, Maximize2, Minimize2, CheckCheck,
-  Smile, Paperclip, ArrowRight, Circle, X,
+  Smile, ArrowRight, Circle, X,
   UserPlus, Users, Sparkles, Loader2, MessageSquare
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -644,19 +644,6 @@ export default function Messages() {
             <div className="p-3.5 sm:p-4 border-t border-border/70 bg-card">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <div className="flex items-center gap-0.5 text-muted-foreground">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast({
-                        title: 'إرفاق وسائط',
-                        description: 'يمكنك إرفاق المستندات والصور هنا.',
-                      })
-                    }
-                    className="p-2 rounded-xl hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-                    title="إرفاق ملف"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </button>
                   <button
                     type="button"
                     onClick={() => setInputText((prev) => `${prev} 👍`)}
