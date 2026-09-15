@@ -91,7 +91,7 @@ export default function ArticlesPage() {
       handleRequireAuth('لكتابة ونشر مقال معمق في المنصة');
       return;
     }
-    setComposerOpen(true);
+    navigate('/articles/editor');
   };
 
   const handleLike = async (art: Article) => {
@@ -295,6 +295,8 @@ export default function ArticlesPage() {
                 onRead={handleOpenReader}
                 onLike={handleLike}
                 onBookmark={handleBookmark}
+                onEdit={(art) => navigate(`/articles/editor?id=${art.id}`)}
+                currentUserId={user?.id}
               />
             ))}
           </div>

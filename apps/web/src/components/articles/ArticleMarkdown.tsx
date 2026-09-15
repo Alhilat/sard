@@ -275,6 +275,19 @@ export default function ArticleMarkdown({ content, className = '' }: ArticleMark
     return parsed;
   }, [content]);
 
+  const isHtml = useMemo(() => {
+    return /<(p|h[1-6]|ul|ol|li|blockquote|strong|em|pre|code|hr|a)\b/i.test(content || '');
+  }, [content]);
+
+  if (isHtml) {
+    return (
+      <div
+        className={`article-prose-content space-y-4 text-foreground/90 font-normal leading-[2.1] text-start rtl ${className}`}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
   return (
     <div className={`space-y-6 text-foreground/90 font-normal leading-relaxed text-justify rtl ${className}`}>
       {blocks.map((block, idx) => {

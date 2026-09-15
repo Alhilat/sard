@@ -21,6 +21,7 @@ import AppSettings from '@/pages/app/Settings';
 import AppSearch from '@/pages/app/Search';
 import AppArticles from '@/pages/app/Articles';
 import ArticleDetail from '@/pages/app/ArticleDetail';
+import ArticleEditor from '@/pages/app/ArticleEditor';
 
 import OrgLayout from '@/layouts/OrgLayout';
 import OrgDashboard from '@/pages/org/Dashboard';
@@ -112,6 +113,12 @@ function Router() {
       <Route path="/landing" component={Landing} />
       <Route path="/auth/login" component={Login} />
       <Route path="/auth/register" component={Register} />
+
+      {/* Article Full Page Editor (Create & Edit) */}
+      <Route path="/articles/editor" component={() => <ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+      <Route path="/app/articles/editor" component={() => <ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+      <Route path="/articles/write" component={() => <ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+      <Route path="/app/articles/write" component={() => <ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
 
       {/* Publicly Accessible Long-form Articles (SEO & Guest Readers - No Login Required) */}
       <Route path="/articles" component={() => <AppLayout><AppArticles /></AppLayout>} />

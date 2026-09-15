@@ -1,12 +1,14 @@
 import { Article } from '@/services/articlesService';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Eye, Heart, MessageSquare, BookOpen, CheckCircle2, Bookmark } from 'lucide-react';
+import { Clock, Eye, Heart, MessageSquare, BookOpen, CheckCircle2, Bookmark, Edit3, AlertTriangle } from 'lucide-react';
 
 interface ArticleCardProps {
   article: Article;
   onRead: (article: Article) => void;
   onLike?: (article: Article) => void;
   onBookmark?: (article: Article) => void;
+  onEdit?: (article: Article) => void;
+  currentUserId?: string;
 }
 
 export default function ArticleCard({
@@ -14,8 +16,11 @@ export default function ArticleCard({
   onRead,
   onLike,
   onBookmark,
+  onEdit,
+  currentUserId,
 }: ArticleCardProps) {
   const authorInitial = (article.author?.name || 'س')[0];
+  const isOwner = Boolean(currentUserId && article.author?.id && currentUserId === article.author.id);
 
   return (
     <article
@@ -43,6 +48,21 @@ export default function ArticleCard({
             {article.category}
           </Badge>
         </div>
+
+        {/* Status Badge Over Cover */}
+        {article.status && article.status !== 'approved' && (
+          <div className="absolute top-3 start-3 z-10">
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1 ${
+              article.status === 'needs_revision'
+                ? 'bg-orange-600 text-white animate-pulse'
+                : article.status === 'pending'
+                ? 'bg-amber-500 text-black'
+                : 'bg-red-600 text-white'
+            }`}>
+              {article.status === 'needs_revision' ? 'مطلوب تعديل نقاط ✍️' : article.status === 'pending' ? 'قيد المراجعة ⏳' : 'مرفوض'}
+            </span>
+          </div>
+        )}
 
         {/* Reading Time Pill Over Cover */}
         <div className="absolute bottom-3 start-3 flex items-center gap-2 z-10">
@@ -141,6 +161,21 @@ export default function ArticleCard({
                 title="حفظ المقال"
               >
                 <Bookmark className={`w-4 h-4 ${article.isBookmarked ? 'fill-current' : ''}`} />
+              </button>
+            )}
+
+            {isOwner && onEdit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(article);
+                }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold transition-colors cursor-pointer"
+                title="تعديل المقال"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>تعديل</span>
               </button>
             )}
 

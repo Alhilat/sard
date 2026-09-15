@@ -240,6 +240,7 @@ export default function ArticleDetail({ slug: propSlug }: ArticleDetailProps) {
   }
 
   const commentTree = buildArticleCommentTree(comments);
+  const isAuthor = Boolean(user && article && (user.id === article.author?.id || user.id === (article as any).author_id || user.role === 'admin'));
 
   return (
     <div className={`min-h-screen bg-background rtl transition-all duration-300 ${isZenMode ? 'zen-reading-mode' : ''}`}>
@@ -324,6 +325,20 @@ export default function ArticleDetail({ slug: propSlug }: ArticleDetailProps) {
             {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </Button>
 
+          {/* Edit Article (for Author / Admin) */}
+          {isAuthor && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/articles/editor?id=${article.id}`)}
+              className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1.5 border-primary/40 text-primary hover:bg-primary/10 cursor-pointer"
+              title="تعديل المقال"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">تعديل المقال</span>
+            </Button>
+          )}
+
           {/* Share */}
           <Button
             variant="ghost"
@@ -400,6 +415,18 @@ export default function ArticleDetail({ slug: propSlug }: ArticleDetailProps) {
                   <p className="text-[11px] opacity-80">
                     تم إرسال مقالك إلى لوحة الإدارة لمراجعته، ولن يظهر لعموم الزوار حتى تتم الموافقة عليه.
                   </p>
+                )}
+
+                {isAuthor && (
+                  <div className="pt-2">
+                    <Button
+                      onClick={() => navigate(`/articles/editor?id=${article.id}`)}
+                      className="bg-primary hover:bg-primary/90 text-white text-xs font-bold h-9 px-4 rounded-xl gap-2 cursor-pointer shadow-md"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>تعديل المقال والنقاط المطلوبة</span>
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

@@ -559,13 +559,13 @@ router.patch('/articles/:id/review', authenticatePetra, (req, res) => {
     }
 
     try {
-      createNotification(db, {
+      createNotification({
         userId: article.author_id,
+        actorId: null,
         type: 'article_review',
         title: notifTitle,
         content: notifBody,
-        referenceId: article.slug || article.id,
-        referenceType: 'article'
+        link: `/articles/${article.slug || article.id}`,
       });
     } catch (notifErr) {
       console.error('Failed to create author notification:', notifErr);
