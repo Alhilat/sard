@@ -328,7 +328,6 @@ export function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
     CREATE INDEX IF NOT EXISTS idx_article_comments_article ON article_comments(article_id, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_article_comments_parent ON article_comments(parent_id);
-    CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status);
   `);
 
   try {
