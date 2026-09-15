@@ -24,15 +24,20 @@ export function buildArticleCommentTree(comments: ArticleComment[]): CommentWith
   return roots;
 }
 
-export const ARTICLE_CATEGORIES = [
-  { id: 'all', label: 'جميع المقالات' },
-  { id: 'برمجة وتطوير', label: 'برمجة وتطوير' },
-  { id: 'تصميم وتجربة المستخدم', label: 'تصميم وتجربة المستخدم' },
-  { id: 'تقنية', label: 'تقنية وذكاء اصطناعي' },
-  { id: 'قواعد بيانات', label: 'قواعد بيانات وبنية تحتية' },
-  { id: 'ريادة أعمال', label: 'منتجات وريادة أعمال' },
-  { id: 'عام', label: 'مقالات عامة' },
-];
+export interface ArticleCategory {
+  id: string;
+  label: string;
+  count?: number;
+}
+
+export type ArticleStatus = 'pending' | 'approved' | 'needs_revision' | 'rejected';
+
+export const ARTICLE_STATUS_LABELS: Record<ArticleStatus, { label: string; color: string }> = {
+  approved: { label: 'مقبول ومنشور', color: 'emerald' },
+  pending: { label: 'قيد المراجعة', color: 'amber' },
+  needs_revision: { label: 'يتطلب تعديل نقاط', color: 'orange' },
+  rejected: { label: 'مرفوض', color: 'red' },
+};
 
 export const PRESET_COVERS = [
   {

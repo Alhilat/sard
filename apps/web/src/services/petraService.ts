@@ -90,6 +90,7 @@ export interface PetraArticle {
   slug: string;
   title: string;
   summary: string;
+  content?: string;
   category: string;
   cover_image: string;
   read_time_minutes: number;
@@ -98,6 +99,10 @@ export interface PetraArticle {
   views_count: number;
   likes_count: number;
   comments_count: number;
+  status: 'pending' | 'approved' | 'needs_revision' | 'rejected';
+  admin_notes?: string;
+  reviewed_at?: number | null;
+  reviewed_by?: string | null;
   created_at: number;
   timestamp_text: string;
   author_id: string;
@@ -428,6 +433,31 @@ export const petraService = {
       return data.articles || [];
     } catch {
       return [];
+    }
+  },
+
+  reviewArticle: async (
+    articleId: string,
+    status: 'approved' | 'needs_revision' | 'rejected',
+    notes?: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await fetch(`/api/petra/articles/${articleId}/review`, {
+        method: 'PATCH',
+        headers: {
+          ...getPetraAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status, notes }),
+      });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة' };
+      }
+      const data = await res.json();
+      return { success: res.ok && data.success, message: data.message };
+    } catch {
+      return { success: false, message: 'تعذر تحديث حالة المقال' };
     }
   },
 

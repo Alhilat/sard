@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { Article, articlesService } from '@/services/articlesService';
-import { ARTICLE_CATEGORIES } from '@/components/articles/types';
 import ArticleCard from '@/components/articles/ArticleCard';
 import ArticleComposerModal from '@/components/articles/ArticleComposerModal';
 import GuestAuthModal from '@/components/articles/GuestAuthModal';
@@ -20,6 +19,7 @@ export default function ArticlesPage() {
   const [location, navigate] = useLocation();
 
   const [articles, setArticles] = useState<Article[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +28,18 @@ export default function ArticlesPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [guestModalOpen, setGuestModalOpen] = useState(false);
   const [guestModalAction, setGuestModalAction] = useState('للتفاعل مع المقالات وكتابة محتوى جديد');
+
+  // Load categories
+  const loadCategories = useCallback(async () => {
+    try {
+      const serverCats = await articlesService.getCategories();
+      if (serverCats && serverCats.length > 0) {
+        setCategories(serverCats);
+      }
+    } catch (err) {
+      console.error('Failed to load article categories:', err);
+    }
+  }, []);
 
   // Load articles
   const loadArticles = useCallback(async () => {
@@ -44,6 +56,10 @@ export default function ArticlesPage() {
       setIsLoading(false);
     }
   }, [selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   useEffect(() => {
     loadArticles();
@@ -210,22 +226,32 @@ export default function ArticlesPage() {
 
         {/* Category Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {ARTICLE_CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-primary text-primary-foreground shadow-xs font-bold'
-                    : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border border-border/70'
-                }`}
-              >
-                {cat.label}
-              </button>
+          {(() => {
+            const dynamicCategories = Array.from(
+              new Set([...categories, ...articles.map((a) => a.category).filter(Boolean)])
             );
-          })}
+            const allPills = [
+              { id: 'all', label: 'جميع المقالات' },
+              ...dynamicCategories.map((c) => ({ id: c, label: c })),
+            ];
+
+            return allPills.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                      : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border border-border/70'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              );
+            });
+          })()}
         </div>
       </section>
 
@@ -248,7 +274,7 @@ export default function ArticlesPage() {
                 لا توجد مقالات في هذا القسم حالياً
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                كن المبادر بكتابة أول مقال في هذا التصنيف لمشاركته مع المجتمع.
+                كن أول من يثري هذا التصنيف بمقال مفصل وتجربة تقنية غنية.
               </p>
             </div>
             <Button
@@ -279,7 +305,10 @@ export default function ArticlesPage() {
       <ArticleComposerModal
         open={composerOpen}
         onOpenChange={setComposerOpen}
-        onArticleCreated={loadArticles}
+        onArticleCreated={() => {
+          loadArticles();
+          loadCategories();
+        }}
       />
 
       {/* Guest Auth Modal */}

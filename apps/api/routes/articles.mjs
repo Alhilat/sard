@@ -25,6 +25,8 @@ router.get('/', authenticateToken, (req, res) => {
     const offset = (page - 1) * limit;
     const category = req.query.category && req.query.category !== 'all' ? req.query.category.trim() : null;
     const search = req.query.search ? req.query.search.trim() : null;
+    const currentUserId = req.user ? req.user.id : null;
+    const isMyOnly = req.query.my === 'true' && currentUserId;
 
     const db = req.app.locals.db;
     let query = `
@@ -40,27 +42,40 @@ router.get('/', authenticateToken, (req, res) => {
     `;
     const params = [];
 
+    // Count total query
+    let countQuery = `SELECT COUNT(*) as count FROM articles a WHERE 1=1`;
+    const countParams = [];
+
+    // Editorial status filtering:
+    if (isMyOnly) {
+      query += ' AND a.author_id = ?';
+      params.push(currentUserId);
+      countQuery += ' AND a.author_id = ?';
+      countParams.push(currentUserId);
+    } else {
+      if (currentUserId) {
+        query += " AND (a.status = 'approved' OR a.author_id = ?)";
+        params.push(currentUserId);
+        countQuery += " AND (a.status = 'approved' OR a.author_id = ?)";
+        countParams.push(currentUserId);
+      } else {
+        query += " AND a.status = 'approved'";
+        countQuery += " AND a.status = 'approved'";
+      }
+    }
+
     if (category) {
       query += ' AND a.category = ?';
       params.push(category);
+      countQuery += ' AND a.category = ?';
+      countParams.push(category);
     }
 
     if (search) {
       query += ' AND (LOWER(a.title) LIKE ? OR LOWER(a.content) LIKE ? OR LOWER(a.summary) LIKE ?)';
       const searchParam = `%${search.toLowerCase()}%`;
       params.push(searchParam, searchParam, searchParam);
-    }
-
-    // Count total query
-    let countQuery = `SELECT COUNT(*) as count FROM articles a WHERE 1=1`;
-    const countParams = [];
-    if (category) {
-      countQuery += ' AND a.category = ?';
-      countParams.push(category);
-    }
-    if (search) {
       countQuery += ' AND (LOWER(a.title) LIKE ? OR LOWER(a.content) LIKE ? OR LOWER(a.summary) LIKE ?)';
-      const searchParam = `%${search.toLowerCase()}%`;
       countParams.push(searchParam, searchParam, searchParam);
     }
 
@@ -72,7 +87,6 @@ router.get('/', authenticateToken, (req, res) => {
 
     const rows = db.prepare(query).all(...params);
 
-    const currentUserId = req.user ? req.user.id : null;
     let likedArticleIds = new Set();
     let bookmarkedArticleIds = new Set();
 
@@ -117,6 +131,9 @@ router.get('/', authenticateToken, (req, res) => {
         likesCount: r.likes_count || 0,
         viewsCount: r.views_count || 0,
         commentsCount: r.comments_count || 0,
+        status: r.status || 'approved',
+        adminNotes: r.admin_notes || '',
+        reviewedAt: r.reviewed_at || null,
         isLiked: likedArticleIds.has(r.id),
         isBookmarked: bookmarkedArticleIds.has(r.id),
         author: {
@@ -147,6 +164,26 @@ router.get('/', authenticateToken, (req, res) => {
   }
 });
 
+// 1.1 List All Dynamic Categories (Publicly accessible)
+router.get('/categories', (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const rows = db.prepare(`
+      SELECT DISTINCT category 
+      FROM articles 
+      WHERE category IS NOT NULL 
+        AND TRIM(category) != ''
+        AND status = 'approved'
+      ORDER BY category ASC
+    `).all();
+    const categories = rows.map((r) => r.category.trim()).filter(Boolean);
+    res.json({ success: true, categories });
+  } catch (err) {
+    console.error('Error fetching article categories:', err);
+    res.status(500).json({ success: false, message: 'تعذر جلب التصنيفات' });
+  }
+});
+
 // 2. Get Single Article by ID or Slug (Publicly viewable without login)
 router.get('/:idOrSlug', authenticateToken, (req, res) => {
   try {
@@ -162,12 +199,25 @@ router.get('/:idOrSlug', authenticateToken, (req, res) => {
       return res.status(404).json({ success: false, message: 'المقال المطلوب غير موجود أو تم حذفه' });
     }
 
-    // Increment views count asynchronously
-    try {
-      stmts.stmtIncrementArticleViews.run(article.id);
-    } catch {}
-
     const currentUserId = req.user ? req.user.id : null;
+    const isAuthor = currentUserId && currentUserId === article.author_id;
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'petra');
+
+    if (article.status !== 'approved' && !isAuthor && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'هذا المقال قيد المراجعة والتدقيق التحريري من قبل الإدارة ولم يُنشر للعامة بعد.',
+        status: article.status
+      });
+    }
+
+    // Increment views count asynchronously if approved
+    if (article.status === 'approved') {
+      try {
+        stmts.stmtIncrementArticleViews.run(article.id);
+      } catch {}
+    }
+
     let isLiked = false;
     let isBookmarked = false;
 
@@ -203,6 +253,9 @@ router.get('/:idOrSlug', authenticateToken, (req, res) => {
         likesCount: article.likes_count || 0,
         viewsCount: (article.views_count || 0) + 1,
         commentsCount: article.comments_count || 0,
+        status: article.status || 'approved',
+        adminNotes: article.admin_notes || '',
+        reviewedAt: article.reviewed_at || null,
         isLiked,
         isBookmarked,
         author: {
@@ -270,6 +323,8 @@ router.post('/', authenticateToken, requireAuth, (req, res) => {
     const finalCover = coverImage || cover_image || '';
     const finalCategory = (category || 'عام').trim();
 
+    const finalStatus = author.role === 'admin' ? 'approved' : 'pending';
+
     const stmts = getStatements();
     stmts.stmtInsertArticle.run({
       id: articleId,
@@ -285,6 +340,10 @@ router.post('/', authenticateToken, requireAuth, (req, res) => {
       likes_count: 0,
       views_count: 0,
       comments_count: 0,
+      status: finalStatus,
+      admin_notes: '',
+      reviewed_at: finalStatus === 'approved' ? now : null,
+      reviewed_by: finalStatus === 'approved' ? 'admin' : null,
       created_at: now,
       updated_at: now,
     });
@@ -293,12 +352,15 @@ router.post('/', authenticateToken, requireAuth, (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'تم نشر مقالك بنجاح',
+      message: finalStatus === 'approved'
+        ? 'تم نشر مقالك بنجاح وهو متاح للقراء الآن.'
+        : 'تم إرسال مقالك بنجاح للمراجعة التحريرية من قبل الإدارة وسوف يظهر للعامة فور اعتماده.',
       article: {
         id: articleId,
         slug: articleSlug,
         title: cleanTitle,
         category: finalCategory,
+        status: finalStatus,
         readTimeMinutes,
         charCount: cleanContent.length,
         wordCount,
@@ -307,6 +369,77 @@ router.post('/', authenticateToken, requireAuth, (req, res) => {
   } catch (err) {
     console.error('Error creating article:', err);
     res.status(500).json({ success: false, message: 'تعذر نشر المقال، يرجى المحاولة لاحقاً' });
+  }
+});
+
+// 3.1 Update Article (Author editing/resubmitting)
+router.put('/:id', authenticateToken, requireAuth, (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const author = req.user;
+    const stmts = getStatements();
+
+    const article = stmts.stmtGetArticleById.get(articleId);
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'المقال غير موجود' });
+    }
+
+    if (article.author_id !== author.id && author.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'غير مصرح لك بتعديل هذا المقال' });
+    }
+
+    const { title, content, summary, coverImage, category, tags } = req.body;
+    const cleanTitle = (title || article.title).trim();
+    const cleanContent = (content || article.content).trim();
+
+    if (cleanContent.length < 500) {
+      return res.status(400).json({
+        success: false,
+        message: `يجب ألا يقل نص المقال عن 500 حرف (العدد الحالي: ${cleanContent.length} حرفاً)`
+      });
+    }
+
+    let parsedTags = article.tags;
+    if (tags !== undefined) {
+      if (Array.isArray(tags)) {
+        parsedTags = JSON.stringify(tags.map((t) => String(t).replace(/^#/, '').trim()).filter(Boolean));
+      } else if (typeof tags === 'string') {
+        parsedTags = JSON.stringify(tags.split(/[\s,]+/).map((t) => t.replace(/^#/, '').trim()).filter(Boolean));
+      }
+    }
+
+    const wordCount = cleanContent.split(/\s+/).filter(Boolean).length;
+    const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 160));
+    const now = Date.now();
+
+    // If it was needs_revision or rejected, editing resubmits it as pending for review!
+    const newStatus = article.status === 'needs_revision' || article.status === 'rejected' ? 'pending' : article.status;
+
+    stmts.stmtUpdateArticle.run({
+      id: articleId,
+      title: cleanTitle,
+      content: cleanContent,
+      summary: (summary || cleanContent.slice(0, 180) + '...').trim(),
+      cover_image: coverImage !== undefined ? coverImage : article.cover_image,
+      category: (category || article.category || 'عام').trim(),
+      tags: parsedTags,
+      read_time_minutes: readTimeMinutes,
+      status: newStatus,
+      updated_at: now,
+    });
+
+    scheduleCloudSync();
+
+    res.json({
+      success: true,
+      message: newStatus === 'pending'
+        ? 'تم تحديث المقال وإعادة إرساله للمراجعة التحريرية بنجاح.'
+        : 'تم حفظ التعديلات بنجاح',
+      status: newStatus
+    });
+  } catch (err) {
+    console.error('Error updating article:', err);
+    res.status(500).json({ success: false, message: 'تعذر تحديث المقال' });
   }
 });
 

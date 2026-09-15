@@ -37,6 +37,9 @@ export interface Article {
   likesCount: number;
   viewsCount: number;
   commentsCount: number;
+  status?: 'pending' | 'approved' | 'needs_revision' | 'rejected';
+  adminNotes?: string;
+  reviewedAt?: number;
   isLiked?: boolean;
   isBookmarked?: boolean;
   author: ArticleAuthor;
@@ -112,6 +115,16 @@ export const articlesService = {
     }
   },
 
+  getCategories: async (): Promise<string[]> => {
+    try {
+      const res = await api.get<{ success: boolean; categories: string[] }>('/articles/categories');
+      return res?.categories || [];
+    } catch (err) {
+      console.error('Failed to fetch article categories:', err);
+      return [];
+    }
+  },
+
   createArticle: async (payload: CreateArticlePayload): Promise<{ success: boolean; article?: any; message?: string }> => {
     try {
       const res = await api.post<{ success: boolean; message?: string; article?: any }>('/articles', payload);
@@ -120,6 +133,18 @@ export const articlesService = {
       return {
         success: false,
         message: err?.message || 'تعذر نشر المقال، يرجى التأكد من استيفاء الحد الأدنى (500 حرف)',
+      };
+    }
+  },
+
+  updateArticle: async (id: string, payload: Partial<CreateArticlePayload>): Promise<{ success: boolean; message?: string; status?: string }> => {
+    try {
+      const res = await api.put<{ success: boolean; message?: string; status?: string }>(`/articles/${id}`, payload);
+      return res;
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || 'تعذر تحديث المقال',
       };
     }
   },

@@ -285,6 +285,10 @@ export function initSchema(db) {
       likes_count INTEGER DEFAULT 0,
       views_count INTEGER DEFAULT 0,
       comments_count INTEGER DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'approved',
+      admin_notes TEXT DEFAULT '',
+      reviewed_at INTEGER DEFAULT NULL,
+      reviewed_by TEXT DEFAULT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
@@ -324,6 +328,7 @@ export function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
     CREATE INDEX IF NOT EXISTS idx_article_comments_article ON article_comments(article_id, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_article_comments_parent ON article_comments(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status);
   `);
 
   try {
@@ -336,6 +341,26 @@ export function initSchema(db) {
 
   try {
     db.exec("ALTER TABLE users ADD COLUMN last_seen_at INTEGER DEFAULT 0;");
+  } catch {}
+
+  try {
+    db.exec("ALTER TABLE articles ADD COLUMN status TEXT NOT NULL DEFAULT 'approved';");
+  } catch {}
+
+  try {
+    db.exec("ALTER TABLE articles ADD COLUMN admin_notes TEXT DEFAULT '';");
+  } catch {}
+
+  try {
+    db.exec("ALTER TABLE articles ADD COLUMN reviewed_at INTEGER DEFAULT NULL;");
+  } catch {}
+
+  try {
+    db.exec("ALTER TABLE articles ADD COLUMN reviewed_by TEXT DEFAULT NULL;");
+  } catch {}
+
+  try {
+    db.exec("CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status);");
   } catch {}
 
   // Seed sample articles if none exist

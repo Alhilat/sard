@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Article, ArticleComment, articlesService } from '@/services/articlesService';
 import { buildArticleCommentTree, CommentWithReplies } from '@/components/articles/types';
 import GuestAuthModal from '@/components/articles/GuestAuthModal';
+import ArticleMarkdown from '@/components/articles/ArticleMarkdown';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   ArrowRight, Heart, Bookmark, Share2, MessageSquare, Clock, Eye,
   CheckCircle2, Send, CornerDownLeft, Sparkles, LogIn, Maximize2,
-  Minimize2, BookOpen, AlertCircle
+  Minimize2, BookOpen, AlertCircle, ShieldAlert, Edit3
 } from 'lucide-react';
 
 interface ArticleDetailProps {
@@ -363,6 +364,48 @@ export default function ArticleDetail({ slug: propSlug }: ArticleDetailProps) {
 
       {/* 3. Main Full Screen Article View Container */}
       <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
+        {/* Moderation Status Banner for Author / Admin */}
+        {article.status && article.status !== 'approved' && (
+          <div
+            className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-start ${
+              article.status === 'pending'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                : article.status === 'needs_revision'
+                ? 'bg-orange-500/10 border-orange-500/30 text-orange-900 dark:text-orange-200'
+                : 'bg-red-500/10 border-red-500/30 text-red-900 dark:text-red-200'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm">
+                    {article.status === 'pending'
+                      ? 'هذا المقال قيد المراجعة والتدقيق التحريري'
+                      : article.status === 'needs_revision'
+                      ? 'مطلوب تعديل نقاط محددة في المقال قبل النشر'
+                      : 'تم رفض نشر هذا المقال'}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {article.status === 'pending' ? 'بانتظار الإدارة' : article.status === 'needs_revision' ? 'بانتظار تعديلك' : 'مرفوض'}
+                  </Badge>
+                </div>
+                {article.adminNotes && (
+                  <p className="text-xs leading-relaxed opacity-90 bg-background/50 p-2.5 rounded-lg border border-border/40 font-medium">
+                    <span className="font-bold">ملاحظات الإدارة: </span>
+                    {article.adminNotes}
+                  </p>
+                )}
+                {article.status === 'pending' && (
+                  <p className="text-[11px] opacity-80">
+                    تم إرسال مقالك إلى لوحة الإدارة لمراجعته، ولن يظهر لعموم الزوار حتى تتم الموافقة عليه.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Article Meta & Title Header */}
         <header className="space-y-6 text-start">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -376,6 +419,10 @@ export default function ArticleDetail({ slug: propSlug }: ArticleDetailProps) {
             <span className="font-mono">{article.charCount.toLocaleString('ar-EG')} حرفاً</span>
             <span>•</span>
             <span>{article.wordCount.toLocaleString('ar-EG')} كلمة</span>
+            <span>•</span>
+            <Badge variant="secondary" className="text-[11px] font-semibold">
+              {article.category}
+            </Badge>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-[1.25]">
@@ -430,13 +477,9 @@ export default function ArticleDetail({ slug: propSlug }: ArticleDetailProps) {
           </div>
         )}
 
-        {/* Article Full Prose Content */}
-        <div className={`font-sans text-foreground/90 font-normal space-y-7 ${fontClasses[fontSize]} selection:bg-primary/20`}>
-          {article.content.split(/\n\s*\n/).map((paragraph, idx) => (
-            <p key={idx} className="tracking-normal whitespace-pre-line text-justify leading-relaxed">
-              {paragraph.trim()}
-            </p>
-          ))}
+        {/* Article Full Prose Content (Rich Markdown with Headings, Bold, Lists, Code) */}
+        <div className={`font-sans ${fontClasses[fontSize]}`}>
+          <ArticleMarkdown content={article.content} />
         </div>
 
         {/* Tags cloud */}

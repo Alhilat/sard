@@ -60,12 +60,14 @@ export function createArticlesStatements(db) {
       INSERT INTO articles (
         id, title, slug, content, summary, cover_image, author_id,
         category, tags, read_time_minutes, likes_count, views_count,
-        comments_count, created_at, updated_at
+        comments_count, status, admin_notes, reviewed_at, reviewed_by,
+        created_at, updated_at
       )
       VALUES (
         @id, @title, @slug, @content, @summary, @cover_image, @author_id,
         @category, @tags, @read_time_minutes, @likes_count, @views_count,
-        @comments_count, @created_at, @updated_at
+        @comments_count, @status, @admin_notes, @reviewed_at, @reviewed_by,
+        @created_at, @updated_at
       )
     `),
 
@@ -78,6 +80,17 @@ export function createArticlesStatements(db) {
           category = @category,
           tags = @tags,
           read_time_minutes = @read_time_minutes,
+          status = @status,
+          updated_at = @updated_at
+      WHERE id = @id
+    `),
+
+    stmtUpdateArticleStatus: db.prepare(`
+      UPDATE articles
+      SET status = @status,
+          admin_notes = @admin_notes,
+          reviewed_at = @reviewed_at,
+          reviewed_by = @reviewed_by,
           updated_at = @updated_at
       WHERE id = @id
     `),

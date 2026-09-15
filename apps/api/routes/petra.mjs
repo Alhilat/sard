@@ -473,6 +473,10 @@ router.get('/articles', authenticatePetra, (req, res) => {
       success: true,
       articles: articles.map((art) => ({
         ...art,
+        status: art.status || 'approved',
+        admin_notes: art.admin_notes || '',
+        reviewed_at: art.reviewed_at || null,
+        reviewed_by: art.reviewed_by || null,
         char_count: art.char_count || (art.content ? art.content.length : 0),
         word_count: art.word_count || 0,
         read_time_minutes: art.read_time_minutes || 1,
@@ -489,6 +493,111 @@ router.get('/articles', authenticatePetra, (req, res) => {
   } catch (err) {
     console.error('Error in petra get articles:', err);
     res.status(500).json({ success: false, message: 'تعذر جلب المقالات' });
+  }
+});
+
+// PATCH /api/petra/articles/:id/review (Accept, Edit this points, Refuse to post)
+router.patch('/articles/:id/review', authenticatePetra, (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const { status, notes } = req.body;
+    const db = req.app.locals.db;
+
+    if (!['approved', 'needs_revision', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'الحالة غير صالحة. الحالات المقبولة: approved (قبول), needs_revision (تعديل نقاط), rejected (رفض النشر)'
+      });
+    }
+
+    const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(articleId);
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'المقال غير موجود أو تم حذفه مسبقاً' });
+    }
+
+    const adminActor = req.petraAdmin || 'admin';
+    const now = Date.now();
+    const cleanNotes = (notes || '').trim();
+
+    if ((status === 'needs_revision' || status === 'rejected') && !cleanNotes) {
+      return res.status(400).json({
+        success: false,
+        message: status === 'needs_revision'
+          ? 'يرجى كتابة النقاط المطلوب من الكاتب تعديلها.'
+          : 'يرجى كتابة سبب رفض نشر المقال.'
+      });
+    }
+
+    const { stmtUpdateArticleStatus, stmtInsertAuditLog } = getStatements();
+
+    stmtUpdateArticleStatus.run({
+      id: articleId,
+      status,
+      admin_notes: cleanNotes,
+      reviewed_at: now,
+      reviewed_by: adminActor,
+      updated_at: now,
+    });
+
+    // In-app notification to author
+    let notifTitle = '';
+    let notifBody = '';
+    let actionLabel = '';
+
+    if (status === 'approved') {
+      notifTitle = 'تهانينا! تم قبول ونشر مقالك 🎉';
+      notifBody = `تمت مراجعة مقالك "${article.title}" والموافقة عليه وهو متاح للجميع الآن.`;
+      actionLabel = 'قبول ونشر مقال';
+    } else if (status === 'needs_revision') {
+      notifTitle = 'ملاحظات تحريرية: مطلوب تعديل نقاط في المقال ✍️';
+      notifBody = `مقالك "${article.title}" يحتاج إلى مراجعة بعض النقاط قبل النشر: "${cleanNotes}"`;
+      actionLabel = 'طلب تعديل نقاط المقال';
+    } else if (status === 'rejected') {
+      notifTitle = 'إشعار حول مقالك ⚠️';
+      notifBody = `نعتذر، تعذر نشر مقالك "${article.title}". السبب: "${cleanNotes}"`;
+      actionLabel = 'رفض نشر مقال';
+    }
+
+    try {
+      createNotification(db, {
+        userId: article.author_id,
+        type: 'article_review',
+        title: notifTitle,
+        content: notifBody,
+        referenceId: article.slug || article.id,
+        referenceType: 'article'
+      });
+    } catch (notifErr) {
+      console.error('Failed to create author notification:', notifErr);
+    }
+
+    // Record in Petra audit logs
+    stmtInsertAuditLog.run(
+      `log_${now}`,
+      adminActor,
+      actionLabel,
+      'article',
+      articleId,
+      `تم تغيير حالة المقال "${article.title}" إلى (${status}). ملاحظات: ${cleanNotes || 'لا توجد'}`,
+      now
+    );
+
+    scheduleCloudSync();
+
+    res.json({
+      success: true,
+      message: status === 'approved'
+        ? 'تمت الموافقة على المقال ونشره بنجاح'
+        : status === 'needs_revision'
+        ? 'تم إرسال ملاحظات التعديل إلى الكاتب بنجاح'
+        : 'تم رفض المقال وإشعار الكاتب بالسبب',
+      status,
+      adminNotes: cleanNotes,
+      reviewedAt: now,
+    });
+  } catch (err) {
+    console.error('Review article error:', err);
+    res.status(500).json({ success: false, message: 'تعذر مراجعة وتحديث حالة المقال' });
   }
 });
 
