@@ -692,12 +692,13 @@ router.post('/broadcast', authenticatePetra, (req, res) => {
     const { stmtInsertNotification, stmtInsertAuditLog } = getStatements();
     const now = Date.now();
     const cleanLink = (link || '').trim() || '/app/feed';
-    const adminActor = req.petraAdmin || 'admin';
+    const adminActor = req.petraUser || req.petraAdmin || 'admin';
 
     // Fast transaction batch insert for all recipient notifications
-    const insertBatch = db.transaction((users) => {
-      for (const u of users) {
-        const notifId = `notif_bc_${now}_${Math.floor(Math.random() * 1000000)}`;
+    db.exec('BEGIN');
+    try {
+      for (const u of targetUsers) {
+        const notifId = `notif_bc_${now}_${Math.floor(Math.random() * 1000000)}_${u.id}`;
         stmtInsertNotification.run(
           notifId,
           u.id,
@@ -709,9 +710,12 @@ router.post('/broadcast', authenticatePetra, (req, res) => {
           now
         );
       }
-    });
+      db.exec('COMMIT');
+    } catch (txErr) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw txErr;
+    }
 
-    insertBatch(targetUsers);
     scheduleCloudSync();
 
     // Push via WebSocket to all connected recipients instantly
@@ -733,15 +737,19 @@ router.post('/broadcast', authenticatePetra, (req, res) => {
     }
 
     // Record in Petra Audit Log
-    stmtInsertAuditLog.run(
-      `log_${now}`,
-      adminActor,
-      'بث إشعار عام',
-      'broadcast',
-      target,
-      `تم إرسال إشعار عام بعنوان "${cleanTitle}" إلى ${targetUsers.length} مستخدم`,
-      now
-    );
+    try {
+      stmtInsertAuditLog.run(
+        `log_${now}`,
+        adminActor,
+        'بث إشعار عام',
+        'broadcast',
+        target,
+        `تم إرسال إشعار عام بعنوان "${cleanTitle}" إلى ${targetUsers.length} مستخدم`,
+        now
+      );
+    } catch (logErr) {
+      console.warn('Petra audit log warning:', logErr.message);
+    }
 
     return res.json({
       success: true,
@@ -752,7 +760,7 @@ router.post('/broadcast', authenticatePetra, (req, res) => {
     console.error('Broadcast notification error:', err);
     res.status(500).json({
       success: false,
-      message: 'تعذر إرسال الإشعار العام للمستخدمين.',
+      message: err.message || 'تعذر إرسال الإشعار العام للمستخدمين.',
     });
   }
 });

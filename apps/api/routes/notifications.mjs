@@ -23,9 +23,9 @@ router.get('/', authenticateToken, (req, res) => {
       created_at: r.created_at,
       user: {
         id: r.actor_id || '',
-        name: r.actor_name || 'مستخدم سرد',
+        name: r.actor_name || (r.type === 'admin_announcement' ? 'إدارة سرد (بترا)' : 'مستخدم سرد'),
         avatar: r.actor_avatar || '',
-        username: r.actor_username || 'user',
+        username: r.actor_username || 'sard',
       },
     }));
 

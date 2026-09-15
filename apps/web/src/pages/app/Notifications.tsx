@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import {
   Bell, Heart, MessageCircle, UserPlus, Calendar, BookOpen, Info,
-  CheckCheck, Smartphone, Volume2, ShieldCheck, Sparkles, Send, ChevronLeft
+  CheckCheck, Smartphone, Volume2, ShieldCheck, Sparkles, Send, ChevronLeft,
+  Megaphone
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { deviceNotificationService } from '@/services/deviceNotificationService';
+import { websocketService } from '@/services/websocketService';
 
 interface NotificationItem {
   id: string;
@@ -34,6 +36,8 @@ const icons: Record<string, any> = {
   activity: { icon: Calendar, color: 'bg-orange-100 dark:bg-orange-950/40 text-orange-500' },
   course: { icon: BookOpen, color: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-500' },
   system: { icon: Info, color: 'bg-muted text-muted-foreground' },
+  admin_announcement: { icon: Megaphone, color: 'bg-amber-100 dark:bg-amber-950/40 text-amber-500' },
+  article_review: { icon: Sparkles, color: 'bg-primary/10 text-primary' },
 };
 
 export default function Notifications() {
@@ -45,7 +49,7 @@ export default function Notifications() {
   const [devicePermission, setDevicePermission] = useState<NotificationPermission>('default');
   const [isSendingTest, setIsSendingTest] = useState(false);
 
-  const filters = ['الكل', 'غير مقروءة', 'إعجابات', 'تعليقات', 'متابعون'];
+  const filters = ['الكل', 'غير مقروءة', 'إعلانات الإدارة', 'إعجابات', 'تعليقات', 'متابعون'];
 
   const fetchNotifications = () => {
     api.get<any>('/notifications')
@@ -64,6 +68,36 @@ export default function Notifications() {
     if (deviceNotificationService.isSupported()) {
       setDevicePermission(deviceNotificationService.getPermission());
     }
+
+    // Real-time notification reception via WebSocket
+    const unsub = websocketService.on('notification:new', (payload: any) => {
+      const n = payload?.notification || payload;
+      if (n && n.id) {
+        setNotifs((prev) => {
+          if (prev.some((item) => item.id === n.id)) return prev;
+          return [
+            {
+              id: n.id,
+              type: n.type || 'admin_announcement',
+              title: n.title,
+              content: n.content,
+              link: n.link,
+              read: false,
+              time: n.time || 'الآن',
+              user: {
+                id: n.actorId || '',
+                name: n.type === 'admin_announcement' ? 'إدارة سرد (بترا)' : 'مستخدم سرد',
+              },
+            },
+            ...prev,
+          ];
+        });
+      }
+    });
+
+    return () => {
+      unsub();
+    };
   }, []);
 
   const handleEnableDeviceNotifications = async () => {
@@ -169,6 +203,7 @@ export default function Notifications() {
 
   const filtered = notifs.filter((n) => {
     if (filter === 'غير مقروءة') return !n.read;
+    if (filter === 'إعلانات الإدارة') return n.type === 'admin_announcement' || n.type === 'system';
     if (filter === 'إعجابات') return n.type === 'like';
     if (filter === 'تعليقات') return n.type === 'comment';
     if (filter === 'متابعون') return n.type === 'follow';

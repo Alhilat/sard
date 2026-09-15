@@ -21,6 +21,7 @@ export function authenticatePetra(req, res, next) {
   const validPetraSession = verifyPetraSession(token);
   if (validPetraSession) {
     req.petraUser = validPetraSession.username || PETRA_USER;
+    req.petraAdmin = req.petraUser;
     return next();
   }
 
@@ -32,6 +33,7 @@ export function authenticatePetra(req, res, next) {
       const user = stmts.stmtFindUserById.get(decoded.id);
       if (user && (user.role === 'admin' || user.email === 'aaa@g.com')) {
         req.petraUser = user.name || PETRA_USER;
+        req.petraAdmin = req.petraUser;
         return next();
       }
     }
