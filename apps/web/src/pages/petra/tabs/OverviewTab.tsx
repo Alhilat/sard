@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Users, MessageSquare, BookOpen, Layers, CheckCircle, Ban, Server
+  Users, MessageSquare, BookOpen, Layers, CheckCircle, Ban, Server, Megaphone
 } from 'lucide-react';
 import { PetraStats, PetraUser, PetraPost, PetraComment, PetraArticle, PetraGroup } from '@/services/petraService';
 import { PetraTab } from '../components/PetraNavigation';
@@ -22,6 +22,7 @@ interface OverviewTabProps {
     renderDetected: boolean;
   } | null;
   onNavigateTab: (tab: PetraTab) => void;
+  onOpenBroadcast?: () => void;
 }
 
 export default function OverviewTab({
@@ -33,6 +34,7 @@ export default function OverviewTab({
   groups,
   envStatus,
   onNavigateTab,
+  onOpenBroadcast,
 }: OverviewTabProps) {
   const activeCount = users.filter((u) => !u.is_banned).length;
   const bannedCount = users.filter((u) => u.is_banned).length;
@@ -47,6 +49,32 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200" dir="rtl">
+      {/* Broadcast Announcement Quick Banner */}
+      {onOpenBroadcast && (
+        <div className="bg-gradient-to-r from-[#26131D] via-[#1A1222] to-[#140F1B] border border-[#542436] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#9E2A2B]/20 border border-[#9E2A2B]/40 flex items-center justify-center text-[#E57373] shrink-0">
+              <Megaphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white font-display">
+                بث إشعار عام لجميع مستخدمي المنصة
+              </h4>
+              <p className="text-xs text-[#9F8EAE] mt-0.5">
+                أرسل تنبيهاً أو رسالة إدارية رسمية تظهر فوراً في جرس إشعارات كافة المستخدمين المسجلين ({users.length} مستخدم)
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={onOpenBroadcast}
+            className="bg-[#9E2A2B] hover:bg-[#852223] text-white text-xs font-bold h-9 px-4 rounded-xl gap-2 cursor-pointer shadow-md shrink-0"
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            <span>إرسال إشعار عام الآن</span>
+          </Button>
+        </div>
+      )}
+
       {/* Top Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <Card className="bg-[#140F1B] border-[#291F34] text-white hover:border-[#47365C] transition-colors rounded-2xl shadow-sm">

@@ -477,4 +477,34 @@ export const petraService = {
       return { success: false, message: 'تعذر حذف المقال' };
     }
   },
+
+  broadcastNotification: async (data: {
+    title: string;
+    content: string;
+    link?: string;
+    target?: 'all' | 'verified' | 'org' | 'individual';
+  }): Promise<{ success: boolean; message: string; count?: number }> => {
+    try {
+      const res = await fetch('/api/petra/broadcast', {
+        method: 'POST',
+        headers: {
+          ...getPetraAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (res.status === 401) {
+        handleUnauthorized();
+        return { success: false, message: 'انتهت صلاحية الجلسة الإدارية' };
+      }
+      const responseData = await res.json();
+      return {
+        success: res.ok && responseData.success,
+        message: responseData.message || (res.ok ? 'تم إرسال الإشعار بنجاح' : 'تعذر إرسال الإشعار'),
+        count: responseData.count,
+      };
+    } catch {
+      return { success: false, message: 'تعذر الاتصال بالخادم لإرسال الإشعار' };
+    }
+  },
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, RefreshCw, LogOut, Activity, Server } from 'lucide-react';
+import { Shield, RefreshCw, LogOut, Activity, Server, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -7,6 +7,7 @@ interface PetraHeaderProps {
   isRefreshing: boolean;
   onRefresh: () => void;
   onLogout: () => void;
+  onOpenBroadcast?: () => void;
   envStatus: {
     envConfigured: boolean;
     envUser: string;
@@ -19,6 +20,7 @@ export default function PetraHeader({
   isRefreshing,
   onRefresh,
   onLogout,
+  onOpenBroadcast,
   envStatus,
 }: PetraHeaderProps) {
   return (
@@ -59,6 +61,18 @@ export default function PetraHeader({
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
             <span className="hidden sm:inline">تحديث</span>
           </Button>
+
+          {onOpenBroadcast && (
+            <Button
+              size="sm"
+              onClick={onOpenBroadcast}
+              className="bg-[#9E2A2B] hover:bg-[#852223] text-white text-xs h-8 px-3 rounded-lg gap-1.5 cursor-pointer font-bold shadow-sm"
+              title="إرسال إشعار عام لجميع المستخدمين"
+            >
+              <Megaphone className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">بث إشعار عام</span>
+            </Button>
+          )}
 
           <Button
             size="sm"

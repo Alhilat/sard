@@ -7,6 +7,7 @@ import { authRateLimiter } from '../middleware/rate-limiter.mjs';
 import { createPetraSession, revokePetraSession } from '../services/petra-sessions.mjs';
 import { metrics, bannedUserIds } from '../services/cache.mjs';
 import { createNotification } from '../services/notification.mjs';
+import { broadcastNotification } from '../services/websocket.mjs';
 import { scheduleCloudSync } from '../db/persistence.mjs';
 
 const router = Router();
@@ -651,6 +652,108 @@ router.get('/logs', authenticatePetra, (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'تعذر جلب سجل العمليات' });
+  }
+});
+
+// POST /api/petra/broadcast (Broadcast administrative message/announcement to all users)
+router.post('/broadcast', authenticatePetra, (req, res) => {
+  try {
+    const { title, content, link, target = 'all' } = req.body;
+    const cleanTitle = (title || '').trim();
+    const cleanContent = (content || '').trim();
+
+    if (!cleanTitle || !cleanContent) {
+      return res.status(400).json({
+        success: false,
+        message: 'عنوان الإشعار ومحتوى الرسالة مطلوبان.',
+      });
+    }
+
+    const db = req.app.locals.db;
+    let query = 'SELECT id, name FROM users WHERE is_banned = 0';
+    const params = [];
+
+    if (target === 'verified') {
+      query += ' AND verified = 1';
+    } else if (target === 'org') {
+      query += " AND role = 'org'";
+    } else if (target === 'individual') {
+      query += " AND role != 'org'";
+    }
+
+    const targetUsers = db.prepare(query).all(...params);
+    if (!targetUsers || targetUsers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'لم يتم العثور على مستخدمين يطابقون الفئة المحددة.',
+      });
+    }
+
+    const { stmtInsertNotification, stmtInsertAuditLog } = getStatements();
+    const now = Date.now();
+    const cleanLink = (link || '').trim() || '/app/feed';
+    const adminActor = req.petraAdmin || 'admin';
+
+    // Fast transaction batch insert for all recipient notifications
+    const insertBatch = db.transaction((users) => {
+      for (const u of users) {
+        const notifId = `notif_bc_${now}_${Math.floor(Math.random() * 1000000)}`;
+        stmtInsertNotification.run(
+          notifId,
+          u.id,
+          null, // system/admin announcement
+          'admin_announcement',
+          cleanTitle,
+          cleanContent,
+          cleanLink,
+          now
+        );
+      }
+    });
+
+    insertBatch(targetUsers);
+    scheduleCloudSync();
+
+    // Push via WebSocket to all connected recipients instantly
+    for (const u of targetUsers) {
+      try {
+        broadcastNotification(u.id, {
+          id: `notif_bc_${now}_${u.id}`,
+          userId: u.id,
+          actorId: null,
+          type: 'admin_announcement',
+          title: cleanTitle,
+          content: cleanContent,
+          link: cleanLink,
+          read: false,
+          created_at: now,
+          time: 'الآن',
+        });
+      } catch {}
+    }
+
+    // Record in Petra Audit Log
+    stmtInsertAuditLog.run(
+      `log_${now}`,
+      adminActor,
+      'بث إشعار عام',
+      'broadcast',
+      target,
+      `تم إرسال إشعار عام بعنوان "${cleanTitle}" إلى ${targetUsers.length} مستخدم`,
+      now
+    );
+
+    return res.json({
+      success: true,
+      count: targetUsers.length,
+      message: `تم إرسال الإشعار بنجاح إلى ${targetUsers.length} مستخدم!`,
+    });
+  } catch (err) {
+    console.error('Broadcast notification error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'تعذر إرسال الإشعار العام للمستخدمين.',
+    });
   }
 });
 

@@ -19,6 +19,7 @@ import AuditLogsTab from './tabs/AuditLogsTab';
 import ConfirmActionModal from './modals/ConfirmActionModal';
 import BanUserModal from './modals/BanUserModal';
 import ArticleReviewModal from './modals/ArticleReviewModal';
+import BroadcastNotificationModal from './modals/BroadcastNotificationModal';
 
 export default function Petra() {
   const { toast } = useToast();
@@ -52,6 +53,8 @@ export default function Petra() {
 
   const [reviewModalArticle, setReviewModalArticle] = useState<PetraArticle | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -381,6 +384,39 @@ export default function Petra() {
     }
   };
 
+  const handleSendBroadcast = async (data: {
+    title: string;
+    content: string;
+    link?: string;
+    target?: 'all' | 'verified' | 'org' | 'individual';
+  }): Promise<boolean> => {
+    try {
+      const res = await petraService.broadcastNotification(data);
+      if (res.success) {
+        toast({
+          title: 'تم إرسال الإشعار العام بنجاح 📢',
+          description: res.message || `تم إرسال الإشعار بنجاح إلى ${res.count || 'جميع'} مستخدم.`,
+        });
+        loadAllData();
+        return true;
+      } else {
+        toast({
+          title: 'فشل إرسال الإشعار',
+          description: res.message || 'تعذر إرسال الإشعار العام',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    } catch {
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ غير متوقع أثناء إرسال الإشعار العام.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   // 1. Unauthenticated Login Gate
   if (!isAuthenticated) {
     return (
@@ -406,6 +442,7 @@ export default function Petra() {
         isRefreshing={isLoading}
         onRefresh={loadAllData}
         onLogout={handleLogout}
+        onOpenBroadcast={() => setIsBroadcastModalOpen(true)}
         envStatus={envStatus}
       />
 
@@ -436,6 +473,7 @@ export default function Petra() {
             groups={groups}
             envStatus={envStatus}
             onNavigateTab={setActiveTab}
+            onOpenBroadcast={() => setIsBroadcastModalOpen(true)}
           />
         )}
 
@@ -505,6 +543,15 @@ export default function Petra() {
         isSubmitting={isSubmittingReview}
         onClose={() => setReviewModalArticle(null)}
         onSubmitReview={handleSubmitReview}
+      />
+
+      <BroadcastNotificationModal
+        isOpen={isBroadcastModalOpen}
+        totalUsersCount={users.length}
+        verifiedUsersCount={users.filter((u) => u.verified).length}
+        orgUsersCount={users.filter((u) => u.role === 'org').length}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        onSendBroadcast={handleSendBroadcast}
       />
     </div>
   );
